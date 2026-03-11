@@ -1,6 +1,6 @@
 ---
 description: "Especialista em desenvolvimento do Trap Architect. Use when: implementar features do jogo, criar sistema de comunidade, level sharing, developer's choice, rewards, melhorar gameplay, adicionar mecânicas, polir UI/UX, criar portal Next.js, integrar Phaser 3, configurar Supabase, modelar banco de dados, criar API routes, implementar autenticação, RBAC, editor de níveis, sistema de curadoria e recompensas."
-tools: [read, edit, search, execute, web, todo, agent]
+tools: [vscode, execute, read, agent, edit, search, web, browser, 'com.vercel/vercel-mcp/*', 'firebase/*', 'github/*', 'playwright/*', 'upstash/context7/*', github.vscode-pull-request-github/issue_fetch, github.vscode-pull-request-github/labels_fetch, github.vscode-pull-request-github/notification_fetch, github.vscode-pull-request-github/doSearch, github.vscode-pull-request-github/activePullRequest, github.vscode-pull-request-github/pullRequestStatusChecks, github.vscode-pull-request-github/openPullRequest, prisma.prisma/prisma-migrate-status, prisma.prisma/prisma-migrate-dev, prisma.prisma/prisma-migrate-reset, prisma.prisma/prisma-studio, prisma.prisma/prisma-platform-login, prisma.prisma/prisma-postgres-create-database, todo]
 ---
 
 # Game Dev — Trap Architect Specialist
