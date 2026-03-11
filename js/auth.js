@@ -1,5 +1,5 @@
 // ============================================================
-// CAT MARIO - AUTH & PROFILE SYSTEM
+// TRAP ARCHITECT - AUTH & PROFILE SYSTEM
 // Social login, nickname setup, player profiles, creator ranks
 // ============================================================
 

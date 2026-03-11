@@ -1,5 +1,5 @@
 // ============================================================
-// CAT MARIO - LEVEL EDITOR (Supreme Edition)
+// TRAP ARCHITECT - LEVEL EDITOR (Supreme Edition)
 // Visual editor for creating and testing custom levels
 // ============================================================
 

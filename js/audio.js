@@ -1,5 +1,5 @@
 // ============================================================
-// CAT MARIO - AUDIO ENGINE
+// TRAP ARCHITECT - AUDIO ENGINE
 // Procedural chiptune music & sound effects using Web Audio API
 // ============================================================
 

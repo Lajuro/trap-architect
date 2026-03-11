@@ -1,5 +1,5 @@
 // ============================================================
-// CAT MARIO - LEVEL DATA
+// TRAP ARCHITECT - LEVEL DATA
 // 3 levels with troll traps, enemies, and secrets
 // ============================================================
 

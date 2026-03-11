@@ -1,5 +1,5 @@
 // ============================================================
-// CAT MARIO - FIREBASE CONFIGURATION
+// TRAP ARCHITECT - FIREBASE CONFIGURATION
 // Firebase initialization and service exports
 // ============================================================
 

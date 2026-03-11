@@ -1,5 +1,5 @@
 // ============================================================
-// CAT MARIO - GAME ENGINE
+// TRAP ARCHITECT - GAME ENGINE
 // Complete game: rendering, physics, UI, HUD, entities, trolls
 // ============================================================
 
@@ -2288,7 +2288,7 @@ class Game {
       drawText(ctx, '🐱', CW / 2, 120, 60, '#FF8C00', 'center', true);
     }
     if (this.introPhase >= 2) {
-      drawText(ctx, 'CAT MARIO', CW / 2, 200, 48, '#FF8C00', 'center', true);
+      drawText(ctx, 'TRAP ARCHITECT', CW / 2, 200, 48, '#FF8C00', 'center', true);
       drawText(ctx, 'O Jogo Troll', CW / 2, 250, 24, '#FFB347', 'center', true);
     }
     if (this.introPhase >= 3) {
@@ -2331,7 +2331,7 @@ class Game {
     const topY = Math.max(30, (CH - footerRegion - totalH) / 2);
 
     // Title
-    drawText(ctx, 'CAT MARIO', CW / 2, topY + 20, 56, '#FF8C00', 'center', true);
+    drawText(ctx, 'TRAP ARCHITECT', CW / 2, topY + 20, 56, '#FF8C00', 'center', true);
     drawText(ctx, 'O Jogo Troll', CW / 2, topY + 64, 22, '#FFB347', 'center', true);
 
     // Draw a cat
