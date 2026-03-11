@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import RankBadge from "@/components/RankBadge";
 import type { User } from "@supabase/supabase-js";
 
 interface Profile {
   id: string;
   nickname: string;
   photo_url: string | null;
-  creator_rank: string;
+  creator_rank: number;
   levels_created: number;
   total_plays_received: number;
   total_likes_received: number;
@@ -152,7 +153,7 @@ export default function ProfilePage() {
             {profile && (
               <div>
                 <label className="block text-sm font-medium mb-1">Rank</label>
-                <p className="text-sm text-muted-foreground capitalize">{profile.creator_rank}</p>
+                <RankBadge rankLevel={profile.creator_rank} />
               </div>
             )}
             <button
@@ -177,6 +178,18 @@ export default function ProfilePage() {
             className="border border-border px-6 py-2 rounded-md font-medium hover:bg-muted transition-colors"
           >
             Jogar Campanha
+          </Link>
+          <Link
+            href="/shop"
+            className="border border-border px-6 py-2 rounded-md font-medium hover:bg-muted transition-colors"
+          >
+            🛒 Loja
+          </Link>
+          <Link
+            href="/settings"
+            className="border border-border px-6 py-2 rounded-md font-medium hover:bg-muted transition-colors"
+          >
+            ⚙ Configurações
           </Link>
         </div>
       </main>

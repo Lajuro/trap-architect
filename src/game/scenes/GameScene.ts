@@ -22,6 +22,7 @@ import { TileType, type ParsedLevel, type GameEntity } from "../types";
 import { gameEvents, GAME_EVENTS } from "../events";
 import { DEMO_LEVEL } from "../levels/demo";
 import { getCampaignLevel, CAMPAIGN_LEVELS } from "../levels/campaign";
+import { playJump, playDeath, playCoin, playComplete, playSpring, playStomp } from "../audio";
 
 interface PlayerSprite extends Phaser.GameObjects.Image {
   vx: number;
@@ -53,6 +54,13 @@ export class GameScene extends Phaser.Scene {
   private hudDeaths!: Phaser.GameObjects.Text;
   private levelNameText!: Phaser.GameObjects.Text;
   private levelNameTimer = 0;
+  // Particles
+  private deathEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private jumpEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private coinEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  // Pause
+  private paused = false;
+  private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super({ key: "GameScene" });
@@ -130,23 +138,26 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(1);
     this.levelNameTimer = 120;
 
+    // Create particle textures and emitters
+    this.createParticles();
+
     // Listen for React events
     gameEvents.on(GAME_EVENTS.RESTART_LEVEL, () => this.restartLevel());
 
-    // ESC to go back to level select or menu
+    // ESC to toggle pause
     if (this.input.keyboard) {
       this.input.keyboard.on("keydown-ESC", () => {
-        gameEvents.off(GAME_EVENTS.RESTART_LEVEL, () => {});
-        if (this.levelIndex >= 0) {
-          this.scene.start("LevelSelectScene");
+        if (this.paused) {
+          this.resumeGame();
         } else {
-          this.scene.start("MenuScene");
+          this.pauseGame();
         }
       });
     }
   }
 
   update(): void {
+    if (this.paused) return;
     if (!this.player.alive) return;
 
     // Level name fade
@@ -318,6 +329,8 @@ export class GameScene extends Phaser.Scene {
       this.player.vy = JUMP_FORCE;
       this.player.grounded = false;
       this.player.jumpHeld = true;
+      playJump();
+      this.emitJumpParticles();
     }
 
     // Variable jump height
@@ -433,9 +446,11 @@ export class GameScene extends Phaser.Scene {
           if (tile === TileType.SPRING) {
             this.player.vy = JUMP_FORCE * SPRING_MULTIPLIER;
             this.player.grounded = false;
+            playSpring();
           } else if (tile === TileType.TRAMPOLINE) {
             this.player.vy = JUMP_FORCE * TRAMPOLINE_MULTIPLIER;
             this.player.grounded = false;
+            playSpring();
           } else if (tile === TileType.FAKE_GROUND) {
             this.startCrumbling(gx, gyBottom);
           }
@@ -601,6 +616,8 @@ export class GameScene extends Phaser.Scene {
           ent.alive = false;
           sprite.setVisible(false);
           this.coins++;
+          playCoin();
+          this.emitCoinParticles(ent.x, ent.y);
           gameEvents.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
         } else if (ent.type === "flag") {
           gameEvents.emit(GAME_EVENTS.LEVEL_COMPLETE);
@@ -615,6 +632,7 @@ export class GameScene extends Phaser.Scene {
             ent.alive = false;
             sprite.setVisible(false);
             this.player.vy = JUMP_FORCE * 0.6;
+            playStomp();
           } else {
             this.playerDie();
           }
@@ -708,6 +726,8 @@ export class GameScene extends Phaser.Scene {
     if (!this.player.alive) return;
     this.player.alive = false;
     this.deaths++;
+    playDeath();
+    this.emitDeathParticles();
 
     gameEvents.emit(GAME_EVENTS.PLAYER_DIED, this.deaths);
 
@@ -737,6 +757,7 @@ export class GameScene extends Phaser.Scene {
 
   private showLevelComplete(): void {
     this.player.alive = false;
+    playComplete();
 
     // Emit completion data for LevelSelectScene progress tracking
     if (this.levelIndex >= 0) {
@@ -801,5 +822,146 @@ export class GameScene extends Phaser.Scene {
 
   private restartLevel(): void {
     this.scene.restart();
+  }
+
+  // ===========================================================
+  // Particles
+  // ===========================================================
+  private createParticles(): void {
+    // White particle texture
+    if (!this.textures.exists("particle_white")) {
+      const tex = this.textures.createCanvas("particle_white", 4, 4);
+      const pctx = tex!.getContext();
+      pctx.fillStyle = "#ffffff";
+      pctx.fillRect(0, 0, 4, 4);
+      tex!.refresh();
+    }
+    // Red particle texture
+    if (!this.textures.exists("particle_red")) {
+      const tex = this.textures.createCanvas("particle_red", 4, 4);
+      const pctx = tex!.getContext();
+      pctx.fillStyle = "#ff4444";
+      pctx.fillRect(0, 0, 4, 4);
+      tex!.refresh();
+    }
+    // Yellow particle texture
+    if (!this.textures.exists("particle_yellow")) {
+      const tex = this.textures.createCanvas("particle_yellow", 4, 4);
+      const pctx = tex!.getContext();
+      pctx.fillStyle = "#ffd700";
+      pctx.fillRect(0, 0, 4, 4);
+      tex!.refresh();
+    }
+
+    this.deathEmitter = this.add.particles(0, 0, "particle_red", {
+      speed: { min: 50, max: 150 },
+      angle: { min: 0, max: 360 },
+      lifespan: 600,
+      gravityY: 200,
+      quantity: 12,
+      emitting: false,
+    });
+    this.deathEmitter.setDepth(60);
+
+    this.jumpEmitter = this.add.particles(0, 0, "particle_white", {
+      speed: { min: 20, max: 60 },
+      angle: { min: 200, max: 340 },
+      lifespan: 300,
+      scale: { start: 1, end: 0 },
+      quantity: 5,
+      emitting: false,
+    });
+    this.jumpEmitter.setDepth(45);
+
+    this.coinEmitter = this.add.particles(0, 0, "particle_yellow", {
+      speed: { min: 30, max: 80 },
+      angle: { min: 0, max: 360 },
+      lifespan: 400,
+      scale: { start: 1, end: 0 },
+      quantity: 8,
+      emitting: false,
+    });
+    this.coinEmitter.setDepth(60);
+  }
+
+  private emitDeathParticles(): void {
+    this.deathEmitter.emitParticleAt(this.player.x, this.player.y);
+  }
+
+  private emitJumpParticles(): void {
+    this.jumpEmitter.emitParticleAt(this.player.x, this.player.y + PLAYER_H / 2);
+  }
+
+  private emitCoinParticles(x: number, y: number): void {
+    this.coinEmitter.emitParticleAt(x, y);
+  }
+
+  // ===========================================================
+  // Pause Menu
+  // ===========================================================
+  private pauseGame(): void {
+    if (this.paused) return;
+    this.paused = true;
+    gameEvents.emit(GAME_EVENTS.GAME_PAUSED);
+
+    const bg = this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.65)
+      .setScrollFactor(0)
+      .setDepth(300);
+
+    const title = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 50, "⏸ PAUSADO", {
+        fontFamily: "monospace",
+        fontSize: "28px",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(301);
+
+    const btnContinue = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 10, "▶ Continuar", {
+        fontFamily: "monospace",
+        fontSize: "18px",
+        color: "#44ff44",
+        backgroundColor: "rgba(0,0,0,0.5)",
+        padding: { x: 16, y: 8 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(301)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => this.resumeGame());
+
+    const btnQuit = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60, "✕ Sair", {
+        fontFamily: "monospace",
+        fontSize: "18px",
+        color: "#ff4444",
+        backgroundColor: "rgba(0,0,0,0.5)",
+        padding: { x: 16, y: 8 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(301)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => {
+        this.resumeGame();
+        if (this.levelIndex >= 0) {
+          this.scene.start("LevelSelectScene");
+        } else {
+          this.scene.start("MenuScene");
+        }
+      });
+
+    this.pauseOverlay = [bg, title, btnContinue, btnQuit];
+  }
+
+  private resumeGame(): void {
+    if (!this.paused) return;
+    this.paused = false;
+    gameEvents.emit(GAME_EVENTS.GAME_RESUMED);
+    this.pauseOverlay.forEach((obj) => obj.destroy());
+    this.pauseOverlay = [];
   }
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import LevelCard from "@/components/LevelCard";
+import RankBadge from "@/components/RankBadge";
 
 interface CreatorProfile {
   id: string;
@@ -26,15 +27,6 @@ interface CreatorLevel {
   difficulty: number;
   created_at: string;
 }
-
-const RANK_TITLES: Record<number, string> = {
-  0: "Jogador",
-  1: "Criador Novato",
-  2: "Construtor",
-  3: "Arquiteto",
-  4: "Mestre Troll",
-  5: "Lenda",
-};
 
 export default function CreatorPage() {
   const params = useParams<{ id: string }>();
@@ -119,9 +111,9 @@ export default function CreatorPage() {
             </div>
             <div className="flex-1">
               <h1 className="text-3xl font-bold mb-1">{profile.nickname}</h1>
-              <p className="text-primary font-medium mb-2">
-                {RANK_TITLES[profile.creator_rank] || "Jogador"}
-              </p>
+              <div className="mb-2">
+                <RankBadge rankLevel={profile.creator_rank} />
+              </div>
               <p className="text-sm text-muted-foreground">
                 Membro desde {joinDate}
               </p>
