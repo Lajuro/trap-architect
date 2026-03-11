@@ -87,6 +87,52 @@ Você é um Engenheiro de Software Full-Stack Sênior e Especialista em Desenvol
 8. **UI em português** — Todo texto voltado ao jogador em PT-BR. Código, variáveis e comentários em inglês.
 9. **Mobile-first** — Layout responsivo com TailwindCSS. Touch controls no Phaser.
 
+## Versionamento e Releases
+
+O projeto usa **Conventional Commits** + **Release Please** para versionamento automático.
+
+### Conventional Commits (OBRIGATÓRIO)
+
+Todo commit DEVE seguir o formato: `<tipo>(escopo opcional): descrição`
+
+| Prefixo | Quando usar | Efeito na versão |
+|---------|-------------|------------------|
+| `feat:` | Nova funcionalidade | **minor** (0.X.0) |
+| `fix:` | Correção de bug | **patch** (0.0.X) |
+| `perf:` | Melhoria de performance | patch |
+| `refactor:` | Refatoração sem mudar comportamento | nenhum |
+| `chore:` | Manutenção, configs, deps | nenhum |
+| `docs:` | Documentação | nenhum |
+| `style:` | Formatação, CSS | nenhum |
+| `ci:` | Mudanças no CI/CD | nenhum |
+| `feat!:` ou `BREAKING CHANGE:` no body | Mudança que quebra compatibilidade | **major** (X.0.0) |
+
+### Exemplos
+
+```
+feat: add conveyor belt tile to editor
+fix: player clipping through walls on ice
+feat(editor): add undo/redo with Ctrl+Z/Y
+chore: update Supabase client to v2.50
+perf: optimize tile rendering with culling
+feat!: migrate from Firebase to Supabase auth
+```
+
+### Como funciona o Release Please
+
+1. Commits com `feat:` / `fix:` no `main` geram um **PR automático** de release
+2. O PR acumula mudanças e atualiza o `CHANGELOG.md` automaticamente
+3. Ao mergear o PR, cria a **GitHub Release** com tag semver e notas de release
+4. A versão no `package.json` é atualizada automaticamente
+
+### Regras para agentes
+
+- **Sempre** sugerir mensagens de commit seguindo Conventional Commits
+- **Nunca** editar manualmente `CHANGELOG.md` — o Release Please gera automaticamente
+- **Nunca** alterar a versão no `package.json` manualmente
+- Antes de committar, pensar: esse commit é `feat`, `fix`, `chore`, `refactor`?
+- Commits atômicos: uma mudança lógica por commit, não misturar feat + fix
+
 ## Abordagem de Trabalho
 
 1. **Antes de qualquer mudança**: Ler os arquivos afetados por completo. Entender o estado atual.
@@ -94,6 +140,7 @@ Você é um Engenheiro de Software Full-Stack Sênior e Especialista em Desenvol
 3. **Mudanças incrementais**: Edições pequenas e testáveis. Nunca reescrever um arquivo inteiro de uma vez.
 4. **Validar sempre**: Após editar, rodar `bun run build` ou checar erros de tipo.
 5. **Manter consistência**: Seguir padrões do projeto (naming conventions, estrutura de pastas, patterns do Next.js App Router).
+6. **Commits convencionais**: Toda mensagem de commit segue Conventional Commits. Ver seção "Versionamento e Releases".
 
 ## Restrições
 
