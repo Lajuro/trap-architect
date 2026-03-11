@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { gameEvents } from "@/game/events";
 import { EDITOR_EVENTS } from "@/game/scenes/EditorScene";
 import { PALETTE_ITEMS } from "@/game/constants";
@@ -21,6 +22,16 @@ export function EditorSidebar() {
   const [gridH, setGridH] = useState(15);
   const [trolls, setTrolls] = useState<TrollTrigger[]>([]);
   const [ready, setReady] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishMsg, setPublishMsg] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user);
+    });
+  }, []);
 
   useEffect(() => {
     const onReady = () => setReady(true);
@@ -79,6 +90,45 @@ export function EditorSidebar() {
       }
     };
     input.click();
+  }, []);
+
+  const handlePublish = useCallback(() => {
+    setPublishMsg(null);
+    const handler = async (data: unknown) => {
+      gameEvents.off(EDITOR_EVENTS.EXPORT_REQUEST, handler);
+      setPublishing(true);
+      try {
+        const levelData = data as LevelData;
+        const res = await fetch("/api/levels", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: levelData.name,
+            bgColor: levelData.bgColor,
+            gridW: levelData.gridW,
+            gridH: levelData.gridH,
+            tiles: levelData.tiles,
+            entities: levelData.entities,
+            trolls: levelData.trolls,
+            playerStart: levelData.playerStart,
+            published: true,
+          }),
+        });
+        if (res.ok) {
+          setPublishMsg("Nível publicado com sucesso!");
+        } else if (res.status === 401) {
+          setPublishMsg("Faça login para publicar.");
+        } else {
+          const { error } = await res.json();
+          setPublishMsg(error || "Erro ao publicar.");
+        }
+      } catch {
+        setPublishMsg("Erro de conexão.");
+      }
+      setPublishing(false);
+    };
+    gameEvents.on(EDITOR_EVENTS.EXPORT_REQUEST, handler);
+    gameEvents.emit(EDITOR_EVENTS.EXPORT_LEVEL);
   }, []);
 
   const handleTestPlay = useCallback(() => {
@@ -260,6 +310,29 @@ export function EditorSidebar() {
           >
             Importar
           </button>
+        </div>
+
+        {/* Publish */}
+        <div className="pt-2 border-t border-border">
+          {isLoggedIn ? (
+            <button
+              onClick={handlePublish}
+              disabled={publishing}
+              className="w-full text-xs bg-purple-700 text-white rounded px-2 py-1.5 hover:bg-purple-600 disabled:opacity-50"
+            >
+              {publishing ? "Publicando..." : "🚀 Publicar"}
+            </button>
+          ) : (
+            <a
+              href="/login"
+              className="block w-full text-center text-xs bg-muted rounded px-2 py-1.5 hover:bg-muted/80 text-muted-foreground"
+            >
+              Faça login para publicar
+            </a>
+          )}
+          {publishMsg && (
+            <p className="text-xs mt-1 text-center text-muted-foreground">{publishMsg}</p>
+          )}
         </div>
       </div>
     </div>

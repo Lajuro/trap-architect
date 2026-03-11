@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AuthNav from "@/components/AuthNav";
 
 export default function HomePage() {
   return (
@@ -9,26 +10,7 @@ export default function HomePage() {
           <h1 className="text-2xl font-bold text-primary">
             🐱 Trap Architect
           </h1>
-          <nav className="flex items-center gap-4">
-            <Link
-              href="/browse"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Explorar
-            </Link>
-            <Link
-              href="/editor"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Criar Nível
-            </Link>
-            <Link
-              href="/login"
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium hover:opacity-90 transition-opacity"
-            >
-              Entrar
-            </Link>
-          </nav>
+          <AuthNav />
         </div>
       </header>
 
