@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20")));
   const featured = searchParams.get("featured") === "true";
   const authorId = searchParams.get("author");
+  const search = searchParams.get("search");
   const offset = (page - 1) * limit;
 
   const allowedSorts = ["created_at", "plays", "likes", "difficulty", "name"];
@@ -30,6 +31,10 @@ export async function GET(request: NextRequest) {
 
   if (authorId) {
     query = query.eq("author_id", authorId);
+  }
+
+  if (search) {
+    query = query.ilike("name", `%${search}%`);
   }
 
   const { data, error, count } = await query;

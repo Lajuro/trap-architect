@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AuthNav from "@/components/AuthNav";
+import HomeLevelFeed from "@/components/HomeLevelFeed";
 
 export default function HomePage() {
   return (
@@ -41,47 +42,11 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Featured Levels Placeholder */}
-        <section className="max-w-7xl mx-auto px-6 py-12">
-          <h3 className="text-2xl font-bold mb-6">🔥 Níveis em Destaque</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors"
-              >
-                <div className="h-40 bg-muted rounded-md mb-4 flex items-center justify-center text-muted-foreground">
-                  Preview do Nível
-                </div>
-                <h4 className="font-bold mb-1">Nível em Breve</h4>
-                <p className="text-sm text-muted-foreground">
-                  Níveis da comunidade aparecerão aqui
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* Featured Levels */}
+        <HomeLevelFeed title="🔥 Níveis em Destaque" apiUrl="/api/levels?featured=true&limit=3" />
 
-        {/* Recent Levels Placeholder */}
-        <section className="max-w-7xl mx-auto px-6 py-12">
-          <h3 className="text-2xl font-bold mb-6">🕐 Níveis Recentes</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors"
-              >
-                <div className="h-40 bg-muted rounded-md mb-4 flex items-center justify-center text-muted-foreground">
-                  Preview do Nível
-                </div>
-                <h4 className="font-bold mb-1">Nível em Breve</h4>
-                <p className="text-sm text-muted-foreground">
-                  Níveis da comunidade aparecerão aqui
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* Recent Levels */}
+        <HomeLevelFeed title="🕐 Níveis Recentes" apiUrl="/api/levels?sort=created_at&limit=3" />
       </main>
 
       {/* Footer */}
