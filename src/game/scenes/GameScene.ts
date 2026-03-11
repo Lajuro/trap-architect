@@ -21,6 +21,7 @@ import {
 import { TileType, type ParsedLevel, type GameEntity } from "../types";
 import { gameEvents, GAME_EVENTS } from "../events";
 import { DEMO_LEVEL } from "../levels/demo";
+import { getCampaignLevel, CAMPAIGN_LEVELS } from "../levels/campaign";
 
 interface PlayerSprite extends Phaser.GameObjects.Image {
   vx: number;
@@ -41,6 +42,7 @@ export class GameScene extends Phaser.Scene {
   private player!: PlayerSprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private level!: ParsedLevel;
+  private levelIndex = -1;
   private tileSprites: (Phaser.GameObjects.Image | null)[][] = [];
   private entitySprites: Phaser.GameObjects.Image[] = [];
   private entities: GameEntity[] = [];
@@ -56,8 +58,20 @@ export class GameScene extends Phaser.Scene {
     super({ key: "GameScene" });
   }
 
+  init(data?: { levelIndex?: number; customLevel?: ParsedLevel }): void {
+    if (data?.customLevel) {
+      this.level = data.customLevel;
+      this.levelIndex = -1;
+    } else if (data?.levelIndex !== undefined) {
+      this.level = getCampaignLevel(data.levelIndex) ?? DEMO_LEVEL;
+      this.levelIndex = data.levelIndex;
+    } else {
+      this.level = DEMO_LEVEL;
+      this.levelIndex = -1;
+    }
+  }
+
   create(): void {
-    this.level = DEMO_LEVEL;
     this.coins = 0;
     this.deaths = 0;
     this.crumbling = [];
@@ -119,16 +133,20 @@ export class GameScene extends Phaser.Scene {
     // Listen for React events
     gameEvents.on(GAME_EVENTS.RESTART_LEVEL, () => this.restartLevel());
 
-    // ESC to go back to menu
+    // ESC to go back to level select or menu
     if (this.input.keyboard) {
       this.input.keyboard.on("keydown-ESC", () => {
         gameEvents.off(GAME_EVENTS.RESTART_LEVEL, () => {});
-        this.scene.start("MenuScene");
+        if (this.levelIndex >= 0) {
+          this.scene.start("LevelSelectScene");
+        } else {
+          this.scene.start("MenuScene");
+        }
       });
     }
   }
 
-  update(_time: number, _delta: number): void {
+  update(): void {
     if (!this.player.alive) return;
 
     // Level name fade
@@ -720,6 +738,15 @@ export class GameScene extends Phaser.Scene {
   private showLevelComplete(): void {
     this.player.alive = false;
 
+    // Emit completion data for LevelSelectScene progress tracking
+    if (this.levelIndex >= 0) {
+      gameEvents.emit(GAME_EVENTS.LEVEL_COMPLETE, {
+        levelIndex: this.levelIndex,
+        deaths: this.deaths,
+        coins: this.coins,
+      });
+    }
+
     const overlay = this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "🎉 NÍVEL COMPLETO!", {
         fontFamily: "monospace",
@@ -756,10 +783,19 @@ export class GameScene extends Phaser.Scene {
       statsText.setAlpha(1);
     });
 
+    // Navigate to next level or level select
     this.time.delayedCall(3000, () => {
       overlay.destroy();
       statsText.destroy();
-      this.scene.start("MenuScene");
+      if (this.levelIndex >= 0 && this.levelIndex < CAMPAIGN_LEVELS.length - 1) {
+        // Next level
+        this.scene.start("GameScene", { levelIndex: this.levelIndex + 1 });
+      } else if (this.levelIndex >= 0) {
+        // All levels complete — back to level select
+        this.scene.start("LevelSelectScene");
+      } else {
+        this.scene.start("MenuScene");
+      }
     });
   }
 

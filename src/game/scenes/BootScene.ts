@@ -40,7 +40,12 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.scene.start("MenuScene");
+    // Start MenuScene if available, otherwise EditorScene (editor-only game)
+    if (this.scene.get("MenuScene")) {
+      this.scene.start("MenuScene");
+    } else {
+      this.scene.start("EditorScene");
+    }
   }
 
   private generateTextures(): void {

@@ -10,7 +10,7 @@ export default function PlayPage() {
           <Link href="/" className="text-xl font-bold text-primary">
             🐱 Trap Architect
           </Link>
-          <span className="text-sm text-muted-foreground">Demo — Fase 1</span>
+          <span className="text-sm text-muted-foreground">Campanha — 4 Fases</span>
         </div>
       </header>
 

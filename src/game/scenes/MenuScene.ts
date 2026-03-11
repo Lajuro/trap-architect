@@ -12,7 +12,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Title
     this.add
-      .text(GAME_WIDTH / 2, 120, "🐱 Trap Architect", {
+      .text(GAME_WIDTH / 2, 100, "🐱 Trap Architect", {
         fontFamily: "monospace",
         fontSize: "36px",
         color: "#ff8c00",
@@ -21,7 +21,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Subtitle
     this.add
-      .text(GAME_WIDTH / 2, 170, "Plataformas impossíveis feitas pela comunidade", {
+      .text(GAME_WIDTH / 2, 150, "Plataformas impossíveis feitas pela comunidade", {
         fontFamily: "monospace",
         fontSize: "14px",
         color: "#a3a3a3",
@@ -29,19 +29,19 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     // Animated cat
-    const cat = this.add.image(GAME_WIDTH / 2, 260, "player").setScale(4);
+    const cat = this.add.image(GAME_WIDTH / 2, 230, "player").setScale(4);
     this.tweens.add({
       targets: cat,
-      y: 250,
+      y: 220,
       duration: 800,
       yoyo: true,
       repeat: -1,
       ease: "Sine.easeInOut",
     });
 
-    // Play button
+    // Play button — goes to Level Select
     const playBtn = this.add
-      .text(GAME_WIDTH / 2, 340, "▶  JOGAR", {
+      .text(GAME_WIDTH / 2, 310, "▶  JOGAR", {
         fontFamily: "monospace",
         fontSize: "20px",
         color: "#ffffff",
@@ -54,12 +54,29 @@ export class MenuScene extends Phaser.Scene {
     playBtn.on("pointerover", () => playBtn.setAlpha(0.8));
     playBtn.on("pointerout", () => playBtn.setAlpha(1));
     playBtn.on("pointerdown", () => {
+      this.scene.start("LevelSelectScene");
+    });
+
+    // Quick play (demo level)
+    const quickBtn = this.add
+      .text(GAME_WIDTH / 2, 370, "⚡ Demo Rápida", {
+        fontFamily: "monospace",
+        fontSize: "16px",
+        color: "#a3a3a3",
+        padding: { x: 16, y: 8 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+
+    quickBtn.on("pointerover", () => quickBtn.setColor("#ffffff"));
+    quickBtn.on("pointerout", () => quickBtn.setColor("#a3a3a3"));
+    quickBtn.on("pointerdown", () => {
       this.scene.start("GameScene");
     });
 
     // Version
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 30, "v0.1.1", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT - 30, "v0.2.0", {
         fontFamily: "monospace",
         fontSize: "12px",
         color: "#555555",
