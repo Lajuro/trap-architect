@@ -35,6 +35,7 @@ export const GAME_EVENTS = {
   // Phaser → React
   PLAYER_DIED: "player:died",
   LEVEL_COMPLETE: "level:complete",
+  CAMPAIGN_COMPLETE: "campaign:complete",
   COINS_CHANGED: "coins:changed",
   GAME_READY: "game:ready",
   GAME_PAUSED: "game:paused",

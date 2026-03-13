@@ -2,6 +2,7 @@ import * as Phaser from "phaser";
 import { GAME_WIDTH, GAME_HEIGHT } from "../constants";
 import { gameEvents, GAME_EVENTS } from "../events";
 import { CAMPAIGN_LEVELS } from "../levels/campaign";
+import { playBGM } from "../audio";
 
 const SAVE_KEY = "trap_architect_progress";
 
@@ -36,6 +37,7 @@ export class LevelSelectScene extends Phaser.Scene {
   create(): void {
     this.progress = loadProgress();
     this.cameras.main.setBackgroundColor("#0a0a0a");
+    playBGM("menu");
 
     // Title
     this.add
@@ -46,15 +48,19 @@ export class LevelSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Level cards
-    const startX = 60;
-    const cardW = 160;
-    const cardH = 200;
-    const gap = 20;
+    // Level cards — 2 rows of 5
+    const cols = 5;
+    const cardW = 130;
+    const cardH = 160;
+    const gap = 16;
+    const totalW = cols * cardW + (cols - 1) * gap;
+    const startX = (GAME_WIDTH - totalW) / 2;
 
     CAMPAIGN_LEVELS.forEach((level, i) => {
-      const x = startX + i * (cardW + gap);
-      const y = 120;
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = startX + col * (cardW + gap);
+      const y = 80 + row * (cardH + 20);
 
       const isUnlocked = i === 0 || this.progress[i - 1]?.completed;
       const isCompleted = this.progress[i]?.completed;
@@ -71,9 +77,9 @@ export class LevelSelectScene extends Phaser.Scene {
       // Level number
       container.add(
         this.add
-          .text(cardW / 2, 20, `${i + 1}`, {
+          .text(cardW / 2, 16, `${i + 1}`, {
             fontFamily: "monospace",
-            fontSize: "32px",
+            fontSize: "24px",
             color: isUnlocked ? "#ffffff" : "#555555",
           })
           .setOrigin(0.5)
@@ -82,11 +88,11 @@ export class LevelSelectScene extends Phaser.Scene {
       // Level name
       container.add(
         this.add
-          .text(cardW / 2, 65, level.name, {
+          .text(cardW / 2, 48, level.name, {
             fontFamily: "monospace",
-            fontSize: "12px",
+            fontSize: "11px",
             color: isUnlocked ? "#ffffff" : "#555555",
-            wordWrap: { width: cardW - 16 },
+            wordWrap: { width: cardW - 12 },
             align: "center",
           })
           .setOrigin(0.5)
@@ -96,11 +102,11 @@ export class LevelSelectScene extends Phaser.Scene {
       if (level.subtitle) {
         container.add(
           this.add
-            .text(cardW / 2, 85, level.subtitle, {
+            .text(cardW / 2, 65, level.subtitle, {
               fontFamily: "monospace",
-              fontSize: "10px",
+              fontSize: "9px",
               color: "#a3a3a3",
-              wordWrap: { width: cardW - 16 },
+              wordWrap: { width: cardW - 12 },
               align: "center",
             })
             .setOrigin(0.5)
@@ -112,9 +118,9 @@ export class LevelSelectScene extends Phaser.Scene {
         const prog = this.progress[i]!;
         container.add(
           this.add
-            .text(cardW / 2, 120, `💀 ${prog.bestDeaths}  🪙 ${prog.bestCoins}`, {
+            .text(cardW / 2, 95, `💀 ${prog.bestDeaths}  🪙 ${prog.bestCoins}`, {
               fontFamily: "monospace",
-              fontSize: "11px",
+              fontSize: "10px",
               color: "#44ff44",
             })
             .setOrigin(0.5)
@@ -122,9 +128,9 @@ export class LevelSelectScene extends Phaser.Scene {
 
         container.add(
           this.add
-            .text(cardW / 2, 140, "✅ COMPLETA", {
+            .text(cardW / 2, 115, "✅ COMPLETA", {
               fontFamily: "monospace",
-              fontSize: "11px",
+              fontSize: "10px",
               color: "#44ff44",
             })
             .setOrigin(0.5)
@@ -132,9 +138,9 @@ export class LevelSelectScene extends Phaser.Scene {
       } else if (!isUnlocked) {
         container.add(
           this.add
-            .text(cardW / 2, 120, "🔒", {
+            .text(cardW / 2, 100, "🔒", {
               fontFamily: "monospace",
-              fontSize: "24px",
+              fontSize: "20px",
             })
             .setOrigin(0.5)
         );

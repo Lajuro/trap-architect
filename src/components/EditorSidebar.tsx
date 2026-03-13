@@ -18,6 +18,7 @@ export function EditorSidebar() {
   const [selectedId, setSelectedId] = useState(1);
   const [levelName, setLevelName] = useState("Meu Nível");
   const [bgColor, setBgColor] = useState("#5c94fc");
+  const [music, setMusic] = useState("easy");
   const [gridW, setGridW] = useState(100);
   const [gridH, setGridH] = useState(15);
   const [trolls, setTrolls] = useState<TrollTrigger[]>([]);
@@ -39,6 +40,7 @@ export function EditorSidebar() {
       const d = data as LevelData;
       setLevelName(d.name);
       setBgColor(d.bgColor);
+      setMusic(d.music || "easy");
       setGridW(d.gridW);
       setGridH(d.gridH);
       setTrolls(d.trolls);
@@ -182,6 +184,22 @@ export function EditorSidebar() {
             }}
             className="w-8 h-6 rounded cursor-pointer"
           />
+        </div>
+        <div className="flex items-center gap-2 mb-2">
+          <label className="text-xs text-muted-foreground">Música:</label>
+          <select
+            value={music}
+            onChange={(e) => {
+              setMusic(e.target.value);
+              gameEvents.emit(EDITOR_EVENTS.SET_LEVEL_META, { music: e.target.value });
+            }}
+            className="flex-1 bg-muted border border-border rounded px-2 py-1 text-xs"
+          >
+            <option value="easy">Calmo</option>
+            <option value="medium">Padrão</option>
+            <option value="hard">Intenso</option>
+            <option value="none">Nenhuma</option>
+          </select>
         </div>
         <div className="flex gap-2">
           <div className="flex-1">

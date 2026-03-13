@@ -22,7 +22,7 @@ import { TileType, type ParsedLevel, type GameEntity } from "../types";
 import { gameEvents, GAME_EVENTS } from "../events";
 import { DEMO_LEVEL } from "../levels/demo";
 import { getCampaignLevel, CAMPAIGN_LEVELS } from "../levels/campaign";
-import { playJump, playDeath, playCoin, playComplete, playSpring, playStomp } from "../audio";
+import { playJump, playDeath, playCoin, playComplete, playSpring, playStomp, playBGM } from "../audio";
 
 interface PlayerSprite extends Phaser.GameObjects.Image {
   vx: number;
@@ -85,6 +85,16 @@ export class GameScene extends Phaser.Scene {
     this.crumbling = [];
 
     this.cameras.main.setBackgroundColor(this.level.bgColor);
+
+    // Play BGM based on level music field
+    const music = this.level.music;
+    if (music === "easy" || music === "medium" || music === "hard") {
+      playBGM(music);
+    } else if (music === "level1") {
+      playBGM("easy");
+    } else {
+      playBGM("medium");
+    }
 
     // Build tile map
     this.buildTileMap();
@@ -811,12 +821,180 @@ export class GameScene extends Phaser.Scene {
       if (this.levelIndex >= 0 && this.levelIndex < CAMPAIGN_LEVELS.length - 1) {
         // Next level
         this.scene.start("GameScene", { levelIndex: this.levelIndex + 1 });
+      } else if (this.levelIndex === CAMPAIGN_LEVELS.length - 1) {
+        // Campaign complete — show victory screen
+        this.showCampaignVictory();
       } else if (this.levelIndex >= 0) {
-        // All levels complete — back to level select
         this.scene.start("LevelSelectScene");
       } else {
         this.scene.start("MenuScene");
       }
+    });
+  }
+
+  private showCampaignVictory(): void {
+    // Collect campaign stats from localStorage
+    let totalDeaths = 0;
+    let totalCoins = 0;
+    try {
+      const raw = localStorage.getItem("trap_architect_progress");
+      const progress = raw ? JSON.parse(raw) : {};
+      for (let i = 0; i < CAMPAIGN_LEVELS.length; i++) {
+        if (progress[i]) {
+          totalDeaths += progress[i].bestDeaths || 0;
+          totalCoins += progress[i].bestCoins || 0;
+        }
+      }
+    } catch { /* ignore */ }
+
+    // Unlock "Arquiteto" skin
+    try {
+      const unlocked = JSON.parse(localStorage.getItem("trap_unlocked_cosmetics") || "[]");
+      if (!unlocked.includes("golden")) {
+        unlocked.push("golden");
+        localStorage.setItem("trap_unlocked_cosmetics", JSON.stringify(unlocked));
+      }
+      localStorage.setItem("trap_campaign_completed", "true");
+    } catch { /* ignore */ }
+
+    // Emit campaign complete event
+    gameEvents.emit(GAME_EVENTS.CAMPAIGN_COMPLETE, { totalDeaths, totalCoins });
+
+    // Dark overlay
+    this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.85)
+      .setScrollFactor(0)
+      .setDepth(300);
+
+    // Title
+    const title = this.add
+      .text(GAME_WIDTH / 2, 60, "🏆 CAMPANHA COMPLETA! 🏆", {
+        fontFamily: "monospace",
+        fontSize: "28px",
+        color: "#FFD700",
+        stroke: "#000000",
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(301);
+
+    this.tweens.add({
+      targets: title,
+      scaleX: 1.05,
+      scaleY: 1.05,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+
+    // Stats
+    this.add
+      .text(GAME_WIDTH / 2, 140, `💀 Mortes totais: ${totalDeaths}`, {
+        fontFamily: "monospace",
+        fontSize: "16px",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(301);
+
+    this.add
+      .text(GAME_WIDTH / 2, 170, `🪙 Moedas totais: ${totalCoins}`, {
+        fontFamily: "monospace",
+        fontSize: "16px",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(301);
+
+    // Unlock message
+    this.add
+      .text(GAME_WIDTH / 2, 220, "🎁 Skin desbloqueada: Gato Dourado!", {
+        fontFamily: "monospace",
+        fontSize: "14px",
+        color: "#FFD700",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(301);
+
+    // CTA
+    this.add
+      .text(GAME_WIDTH / 2, 270, "Agora é sua vez de criar! 🎮", {
+        fontFamily: "monospace",
+        fontSize: "14px",
+        color: "#a3a3a3",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(301);
+
+    // Confetti particles
+    this.createVictoryParticles();
+
+    // Buttons
+    const menuBtn = this.add
+      .text(GAME_WIDTH / 2 - 100, 340, "Menu", {
+        fontFamily: "monospace",
+        fontSize: "16px",
+        color: "#ffffff",
+        backgroundColor: "#333333",
+        padding: { x: 16, y: 8 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(301)
+      .setInteractive({ useHandCursor: true });
+
+    menuBtn.on("pointerover", () => menuBtn.setAlpha(0.8));
+    menuBtn.on("pointerout", () => menuBtn.setAlpha(1));
+    menuBtn.on("pointerdown", () => this.scene.start("MenuScene"));
+
+    const selectBtn = this.add
+      .text(GAME_WIDTH / 2 + 100, 340, "Fases", {
+        fontFamily: "monospace",
+        fontSize: "16px",
+        color: "#ffffff",
+        backgroundColor: "#ff8c00",
+        padding: { x: 16, y: 8 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(301)
+      .setInteractive({ useHandCursor: true });
+
+    selectBtn.on("pointerover", () => selectBtn.setAlpha(0.8));
+    selectBtn.on("pointerout", () => selectBtn.setAlpha(1));
+    selectBtn.on("pointerdown", () => this.scene.start("LevelSelectScene"));
+  }
+
+  private createVictoryParticles(): void {
+    const colors = [0xff4444, 0x44ff44, 0x4488ff, 0xffdd44, 0xff88ff, 0x44ffff];
+    colors.forEach((color) => {
+      const key = `confetti_${color.toString(16)}`;
+      if (!this.textures.exists(key)) {
+        const tex = this.textures.createCanvas(key, 6, 6);
+        const ctx = tex!.getContext();
+        ctx.fillStyle = `#${color.toString(16).padStart(6, "0")}`;
+        ctx.fillRect(0, 0, 6, 6);
+        tex!.refresh();
+      }
+
+      this.add.particles(0, 0, key, {
+        x: { min: 0, max: GAME_WIDTH },
+        y: -10,
+        speedX: { min: -50, max: 50 },
+        speedY: { min: 50, max: 150 },
+        gravityY: 80,
+        lifespan: 4000,
+        frequency: 200,
+        quantity: 1,
+        rotate: { min: 0, max: 360 },
+        scale: { start: 1, end: 0.3 },
+      }).setScrollFactor(0).setDepth(302);
     });
   }
 

@@ -13,6 +13,7 @@ import {
 } from "../constants";
 import { TileType, type EntityType, type LevelData, type TrollTrigger } from "../types";
 import { gameEvents } from "../events";
+import { playBGM } from "../audio";
 
 // ============================================================
 // Editor Events
@@ -132,6 +133,7 @@ export class EditorScene extends Phaser.Scene {
   create(): void {
     // Background
     this.cameras.main.setBackgroundColor(this.bgColor);
+    playBGM("editor");
 
     // Set world bounds
     const worldW = this.gridW * TILE_SIZE;

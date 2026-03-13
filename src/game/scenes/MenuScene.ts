@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { GAME_WIDTH, GAME_HEIGHT } from "../constants";
 import { gameEvents, GAME_EVENTS } from "../events";
+import { playBGM } from "../audio";
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -9,6 +10,7 @@ export class MenuScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor("#0a0a0a");
+    playBGM("menu");
 
     // Title
     this.add
