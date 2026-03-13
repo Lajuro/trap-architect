@@ -1,167 +1,42 @@
-"use client";
+import type { Metadata } from "next";
+import { createClient } from "@/lib/supabase/server";
+import { CREATOR_RANKS } from "@/game/constants";
+import CreatorClient from "./CreatorClient";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
-import LevelCard from "@/components/LevelCard";
-import RankBadge from "@/components/RankBadge";
-
-interface CreatorProfile {
-  id: string;
-  nickname: string;
-  photo_url: string | null;
-  creator_rank: number;
-  levels_published: number;
-  total_plays: number;
-  total_likes: number;
-  created_at: string;
+interface Props {
+  params: Promise<{ id: string }>;
 }
 
-interface CreatorLevel {
-  id: string;
-  name: string;
-  subtitle: string | null;
-  bg_color: string;
-  plays: number;
-  likes: number;
-  difficulty: number;
-  created_at: string;
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("nickname, creator_rank, levels_published, total_plays")
+    .eq("id", id)
+    .single();
+
+  if (!data) {
+    return { title: "Criador não encontrado — Trap Architect" };
+  }
+
+  const rank = CREATOR_RANKS.find((r) => r.level === data.creator_rank);
+  const title = `${data.nickname} — Trap Architect`;
+  const description = `${rank?.title ?? "Jogador"} · ${data.levels_published} níveis · ${data.total_plays} plays`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "profile",
+      siteName: "Trap Architect",
+    },
+  };
 }
 
 export default function CreatorPage() {
-  const params = useParams<{ id: string }>();
-  const creatorId = params.id;
-
-  const [profile, setProfile] = useState<CreatorProfile | null>(null);
-  const [levels, setLevels] = useState<CreatorLevel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function fetchCreator() {
-      try {
-        const res = await fetch(`/api/creators/${creatorId}`);
-        if (!res.ok) {
-          setError("Criador não encontrado");
-          return;
-        }
-        const data = await res.json();
-        setProfile(data.profile);
-        setLevels(data.levels || []);
-      } catch {
-        setError("Erro ao carregar perfil");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchCreator();
-  }, [creatorId]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Carregando perfil...</p>
-      </div>
-    );
-  }
-
-  if (error || !profile) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
-        <p className="text-destructive text-lg">
-          {error || "Criador não encontrado"}
-        </p>
-        <Link href="/browse" className="text-primary hover:underline">
-          ← Voltar para Explorar
-        </Link>
-      </div>
-    );
-  }
-
-  const joinDate = new Date(profile.created_at).toLocaleDateString("pt-BR", {
-    year: "numeric",
-    month: "long",
-  });
-
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="border-b border-border px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-primary">
-            🐱 Trap Architect
-          </Link>
-          <Link
-            href="/browse"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            ← Explorar
-          </Link>
-        </div>
-      </header>
-
-      <main className="flex-1 max-w-7xl mx-auto px-6 py-8 w-full">
-        {/* Profile card */}
-        <div className="bg-card border border-border rounded-lg p-8 mb-8">
-          <div className="flex items-start gap-6">
-            {/* Avatar placeholder */}
-            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center text-3xl shrink-0">
-              🐱
-            </div>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold mb-1">{profile.nickname}</h1>
-              <div className="mb-2">
-                <RankBadge rankLevel={profile.creator_rank} />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Membro desde {joinDate}
-              </p>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-muted rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold">{profile.levels_published}</p>
-              <p className="text-sm text-muted-foreground">Níveis Criados</p>
-            </div>
-            <div className="bg-muted rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold">{profile.total_plays}</p>
-              <p className="text-sm text-muted-foreground">Plays Totais</p>
-            </div>
-            <div className="bg-muted rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold">{profile.total_likes}</p>
-              <p className="text-sm text-muted-foreground">Likes Totais</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Levels */}
-        <h2 className="text-2xl font-bold mb-6">
-          Níveis de {profile.nickname}
-        </h2>
-        {levels.length === 0 ? (
-          <p className="text-muted-foreground">
-            Este criador ainda não publicou nenhum nível.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {levels.map((level) => (
-              <LevelCard
-                key={level.id}
-                id={level.id}
-                name={level.name}
-                subtitle={level.subtitle}
-                plays={level.plays}
-                likes={level.likes}
-                difficulty={level.difficulty}
-                bgColor={level.bg_color}
-              />
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
-  );
+  return <CreatorClient />;
 }

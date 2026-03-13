@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { ErrorBoundary, GameErrorFallback } from "./ErrorBoundary";
 
-export function EditorCanvas() {
+function EditorCanvasInner() {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
 
@@ -35,5 +36,13 @@ export function EditorCanvas() {
       ref={containerRef}
       className="w-full max-w-[800px] aspect-[800/600] mx-auto rounded-lg overflow-hidden border-2 border-border"
     />
+  );
+}
+
+export function EditorCanvas() {
+  return (
+    <ErrorBoundary fallback={<GameErrorFallback />}>
+      <EditorCanvasInner />
+    </ErrorBoundary>
   );
 }

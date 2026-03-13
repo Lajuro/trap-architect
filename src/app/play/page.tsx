@@ -1,5 +1,12 @@
+"use client";
+
 import Link from "next/link";
-import { GameCanvas } from "@/components/GameCanvas";
+import dynamic from "next/dynamic";
+
+const GameCanvas = dynamic(
+  () => import("@/components/GameCanvas").then((m) => m.GameCanvas),
+  { ssr: false },
+);
 
 export default function PlayPage() {
   return (

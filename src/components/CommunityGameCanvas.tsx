@@ -2,12 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import type { ParsedLevel } from "@/game/types";
+import { ErrorBoundary, GameErrorFallback } from "./ErrorBoundary";
 
 interface CommunityGameCanvasProps {
   level: ParsedLevel;
 }
 
-export function CommunityGameCanvas({ level }: CommunityGameCanvasProps) {
+function CommunityGameCanvasInner({ level }: CommunityGameCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
 
@@ -56,5 +57,13 @@ export function CommunityGameCanvas({ level }: CommunityGameCanvasProps) {
       ref={containerRef}
       className="w-full max-w-[800px] aspect-[800/480] mx-auto rounded-lg overflow-hidden border-2 border-border"
     />
+  );
+}
+
+export function CommunityGameCanvas({ level }: CommunityGameCanvasProps) {
+  return (
+    <ErrorBoundary fallback={<GameErrorFallback />}>
+      <CommunityGameCanvasInner level={level} />
+    </ErrorBoundary>
   );
 }
