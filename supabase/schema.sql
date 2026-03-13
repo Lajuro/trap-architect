@@ -32,7 +32,10 @@ create table if not exists public.profiles (
   equipped_trail text not null default '',
   equipped_death_effect text not null default '',
   equipped_frame text not null default '',
-  unlocked_cosmetics text[] not null default '{}'
+  unlocked_cosmetics text[] not null default '{}',
+  -- Campaign progress (cloud save)
+  campaign_progress jsonb not null default '{}',
+  campaign_completed boolean not null default false
 );
 
 -- RLS: Users can read all profiles, update only their own

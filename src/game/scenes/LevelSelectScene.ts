@@ -208,5 +208,33 @@ export class LevelSelectScene extends Phaser.Scene {
       if (coins > existing.bestCoins) existing.bestCoins = coins;
     }
     saveProgress(this.progress);
+
+    // Fire-and-forget cloud sync
+    syncProgressToCloud(this.progress);
   }
+}
+
+/** Push campaign progress to DB (async, non-blocking) */
+function syncProgressToCloud(progress: Record<number, LevelProgress>): void {
+  // Convert to DB-friendly format (string keys)
+  const dbProgress: Record<string, { completed: boolean; deaths: number; coins: number }> = {};
+  let allCompleted = true;
+  for (let i = 0; i < 10; i++) {
+    const p = progress[i];
+    if (p) {
+      dbProgress[String(i)] = { completed: p.completed, deaths: p.bestDeaths, coins: p.bestCoins };
+      if (!p.completed) allCompleted = false;
+    } else {
+      allCompleted = false;
+    }
+  }
+
+  fetch("/api/profile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      campaign_progress: dbProgress,
+      ...(allCompleted ? { campaign_completed: true } : {}),
+    }),
+  }).catch(() => { /* offline — will sync on next login */ });
 }

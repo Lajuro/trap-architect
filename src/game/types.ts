@@ -192,3 +192,26 @@ export interface CosmeticSkin {
   cost: number;
   color: string;
 }
+
+/** Cosmetic trail definition */
+export interface CosmeticTrail {
+  id: string;
+  name: string;
+  cost: number;
+  colors: string[];
+}
+
+/** Cosmetic death effect definition */
+export interface CosmeticDeathEffect {
+  id: string;
+  name: string;
+  cost: number;
+}
+
+/** Cosmetic profile frame definition */
+export interface CosmeticFrame {
+  id: string;
+  name: string;
+  cost: number;
+  style: "none" | "solid" | "gradient" | "animated";
+}

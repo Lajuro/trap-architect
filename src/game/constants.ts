@@ -1,4 +1,4 @@
-import { TileType, type CreatorRank, type CosmeticSkin, type PaletteItem } from "./types";
+import { TileType, type CreatorRank, type CosmeticSkin, type CosmeticTrail, type CosmeticDeathEffect, type CosmeticFrame, type PaletteItem } from "./types";
 
 // ============================================================
 // Physics
@@ -96,6 +96,39 @@ export const SKINS: CosmeticSkin[] = [
   { id: "troll", name: "Gato Troll", cost: 300, color: "#FF4444" },
   { id: "ice", name: "Gato Gelo", cost: 250, color: "#88DDFF" },
   { id: "lava", name: "Gato Lava", cost: 400, color: "#FF4400" },
+];
+
+// ============================================================
+// Cosmetic Trails
+// ============================================================
+export const TRAILS: CosmeticTrail[] = [
+  { id: "trail_none", name: "Nenhum", cost: 0, colors: [] },
+  { id: "trail_fire", name: "Fogo", cost: 15, colors: ["#FF4500", "#FF8C00"] },
+  { id: "trail_ice", name: "Gelo", cost: 15, colors: ["#00BFFF", "#87CEEB"] },
+  { id: "trail_stars", name: "Estrelas", cost: 25, colors: ["#FFD700", "#FFFFFF"] },
+  { id: "trail_rainbow", name: "Arco-Íris", cost: 50, colors: ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#8B00FF"] },
+];
+
+// ============================================================
+// Cosmetic Death Effects
+// ============================================================
+export const DEATH_EFFECTS: CosmeticDeathEffect[] = [
+  { id: "death_default", name: "Padrão", cost: 0 },
+  { id: "death_pixelate", name: "Pixelado", cost: 15 },
+  { id: "death_ghost", name: "Fantasma", cost: 20 },
+  { id: "death_confetti", name: "Confete", cost: 25 },
+  { id: "death_shatter", name: "Estilhaçar", cost: 40 },
+];
+
+// ============================================================
+// Cosmetic Profile Frames
+// ============================================================
+export const FRAMES: CosmeticFrame[] = [
+  { id: "frame_none", name: "Nenhum", cost: 0, style: "none" },
+  { id: "frame_gold", name: "Dourado", cost: 20, style: "solid" },
+  { id: "frame_diamond", name: "Diamante", cost: 35, style: "gradient" },
+  { id: "frame_troll", name: "Troll", cost: 30, style: "solid" },
+  { id: "frame_fire", name: "Fogo", cost: 40, style: "animated" },
 ];
 
 // ============================================================

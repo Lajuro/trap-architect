@@ -6,6 +6,7 @@ interface LevelCardProps {
   subtitle?: string | null;
   authorName?: string;
   authorId?: string;
+  authorFrame?: string;
   plays: number;
   likes: number;
   difficulty: number;

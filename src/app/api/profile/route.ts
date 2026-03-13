@@ -33,7 +33,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json();
-  const allowed = ["nickname", "photo_url"];
+  const allowed = ["nickname", "photo_url", "equipped_skin", "equipped_trail", "equipped_death_effect", "equipped_frame", "campaign_progress", "campaign_completed"];
   const updates: Record<string, unknown> = {};
   for (const key of allowed) {
     if (body[key] !== undefined) {

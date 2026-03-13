@@ -247,6 +247,32 @@ export class BootScene extends Phaser.Scene {
     g.fillRect(12, 2, 4, 6);
     g.generateTexture("entity_flying", 16, 16);
 
+    // Trail particle (small 3x3)
+    g.clear();
+    g.fillStyle(0xffffff);
+    g.fillRect(0, 0, 3, 3);
+    g.generateTexture("particle_trail", 3, 3);
+
+    // Death pixel block (6x6 for pixelate effect)
+    g.clear();
+    g.fillStyle(0xff8c00);
+    g.fillRect(0, 0, 6, 6);
+    g.generateTexture("particle_pixel", 6, 6);
+
+    // Ghost sprite (semi-transparent cat silhouette)
+    g.clear();
+    g.fillStyle(0xaaccff, 0.6);
+    g.fillRect(3, 6, 16, 22);
+    g.fillRect(3, 0, 5, 8);
+    g.fillRect(14, 0, 5, 8);
+    g.generateTexture("particle_ghost", 22, 28);
+
+    // Glass shard (angular fragment for shatter)
+    g.clear();
+    g.fillStyle(0xccddff);
+    g.fillTriangle(0, 0, 8, 3, 2, 8);
+    g.generateTexture("particle_shard", 8, 8);
+
     g.destroy();
   }
 }

@@ -58,6 +58,7 @@ export class GameScene extends Phaser.Scene {
   private deathEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private jumpEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private coinEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private trailEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
   // Pause
   private paused = false;
   private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
@@ -197,6 +198,9 @@ export class GameScene extends Phaser.Scene {
 
     // Troll triggers
     this.checkTrolls();
+
+    // Trail effect
+    this.updateTrail();
 
     // Update HUD
     this.hudCoins.setText(`🪙 ${this.coins}`);
@@ -1060,10 +1064,172 @@ export class GameScene extends Phaser.Scene {
       emitting: false,
     });
     this.coinEmitter.setDepth(60);
+
+    // Trail emitter (configured based on equipped trail)
+    this.setupTrailEmitter();
+  }
+
+  private setupTrailEmitter(): void {
+    if (this.trailEmitter) {
+      this.trailEmitter.destroy();
+      this.trailEmitter = null;
+    }
+
+    if (typeof window === "undefined") return;
+    const trailId = localStorage.getItem("trap_equipped_trail") || "trail_none";
+    if (trailId === "trail_none") return;
+
+    // Create colored trail texture
+    const trailColors: Record<string, number> = {
+      trail_fire: 0xff4500,
+      trail_ice: 0x00bfff,
+      trail_stars: 0xffd700,
+      trail_rainbow: 0xff0000,
+    };
+
+    const color = trailColors[trailId] || 0xffffff;
+    const texKey = `trail_tex_${trailId}`;
+    if (!this.textures.exists(texKey)) {
+      const tex = this.textures.createCanvas(texKey, 3, 3);
+      const ctx = tex!.getContext();
+      ctx.fillStyle = "#" + color.toString(16).padStart(6, "0");
+      ctx.fillRect(0, 0, 3, 3);
+      tex!.refresh();
+    }
+
+    this.trailEmitter = this.add.particles(0, 0, texKey, {
+      speed: { min: 10, max: 40 },
+      angle: { min: 160, max: 200 },
+      lifespan: 500,
+      scale: { start: 1.5, end: 0 },
+      alpha: { start: 0.8, end: 0 },
+      quantity: 1,
+      frequency: 30,
+      maxParticles: 50,
+      emitting: false,
+    });
+    this.trailEmitter.setDepth(44);
+
+    // Rainbow trail uses tint cycling
+    if (trailId === "trail_rainbow") {
+      const rainbowColors = [0xff0000, 0xff7f00, 0xffff00, 0x00ff00, 0x0000ff, 0x8b00ff];
+      let colorIdx = 0;
+      this.time.addEvent({
+        delay: 100,
+        loop: true,
+        callback: () => {
+          if (this.trailEmitter) {
+            this.trailEmitter.setParticleTint(rainbowColors[colorIdx % rainbowColors.length]);
+            colorIdx++;
+          }
+        },
+      });
+    }
+  }
+
+  private updateTrail(): void {
+    if (!this.trailEmitter || !this.player.alive) {
+      if (this.trailEmitter) this.trailEmitter.emitting = false;
+      return;
+    }
+    const moving = this.player.vx !== 0 || this.player.vy !== 0;
+    this.trailEmitter.emitting = moving;
+    if (moving) {
+      this.trailEmitter.setPosition(this.player.x, this.player.y);
+    }
   }
 
   private emitDeathParticles(): void {
-    this.deathEmitter.emitParticleAt(this.player.x, this.player.y);
+    const effectId = typeof window !== "undefined"
+      ? (localStorage.getItem("trap_equipped_death_effect") || "death_default")
+      : "death_default";
+
+    const x = this.player.x;
+    const y = this.player.y;
+
+    switch (effectId) {
+      case "death_pixelate":
+        this.emitPixelateEffect(x, y);
+        break;
+      case "death_ghost":
+        this.emitGhostEffect(x, y);
+        break;
+      case "death_confetti":
+        this.emitConfettiEffect(x, y);
+        break;
+      case "death_shatter":
+        this.emitShatterEffect(x, y);
+        break;
+      default:
+        this.deathEmitter.emitParticleAt(x, y);
+        break;
+    }
+  }
+
+  private emitPixelateEffect(x: number, y: number): void {
+    // Square particles that scatter in grid pattern
+    for (let i = 0; i < 12; i++) {
+      const px = x + (Math.random() - 0.5) * PLAYER_W;
+      const py = y + (Math.random() - 0.5) * PLAYER_H;
+      const block = this.add.rectangle(px, py, 6, 6, 0xff8c00).setDepth(60);
+      this.tweens.add({
+        targets: block,
+        x: px + (Math.random() - 0.5) * 120,
+        y: py + Math.random() * 80 + 30,
+        alpha: 0,
+        angle: Math.random() * 360,
+        duration: 600,
+        ease: "Power2",
+        onComplete: () => block.destroy(),
+      });
+    }
+  }
+
+  private emitGhostEffect(x: number, y: number): void {
+    const ghost = this.add.image(x, y, "particle_ghost").setDepth(60).setAlpha(0.7);
+    this.tweens.add({
+      targets: ghost,
+      y: y - 80,
+      alpha: 0,
+      duration: 1200,
+      ease: "Power1",
+      onComplete: () => ghost.destroy(),
+    });
+  }
+
+  private emitConfettiEffect(x: number, y: number): void {
+    const colors = [0xff4444, 0x44ff44, 0x4444ff, 0xffff44, 0xff44ff, 0x44ffff];
+    for (let i = 0; i < 16; i++) {
+      const color = colors[i % colors.length];
+      const piece = this.add.rectangle(x, y, 4, 4, color).setDepth(60);
+      this.tweens.add({
+        targets: piece,
+        x: x + (Math.random() - 0.5) * 150,
+        y: y + (Math.random() - 0.5) * 150,
+        alpha: 0,
+        angle: Math.random() * 720,
+        duration: 800,
+        ease: "Power2",
+        onComplete: () => piece.destroy(),
+      });
+    }
+  }
+
+  private emitShatterEffect(x: number, y: number): void {
+    for (let i = 0; i < 10; i++) {
+      const shard = this.add.image(x, y, "particle_shard").setDepth(60);
+      shard.setAngle(Math.random() * 360);
+      this.tweens.add({
+        targets: shard,
+        x: x + (Math.random() - 0.5) * 160,
+        y: y + Math.random() * 100,
+        alpha: 0,
+        angle: shard.angle + (Math.random() - 0.5) * 360,
+        duration: 700,
+        ease: "Power2",
+        onComplete: () => shard.destroy(),
+      });
+    }
   }
 
   private emitJumpParticles(): void {

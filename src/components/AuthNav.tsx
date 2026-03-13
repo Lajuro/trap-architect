@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { hydrateFromProfile } from "@/lib/cosmetics-sync";
 
 export default function AuthNav() {
   const [user, setUser] = useState<{ email?: string } | null>(null);
@@ -12,9 +13,33 @@ export default function AuthNav() {
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUser(user);
       setLoading(false);
+
+      // Hydrate cosmetics from DB on login
+      if (user) {
+        try {
+          const res = await fetch("/api/shop/inventory");
+          if (res.ok) {
+            const data = await res.json();
+            // Also fetch campaign progress
+            const profileRes = await fetch("/api/profile");
+            const profileData = profileRes.ok ? await profileRes.json() : null;
+            hydrateFromProfile({
+              equipped_skin: data.equipped_skin,
+              equipped_trail: data.equipped_trail,
+              equipped_death_effect: data.equipped_death_effect,
+              equipped_frame: data.equipped_frame,
+              unlocked_cosmetics: data.unlocked_cosmetics,
+              campaign_progress: profileData?.profile?.campaign_progress || {},
+              campaign_completed: profileData?.profile?.campaign_completed || false,
+            });
+          }
+        } catch {
+          // Offline fallback — use existing localStorage
+        }
+      }
     });
   }, [supabase.auth]);
 
