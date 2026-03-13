@@ -22,7 +22,7 @@ import { TileType, type ParsedLevel, type GameEntity } from "../types";
 import { gameEvents, GAME_EVENTS } from "../events";
 import { DEMO_LEVEL } from "../levels/demo";
 import { getCampaignLevel, CAMPAIGN_LEVELS } from "../levels/campaign";
-import { playJump, playDeath, playCoin, playComplete, playSpring, playStomp, playBGM } from "../audio";
+import { playJump, playDeath, playCoin, playComplete, playSpring, playStomp, playBGM, isSoundEnabled, isMusicEnabled, setMusicEnabled, setSoundEnabled, stopBGM } from "../audio";
 
 interface PlayerSprite extends Phaser.GameObjects.Image {
   vx: number;
@@ -52,6 +52,7 @@ export class GameScene extends Phaser.Scene {
   private crumbling: CrumblingTile[] = [];
   private hudCoins!: Phaser.GameObjects.Text;
   private hudDeaths!: Phaser.GameObjects.Text;
+  private hudTime!: Phaser.GameObjects.Text;
   private levelNameText!: Phaser.GameObjects.Text;
   private levelNameTimer = 0;
   // Particles
@@ -62,6 +63,11 @@ export class GameScene extends Phaser.Scene {
   // Pause
   private paused = false;
   private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
+  // Time tracking
+  private startTime = 0;
+  private elapsedMs = 0;
+  private pauseStartTime = 0;
+  private totalPausedMs = 0;
 
   constructor() {
     super({ key: "GameScene" });
@@ -84,6 +90,10 @@ export class GameScene extends Phaser.Scene {
     this.coins = 0;
     this.deaths = 0;
     this.crumbling = [];
+    this.startTime = Date.now();
+    this.elapsedMs = 0;
+    this.pauseStartTime = 0;
+    this.totalPausedMs = 0;
 
     this.cameras.main.setBackgroundColor(this.level.bgColor);
 
@@ -130,6 +140,15 @@ export class GameScene extends Phaser.Scene {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#ff4444",
+      })
+      .setScrollFactor(0)
+      .setDepth(100);
+
+    this.hudTime = this.add
+      .text(16, 64, "⏱ 0s", {
+        fontFamily: "monospace",
+        fontSize: "16px",
+        color: "#aaaaaa",
       })
       .setScrollFactor(0)
       .setDepth(100);
@@ -205,6 +224,8 @@ export class GameScene extends Phaser.Scene {
     // Update HUD
     this.hudCoins.setText(`🪙 ${this.coins}`);
     this.hudDeaths.setText(`💀 ${this.deaths}`);
+    const elapsedSecs = Math.floor((Date.now() - this.startTime - this.totalPausedMs) / 1000);
+    this.hudTime.setText(`⏱ ${elapsedSecs}s`);
   }
 
   private buildTileMap(): void {
@@ -1246,66 +1267,196 @@ export class GameScene extends Phaser.Scene {
   private pauseGame(): void {
     if (this.paused) return;
     this.paused = true;
+    this.pauseStartTime = Date.now();
     gameEvents.emit(GAME_EVENTS.GAME_PAUSED);
 
-    const bg = this.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.65)
-      .setScrollFactor(0)
-      .setDepth(300);
+    const cw = GAME_WIDTH;
+    const ch = GAME_HEIGHT;
 
+    // Dark overlay (click outside panel to resume)
+    const bg = this.add
+      .rectangle(cw / 2, ch / 2, cw, ch, 0x000000, 0.6)
+      .setScrollFactor(0)
+      .setDepth(300)
+      .setInteractive({ useHandCursor: false })
+      .on("pointerdown", (_p: Phaser.Input.Pointer, _lx: number, _ly: number, ev: Phaser.Types.Input.EventData) => {
+        ev.stopPropagation();
+        this.resumeGame();
+      });
+
+    // Panel background
+    const panelW = 320;
+    const panelH = 340;
+    const panelX = cw / 2;
+    const panelY = ch / 2;
+
+    const panel = this.add
+      .rectangle(panelX, panelY, panelW, panelH, 0x1a1a2e, 0.95)
+      .setScrollFactor(0)
+      .setDepth(301)
+      .setStrokeStyle(2, 0x6366f1)
+      .setInteractive()
+      .on("pointerdown", (_p: Phaser.Input.Pointer, _lx: number, _ly: number, ev: Phaser.Types.Input.EventData) => {
+        ev.stopPropagation();
+      });
+
+    // Title
     const title = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 50, "⏸ PAUSADO", {
+      .text(panelX, panelY - 140, "⏸ Pausado", {
         fontFamily: "monospace",
-        fontSize: "28px",
+        fontSize: "24px",
         color: "#ffffff",
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(301);
+      .setDepth(302);
 
-    const btnContinue = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 10, "▶ Continuar", {
+    // Stats
+    const elapsed = Date.now() - this.startTime - this.totalPausedMs;
+    const secs = Math.floor(elapsed / 1000);
+    const statsText = `💀 ${this.deaths}  ·  🪙 ${this.coins}  ·  ⏱ ${secs}s`;
+    const stats = this.add
+      .text(panelX, panelY - 105, statsText, {
         fontFamily: "monospace",
-        fontSize: "18px",
-        color: "#44ff44",
-        backgroundColor: "rgba(0,0,0,0.5)",
-        padding: { x: 16, y: 8 },
+        fontSize: "13px",
+        color: "#9ca3af",
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(301)
-      .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => this.resumeGame());
+      .setDepth(302);
 
-    const btnQuit = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 60, "✕ Sair", {
+    // Helper: create button
+    const makeBtn = (y: number, label: string, color: string, cb: () => void) => {
+      const btn = this.add
+        .text(panelX, y, label, {
+          fontFamily: "monospace",
+          fontSize: "16px",
+          color,
+          backgroundColor: "rgba(255,255,255,0.07)",
+          padding: { x: 40, y: 10 },
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(302)
+        .setInteractive({ useHandCursor: true })
+        .on("pointerover", () => btn.setStyle({ backgroundColor: "rgba(255,255,255,0.15)" }))
+        .on("pointerout", () => btn.setStyle({ backgroundColor: "rgba(255,255,255,0.07)" }))
+        .on("pointerdown", (_p: Phaser.Input.Pointer, _lx: number, _ly: number, ev: Phaser.Types.Input.EventData) => {
+          ev.stopPropagation();
+          cb();
+        });
+      return btn;
+    };
+
+    const btnContinue = makeBtn(panelY - 60, "▶  Continuar", "#4ade80", () => this.resumeGame());
+    const btnRestart = makeBtn(panelY - 15, "↻  Reiniciar", "#fbbf24", () => {
+      this.resumeGame();
+      this.restartLevel();
+    });
+
+    // Settings section
+    const settingsLabel = this.add
+      .text(panelX, panelY + 30, "⚙  Configurações", {
         fontFamily: "monospace",
-        fontSize: "18px",
-        color: "#ff4444",
-        backgroundColor: "rgba(0,0,0,0.5)",
-        padding: { x: 16, y: 8 },
+        fontSize: "13px",
+        color: "#6366f1",
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(301)
+      .setDepth(302);
+
+    // SFX toggle
+    let sfxOn = isSoundEnabled();
+    const sfxBtn = this.add
+      .text(panelX, panelY + 60, `SFX: ${sfxOn ? "✅ Ligado" : "❌ Desligado"}`, {
+        fontFamily: "monospace",
+        fontSize: "14px",
+        color: sfxOn ? "#4ade80" : "#ef4444",
+        backgroundColor: "rgba(255,255,255,0.05)",
+        padding: { x: 24, y: 6 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(302)
       .setInteractive({ useHandCursor: true })
-      .on("pointerdown", () => {
-        this.resumeGame();
-        if (this.levelIndex >= 0) {
-          this.scene.start("LevelSelectScene");
-        } else {
-          this.scene.start("MenuScene");
-        }
+      .on("pointerdown", (_p: Phaser.Input.Pointer, _lx: number, _ly: number, ev: Phaser.Types.Input.EventData) => {
+        ev.stopPropagation();
+        sfxOn = !sfxOn;
+        setSoundEnabled(sfxOn);
+        sfxBtn.setText(`SFX: ${sfxOn ? "✅ Ligado" : "❌ Desligado"}`);
+        sfxBtn.setColor(sfxOn ? "#4ade80" : "#ef4444");
       });
 
-    this.pauseOverlay = [bg, title, btnContinue, btnQuit];
+    // Music toggle
+    let musicOn = isMusicEnabled();
+    const musicBtn = this.add
+      .text(panelX, panelY + 95, `Música: ${musicOn ? "✅ Ligada" : "❌ Desligada"}`, {
+        fontFamily: "monospace",
+        fontSize: "14px",
+        color: musicOn ? "#4ade80" : "#ef4444",
+        backgroundColor: "rgba(255,255,255,0.05)",
+        padding: { x: 12, y: 6 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(302)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", (_p: Phaser.Input.Pointer, _lx: number, _ly: number, ev: Phaser.Types.Input.EventData) => {
+        ev.stopPropagation();
+        musicOn = !musicOn;
+        setMusicEnabled(musicOn);
+        if (musicOn) {
+          const m = this.level.music;
+          playBGM((m === "easy" || m === "medium" || m === "hard") ? m : "medium");
+        }
+        musicBtn.setText(`Música: ${musicOn ? "✅ Ligada" : "❌ Desligada"}`);
+        musicBtn.setColor(musicOn ? "#4ade80" : "#ef4444");
+      });
+
+    // Quit button
+    const btnQuit = makeBtn(panelY + 140, "✕  Sair", "#ef4444", () => {
+      this.resumeGame();
+      stopBGM();
+      if (this.levelIndex >= 0) {
+        this.scene.start("LevelSelectScene");
+      } else {
+        this.scene.start("MenuScene");
+      }
+    });
+
+    this.pauseOverlay = [bg, panel, title, stats, btnContinue, btnRestart, settingsLabel, sfxBtn, musicBtn, btnQuit];
+
+    // R to restart while paused
+    if (this.input.keyboard) {
+      const rKey = this.input.keyboard.addKey("R");
+      const rHandler = () => {
+        if (this.paused) {
+          rKey.off("down", rHandler);
+          this.resumeGame();
+          this.restartLevel();
+        }
+      };
+      rKey.on("down", rHandler);
+      // Store ref for cleanup
+      (this as unknown as Record<string, unknown>)._pauseRKey = rKey;
+      (this as unknown as Record<string, unknown>)._pauseRHandler = rHandler;
+    }
   }
 
   private resumeGame(): void {
     if (!this.paused) return;
     this.paused = false;
+    // Accumulate paused time so we don't count it
+    this.totalPausedMs += Date.now() - this.pauseStartTime;
     gameEvents.emit(GAME_EVENTS.GAME_RESUMED);
     this.pauseOverlay.forEach((obj) => obj.destroy());
     this.pauseOverlay = [];
+
+    // Cleanup R key listener
+    const rKey = (this as unknown as Record<string, unknown>)._pauseRKey as Phaser.Input.Keyboard.Key | undefined;
+    const rHandler = (this as unknown as Record<string, unknown>)._pauseRHandler as (() => void) | undefined;
+    if (rKey && rHandler) {
+      rKey.off("down", rHandler);
+    }
   }
 }

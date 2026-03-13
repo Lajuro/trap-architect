@@ -11,6 +11,7 @@ interface LevelSummary {
   likes: number;
   difficulty: number;
   bg_color: string;
+  thumbnail: string | null;
   profiles: { nickname: string; photo_url: string | null };
   author_id: string;
 }
@@ -60,6 +61,7 @@ export default function HomeLevelFeed({
                 likes={level.likes}
                 difficulty={level.difficulty}
                 bgColor={level.bg_color}
+                thumbnail={level.thumbnail}
                 authorName={level.profiles?.nickname}
                 authorId={level.author_id}
               />

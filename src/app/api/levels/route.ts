@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { recalcCreatorRank } from "@/lib/rank-check";
 
 /** GET /api/levels — list published levels with sorting/pagination */
 export async function GET(request: NextRequest) {
@@ -11,6 +12,7 @@ export async function GET(request: NextRequest) {
   const featured = searchParams.get("featured") === "true";
   const authorId = searchParams.get("author");
   const search = searchParams.get("search");
+  const difficulty = searchParams.get("difficulty");
   const offset = (page - 1) * limit;
 
   const allowedSorts = ["created_at", "plays", "likes", "difficulty", "name"];
@@ -37,6 +39,18 @@ export async function GET(request: NextRequest) {
     query = query.ilike("name", `%${search}%`);
   }
 
+  // Difficulty range filter
+  const difficultyRanges: Record<string, [number, number]> = {
+    easy: [0, 0.3],
+    medium: [0.3, 0.6],
+    hard: [0.6, 0.8],
+    extreme: [0.8, 1.01],
+  };
+  if (difficulty && difficultyRanges[difficulty]) {
+    const [min, max] = difficultyRanges[difficulty];
+    query = query.gte("difficulty", min).lt("difficulty", max).gte("plays", 10);
+  }
+
   const { data, error, count } = await query;
 
   if (error) {
@@ -61,7 +75,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { name, subtitle, bgColor, music, gridW, gridH, tiles, entities, trolls, playerStart, published } = body;
+  const { name, subtitle, bgColor, music, gridW, gridH, tiles, entities, trolls, playerStart, published, thumbnail } = body;
 
   if (!name || !tiles || !gridW || !gridH) {
     return NextResponse.json({ error: "Dados do nível incompletos" }, { status: 400 });
@@ -82,6 +96,7 @@ export async function POST(request: NextRequest) {
       trolls: trolls || [],
       player_start: playerStart || { x: 3, y: 12 },
       published: published ?? false,
+      thumbnail: thumbnail || null,
     })
     .select()
     .single();
@@ -91,6 +106,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Update author's levels_published count if publishing
+  let rankUp = null;
   if (published) {
     await supabase
       .from("profiles")
@@ -103,7 +119,9 @@ export async function POST(request: NextRequest) {
           .then((r) => r.count)) ?? 0,
       })
       .eq("id", user.id);
+
+    rankUp = await recalcCreatorRank(supabase, user.id);
   }
 
-  return NextResponse.json({ level: data }, { status: 201 });
+  return NextResponse.json({ level: data, rankUp }, { status: 201 });
 }

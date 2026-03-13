@@ -18,6 +18,16 @@ interface LevelRow {
   profiles: { nickname: string };
 }
 
+interface ReportRow {
+  id: string;
+  reason: string;
+  description: string | null;
+  status: string;
+  created_at: string;
+  profiles: { nickname: string };
+  levels: { name: string; author_id: string };
+}
+
 const CATEGORIES = [
   "Nível da Semana",
   "Clássicos",
@@ -27,6 +37,7 @@ const CATEGORIES = [
 
 export default function AdminPage() {
   const [levels, setLevels] = useState<LevelRow[]>([]);
+  const [reports, setReports] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -66,10 +77,35 @@ export default function AdminPage() {
 
       setAuthorized(true);
       await loadLevels();
+      await loadReports();
       setLoading(false);
     }
     init();
   }, [router, supabase, loadLevels]);
+
+  async function loadReports() {
+    try {
+      const res = await fetch("/api/admin/reports");
+      if (res.ok) {
+        const data = await res.json();
+        setReports(data.reports || []);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleReport(reportId: string, action: string) {
+    setUpdating(reportId);
+    await fetch("/api/admin/reports", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reportId, action }),
+    });
+    await loadReports();
+    await loadLevels();
+    setUpdating(null);
+  }
 
   async function toggleFeatured(levelId: string, currentFeatured: boolean) {
     setUpdating(levelId);
@@ -195,6 +231,68 @@ export default function AdminPage() {
             </p>
           )}
         </div>
+
+        {/* Reports section */}
+        <h2 className="text-2xl font-bold mt-12 mb-4">🚩 Denúncias Pendentes</h2>
+        {reports.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">
+            Nenhuma denúncia pendente.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {reports.map((report) => {
+              const reasonLabels: Record<string, string> = {
+                offensive: "🚫 Conteúdo ofensivo",
+                impossible: "❌ Impossível",
+                spam: "📋 Spam",
+                bug: "🐛 Bug",
+                other: "🔄 Outro",
+              };
+              return (
+                <div
+                  key={report.id}
+                  className="bg-card border border-border rounded-lg p-4"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium mb-1">
+                        {report.levels?.name || "Nível removido"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Reportado por {report.profiles?.nickname || "?"} ·{" "}
+                        {reasonLabels[report.reason] || report.reason}
+                      </p>
+                      {report.description && (
+                        <p className="text-sm text-muted-foreground italic">
+                          &ldquo;{report.description}&rdquo;
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(report.created_at).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleReport(report.id, "dismissed")}
+                        disabled={updating === report.id}
+                        className="text-xs px-3 py-1.5 rounded bg-muted hover:bg-muted/80 disabled:opacity-50"
+                      >
+                        ✅ Dispensar
+                      </button>
+                      <button
+                        onClick={() => handleReport(report.id, "actioned")}
+                        disabled={updating === report.id}
+                        className="text-xs px-3 py-1.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 disabled:opacity-50"
+                      >
+                        🔒 Ocultar Nível
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </main>
     </div>
   );

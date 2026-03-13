@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { recalcCreatorRank } from "@/lib/rank-check";
 
 /** GET /api/profile — get current user profile */
 export async function GET() {
@@ -20,7 +21,13 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ profile: data });
+  // Auto-recalculate rank and notify if changed
+  const rankUp = await recalcCreatorRank(supabase, user.id);
+  if (rankUp) {
+    data.creator_rank = rankUp.newRank;
+  }
+
+  return NextResponse.json({ profile: data, rankUp });
 }
 
 /** PATCH /api/profile — update current user profile */

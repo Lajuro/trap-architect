@@ -12,6 +12,7 @@ interface LevelSummary {
   likes: number;
   difficulty: number;
   bg_color: string;
+  thumbnail: string | null;
   profiles: { nickname: string; photo_url: string | null };
   author_id: string;
 }
@@ -23,12 +24,21 @@ const SORT_OPTIONS = [
   { value: "difficulty", label: "Mais Difíceis" },
 ] as const;
 
+const DIFFICULTY_FILTERS = [
+  { value: "", label: "Todas", color: "#FFFFFF" },
+  { value: "easy", label: "🟢 Fácil", color: "#22C55E" },
+  { value: "medium", label: "🟡 Médio", color: "#EAB308" },
+  { value: "hard", label: "🟠 Difícil", color: "#F97316" },
+  { value: "extreme", label: "🔴 Extremo", color: "#EF4444" },
+] as const;
+
 const PAGE_SIZE = 12;
 
 export default function BrowsePage() {
   const [levels, setLevels] = useState<LevelSummary[]>([]);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("created_at");
+  const [difficultyFilter, setDifficultyFilter] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -42,6 +52,7 @@ export default function BrowsePage() {
         limit: String(PAGE_SIZE),
       });
       if (search.trim()) params.set("search", search.trim());
+      if (difficultyFilter) params.set("difficulty", difficultyFilter);
 
       try {
         const res = await fetch(`/api/levels?${params}`);
@@ -55,7 +66,7 @@ export default function BrowsePage() {
         setLoading(false);
       }
     },
-    [sort, search],
+    [sort, search, difficultyFilter],
   );
 
   // Reset and fetch when sort/search changes
@@ -109,6 +120,23 @@ export default function BrowsePage() {
           </select>
         </div>
 
+        {/* Difficulty filter */}
+        <div className="flex gap-2 mb-8 flex-wrap">
+          {DIFFICULTY_FILTERS.map((df) => (
+            <button
+              key={df.value}
+              onClick={() => setDifficultyFilter(df.value)}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                difficultyFilter === df.value
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border text-muted-foreground hover:border-primary/50"
+              }`}
+            >
+              {df.label}
+            </button>
+          ))}
+        </div>
+
         {/* Results */}
         {loading && levels.length === 0 ? (
           <div className="text-center text-muted-foreground py-20">
@@ -138,6 +166,7 @@ export default function BrowsePage() {
                   likes={level.likes}
                   difficulty={level.difficulty}
                   bgColor={level.bg_color}
+                  thumbnail={level.thumbnail}
                   authorName={level.profiles?.nickname}
                   authorId={level.author_id}
                 />

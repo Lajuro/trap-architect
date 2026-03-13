@@ -44,6 +44,7 @@ export interface DbLevel {
   difficulty: number;
   featured: boolean;
   featured_category: string | null;
+  thumbnail: string | null;
 }
 
 export interface DbTrollTrigger {

@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import type { DbLevel } from "@/lib/database.types";
 import type { ParsedLevel, TrollTrigger, GameEntity, EntityType } from "@/game/types";
 import { TILE_SIZE } from "@/game/constants";
+import { getDifficultyLabel } from "@/lib/difficulty";
 
 const CommunityGameCanvas = dynamic(
   () =>
@@ -87,6 +88,11 @@ export default function CommunityLevelPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDesc, setReportDesc] = useState("");
+  const [reportMsg, setReportMsg] = useState<string | null>(null);
+  const [reporting, setReporting] = useState(false);
 
   // Fetch level data
   useEffect(() => {
@@ -149,6 +155,33 @@ export default function CommunityLevelPage() {
     setPlaying(true);
   }, [levelId]);
 
+  const handleReport = useCallback(async () => {
+    if (!reportReason) return;
+    setReporting(true);
+    setReportMsg(null);
+    try {
+      const res = await fetch(`/api/levels/${levelId}/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reportReason, description: reportDesc }),
+      });
+      if (res.ok) {
+        setReportMsg("Denúncia enviada!");
+        setTimeout(() => setShowReport(false), 1500);
+      } else if (res.status === 409) {
+        setReportMsg("Você já denunciou este nível.");
+      } else if (res.status === 401) {
+        setReportMsg("Faça login para denunciar.");
+      } else {
+        const data = await res.json();
+        setReportMsg(data.error || "Erro ao enviar denúncia.");
+      }
+    } catch {
+      setReportMsg("Erro de conexão.");
+    }
+    setReporting(false);
+  }, [levelId, reportReason, reportDesc]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -200,7 +233,10 @@ export default function CommunityLevelPage() {
               por {authorName}
             </Link>
             <span>▶ {level.plays} plays</span>
-            <span>💀 {level.difficulty.toFixed(1)} dificuldade</span>
+            {(() => {
+              const d = getDifficultyLabel(level.difficulty, level.plays);
+              return <span style={{ color: d.color }}>{d.emoji} {d.label}</span>;
+            })()}
           </div>
         </div>
 
@@ -221,12 +257,21 @@ export default function CommunityLevelPage() {
           </div>
         ) : (
           <div
-            className="h-64 rounded-lg mb-8 flex items-center justify-center"
+            className="h-64 rounded-lg mb-8 flex items-center justify-center relative overflow-hidden"
             style={{ backgroundColor: level.bg_color || "#1a1a2e" }}
           >
+            {level.thumbnail && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={level.thumbnail}
+                alt={level.name}
+                className="absolute inset-0 w-full h-full object-cover opacity-40"
+                style={{ imageRendering: "pixelated" }}
+              />
+            )}
             <button
               onClick={handlePlay}
-              className="bg-primary text-primary-foreground px-8 py-3 rounded-lg text-lg font-bold hover:opacity-90 transition-opacity"
+              className="relative bg-primary text-primary-foreground px-8 py-3 rounded-lg text-lg font-bold hover:opacity-90 transition-opacity"
             >
               ▶ Jogar
             </button>
@@ -245,7 +290,68 @@ export default function CommunityLevelPage() {
           >
             ♥ {likeCount}
           </button>
+          <button
+            onClick={() => { setShowReport(true); setReportMsg(null); }}
+            className="px-4 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:border-red-500/50 hover:text-red-400 transition-colors"
+          >
+            🚩 Denunciar
+          </button>
         </div>
+
+        {/* Report Modal */}
+        {showReport && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={() => setShowReport(false)}>
+            <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-bold mb-4">🚩 Denunciar Nível</h3>
+              <div className="space-y-2 mb-4">
+                {[
+                  { value: "offensive", label: "🚫 Conteúdo ofensivo" },
+                  { value: "impossible", label: "❌ Impossível de completar" },
+                  { value: "spam", label: "📋 Spam / Nível vazio" },
+                  { value: "bug", label: "🐛 Bug / Nível quebrado" },
+                  { value: "other", label: "🔄 Outro" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setReportReason(opt.value)}
+                    className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors ${
+                      reportReason === opt.value
+                        ? "border-red-500 bg-red-500/10 text-foreground"
+                        : "border-border hover:border-red-500/30"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                placeholder="Detalhes adicionais (opcional)"
+                value={reportDesc}
+                onChange={(e) => setReportDesc(e.target.value)}
+                maxLength={500}
+                className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm mb-4 resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {reportMsg && (
+                <p className="text-sm text-muted-foreground mb-3">{reportMsg}</p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowReport(false)}
+                  className="flex-1 px-4 py-2 rounded-lg border border-border text-sm hover:bg-muted transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleReport}
+                  disabled={!reportReason || reporting}
+                  className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 disabled:opacity-50 transition-colors"
+                >
+                  {reporting ? "Enviando..." : "Enviar Denúncia"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Leaderboard */}
         {leaderboard.length > 0 && (

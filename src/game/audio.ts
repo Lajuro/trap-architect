@@ -232,6 +232,11 @@ export function setMusicEnabled(enabled: boolean): void {
   if (!enabled) stopBGM();
 }
 
+export function setSoundEnabled(enabled: boolean): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("trap_sound_enabled", enabled ? "true" : "false");
+}
+
 export function getMusicVolume(): number {
   if (typeof window === "undefined") return 0.5;
   const v = localStorage.getItem("trap_music_volume");

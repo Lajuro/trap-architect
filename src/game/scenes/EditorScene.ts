@@ -25,6 +25,7 @@ export const EDITOR_EVENTS = {
   READY: "editor:ready",
   TEST_REQUEST: "editor:test_request",
   EXPORT_REQUEST: "editor:export",
+  VALIDATION: "editor:validation",
 
   // React → EditorScene
   SET_TOOL: "editor:set_tool",
@@ -87,6 +88,10 @@ export class EditorScene extends Phaser.Scene {
   private gridGraphics!: Phaser.GameObjects.Graphics;
   private hoverGraphics!: Phaser.GameObjects.Graphics;
   private boundsGraphics!: Phaser.GameObjects.Graphics;
+
+  // UI overlays
+  private zoomText!: Phaser.GameObjects.Text;
+  private minimapGraphics!: Phaser.GameObjects.Graphics;
 
   // Tool state
   private selectedPaletteId = 1; // Ground Top by default
@@ -213,6 +218,19 @@ export class EditorScene extends Phaser.Scene {
     // Register React event listeners
     this.registerEventListeners();
 
+    // Zoom indicator (screen-fixed)
+    this.zoomText = this.add.text(10, 10, "100%", {
+      fontSize: "14px",
+      color: "#ffffff",
+      backgroundColor: "#00000088",
+      padding: { x: 6, y: 3 },
+    }).setScrollFactor(0).setDepth(100);
+
+    // Mini-map graphics (screen-fixed)
+    this.minimapGraphics = this.add.graphics()
+      .setScrollFactor(0)
+      .setDepth(100);
+
     // Signal ready
     gameEvents.emit(EDITOR_EVENTS.READY);
     this.emitLevelData();
@@ -245,6 +263,13 @@ export class EditorScene extends Phaser.Scene {
 
     // Hover preview
     this.updateHoverPreview();
+
+    // Zoom indicator
+    const zoomPct = Math.round(this.cameras.main.zoom * 100);
+    this.zoomText.setText(`${zoomPct}%`);
+
+    // Mini-map
+    this.drawMinimap();
   }
 
   // ============================================================
@@ -591,6 +616,7 @@ export class EditorScene extends Phaser.Scene {
 
     if (gx < 0 || gx >= this.gridW || gy < 0 || gy >= this.gridH) return;
 
+    // Cell highlight
     this.hoverGraphics.lineStyle(2, 0xffff00, 0.6);
     this.hoverGraphics.strokeRect(
       gx * TILE_SIZE,
@@ -598,6 +624,61 @@ export class EditorScene extends Phaser.Scene {
       TILE_SIZE,
       TILE_SIZE
     );
+
+    // Ghost preview of tile to be placed
+    this.hoverGraphics.fillStyle(0xffff00, 0.2);
+    this.hoverGraphics.fillRect(
+      gx * TILE_SIZE,
+      gy * TILE_SIZE,
+      TILE_SIZE,
+      TILE_SIZE
+    );
+  }
+
+  // ============================================================
+  // Mini-map
+  // ============================================================
+  private drawMinimap(): void {
+    this.minimapGraphics.clear();
+    const MW = 200;
+    const MH = 60;
+    const cam = this.cameras.main;
+    const mx = cam.width - MW - 10;
+    const my = cam.height - MH - 10;
+
+    // Background
+    this.minimapGraphics.fillStyle(0x000000, 0.5);
+    this.minimapGraphics.fillRect(mx, my, MW, MH);
+    this.minimapGraphics.lineStyle(1, 0x666666, 1);
+    this.minimapGraphics.strokeRect(mx, my, MW, MH);
+
+    // Scale factors
+    const sx = MW / (this.gridW * TILE_SIZE);
+    const sy = MH / (this.gridH * TILE_SIZE);
+
+    // Draw tiles as tiny pixels
+    for (let gy = 0; gy < this.gridH; gy++) {
+      for (let gx = 0; gx < this.gridW; gx++) {
+        const t = this.tiles[gy]?.[gx];
+        if (t && t !== TileType.AIR) {
+          this.minimapGraphics.fillStyle(0x44aa44, 0.8);
+          this.minimapGraphics.fillRect(
+            mx + gx * TILE_SIZE * sx,
+            my + gy * TILE_SIZE * sy,
+            Math.max(1, TILE_SIZE * sx),
+            Math.max(1, TILE_SIZE * sy),
+          );
+        }
+      }
+    }
+
+    // Viewport rectangle
+    const vx = mx + cam.scrollX * sx;
+    const vy = my + cam.scrollY * sy;
+    const vw = (cam.width / cam.zoom) * sx;
+    const vh = (cam.height / cam.zoom) * sy;
+    this.minimapGraphics.lineStyle(1, 0xffff00, 1);
+    this.minimapGraphics.strokeRect(vx, vy, vw, vh);
   }
 
   // ============================================================
@@ -713,6 +794,22 @@ export class EditorScene extends Phaser.Scene {
   private emitLevelData(): void {
     const data = this.exportLevelData();
     gameEvents.emit(EDITOR_EVENTS.LEVEL_DATA_CHANGED, data);
+    this.emitValidation(data);
+  }
+
+  private emitValidation(data: LevelData): void {
+    const warnings: string[] = [];
+    const hasTiles = data.tiles.some((row) =>
+      row.some((t) => t !== TileType.AIR)
+    );
+    if (!hasTiles) warnings.push("Nível vazio — adicione tiles");
+
+    const hasFlag = data.entities.some((e) => e.type === "flag");
+    if (!hasFlag) warnings.push("Sem bandeira — adicione uma flag");
+
+    if (!data.playerStart) warnings.push("Sem posição inicial do jogador");
+
+    gameEvents.emit(EDITOR_EVENTS.VALIDATION, warnings);
   }
 
   exportLevelData(): LevelData {

@@ -77,7 +77,8 @@ create table if not exists public.levels (
   likes int not null default 0,
   difficulty real not null default 0,
   featured boolean not null default false,
-  featured_category text
+  featured_category text,
+  thumbnail text
 );
 
 -- Indexes for common queries
@@ -178,6 +179,42 @@ create or replace trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 -- ============================================================
+-- Table: level_reports
+-- ============================================================
+create table if not exists public.level_reports (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) not null,
+  level_id uuid references public.levels(id) not null,
+  reason text not null,
+  description text,
+  status text default 'pending' not null,
+  created_at timestamptz default now(),
+  unique(user_id, level_id)
+);
+
+alter table public.level_reports enable row level security;
+
+-- Users can insert their own reports
+create policy "Users can create reports" on public.level_reports
+  for insert with check (auth.uid() = user_id);
+
+-- Users can read their own reports
+create policy "Users can read own reports" on public.level_reports
+  for select using (auth.uid() = user_id);
+
+-- Admins can read all reports
+create policy "Admins can read all reports" on public.level_reports
+  for select using (
+    exists (select 1 from public.profiles where id = auth.uid() and creator_rank = 99)
+  );
+
+-- Admins can update reports
+create policy "Admins can update reports" on public.level_reports
+  for update using (
+    exists (select 1 from public.profiles where id = auth.uid() and creator_rank = 99)
+  );
+
+-- ============================================================
 -- Function: increment level play count + update difficulty
 -- ============================================================
 create or replace function public.record_play(
@@ -194,13 +231,18 @@ begin
   insert into public.level_plays (level_id, user_id, completed, deaths, coins, time_ms)
   values (p_level_id, p_user_id, p_completed, p_deaths, p_coins, p_time_ms);
 
-  -- Update level play count
+  -- Update level play count and difficulty (only calculated with 10+ plays)
   update public.levels
   set plays = plays + 1,
       difficulty = (
         select case
-          when count(*) = 0 then 0
-          else 1.0 - (count(*) filter (where completed) * 1.0 / count(*))
+          when count(*) < 10 then -1
+          else
+            (1.0 - (count(*) filter (where completed) * 1.0 / count(*))) * 0.8
+            + least(
+                coalesce(avg(deaths) filter (where completed), 0) / 20.0,
+                0.3
+              ) * 0.2
         end
         from public.level_plays
         where level_id = p_level_id

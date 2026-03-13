@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import RankBadge from "@/components/RankBadge";
+import { RankUpToast, useRankUpToast } from "@/components/RankUpToast";
 import type { User } from "@supabase/supabase-js";
 
 interface Profile {
@@ -24,6 +25,7 @@ export default function ProfilePage() {
   const [nickname, setNickname] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const { rankUp, checkRankUp, dismiss } = useRankUpToast();
   const router = useRouter();
   const supabase = createClient();
 
@@ -38,13 +40,14 @@ export default function ProfilePage() {
 
       const res = await fetch("/api/profile");
       if (res.ok) {
-        const { profile } = await res.json();
+        const { profile, rankUp: ru } = await res.json();
         setProfile(profile);
         setNickname(profile.nickname || "");
+        if (ru) checkRankUp(ru.oldRank, ru.newRank);
       }
     }
     load();
-  }, [router, supabase.auth]);
+  }, [router, supabase.auth, checkRankUp]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -193,6 +196,8 @@ export default function ProfilePage() {
           </Link>
         </div>
       </main>
+
+      {rankUp && <RankUpToast rankUp={rankUp} onDismiss={dismiss} />}
     </div>
   );
 }

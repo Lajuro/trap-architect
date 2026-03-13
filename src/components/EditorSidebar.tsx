@@ -3,9 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { gameEvents } from "@/game/events";
+import { GAME_EVENTS } from "@/game/events";
 import { EDITOR_EVENTS } from "@/game/scenes/EditorScene";
 import { PALETTE_ITEMS } from "@/game/constants";
 import type { LevelData, TrollTrigger } from "@/game/types";
+import { generateThumbnail } from "@/lib/thumbnail";
+import { RankUpToast, useRankUpToast } from "@/components/RankUpToast";
 
 const CATEGORY_LABELS: Record<string, string> = {
   terrain: "Terreno",
@@ -26,6 +29,10 @@ export function EditorSidebar() {
   const [publishing, setPublishing] = useState(false);
   const [publishMsg, setPublishMsg] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [tested, setTested] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const { rankUp, checkRankUp, dismiss } = useRankUpToast();
 
   useEffect(() => {
     const supabase = createClient();
@@ -44,14 +51,22 @@ export function EditorSidebar() {
       setGridW(d.gridW);
       setGridH(d.gridH);
       setTrolls(d.trolls);
+      setTested(false);
     };
+
+    const onTestComplete = () => setTested(true);
+    const onValidation = (w: unknown) => setWarnings(w as string[]);
 
     gameEvents.on(EDITOR_EVENTS.READY, onReady);
     gameEvents.on(EDITOR_EVENTS.LEVEL_DATA_CHANGED, onDataChanged);
+    gameEvents.on(GAME_EVENTS.LEVEL_COMPLETE, onTestComplete);
+    gameEvents.on(EDITOR_EVENTS.VALIDATION, onValidation);
 
     return () => {
       gameEvents.off(EDITOR_EVENTS.READY, onReady);
       gameEvents.off(EDITOR_EVENTS.LEVEL_DATA_CHANGED, onDataChanged);
+      gameEvents.off(GAME_EVENTS.LEVEL_COMPLETE, onTestComplete);
+      gameEvents.off(EDITOR_EVENTS.VALIDATION, onValidation);
     };
   }, []);
 
@@ -101,6 +116,14 @@ export function EditorSidebar() {
       setPublishing(true);
       try {
         const levelData = data as LevelData;
+        const thumbnail = generateThumbnail(
+          levelData.tiles,
+          levelData.gridW,
+          levelData.gridH,
+          levelData.entities,
+          levelData.playerStart,
+          levelData.bgColor,
+        );
         const res = await fetch("/api/levels", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -114,10 +137,13 @@ export function EditorSidebar() {
             trolls: levelData.trolls,
             playerStart: levelData.playerStart,
             published: true,
+            thumbnail,
           }),
         });
         if (res.ok) {
+          const { rankUp: ru } = await res.json();
           setPublishMsg("Nível publicado com sucesso!");
+          if (ru) checkRankUp(ru.oldRank, ru.newRank);
         } else if (res.status === 401) {
           setPublishMsg("Faça login para publicar.");
         } else {
@@ -131,7 +157,7 @@ export function EditorSidebar() {
     };
     gameEvents.on(EDITOR_EVENTS.EXPORT_REQUEST, handler);
     gameEvents.emit(EDITOR_EVENTS.EXPORT_LEVEL);
-  }, []);
+  }, [checkRankUp]);
 
   const handleTestPlay = useCallback(() => {
     const handler = (data: unknown) => {
@@ -159,6 +185,7 @@ export function EditorSidebar() {
   }
 
   return (
+    <>
     <div className="w-64 bg-card border-l border-border flex flex-col overflow-y-auto">
       {/* Level metadata */}
       <div className="p-3 border-b border-border">
@@ -315,6 +342,33 @@ export function EditorSidebar() {
         >
           ▶ Testar
         </button>
+
+        {/* Validation warnings */}
+        {warnings.length > 0 && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-2 space-y-1">
+            {warnings.map((w, i) => (
+              <p key={i} className="text-xs text-yellow-400">⚠️ {w}</p>
+            ))}
+          </div>
+        )}
+
+        {/* Shortcuts help */}
+        <button
+          onClick={() => setShowShortcuts((v) => !v)}
+          className="w-full text-xs bg-muted rounded px-2 py-1.5 hover:bg-muted/80 text-muted-foreground"
+        >
+          {showShortcuts ? "✕ Fechar Atalhos" : "? Atalhos"}
+        </button>
+        {showShortcuts && (
+          <div className="bg-muted/50 rounded p-2 text-xs text-muted-foreground space-y-1">
+            <p><kbd className="font-mono">WASD</kbd> — Mover câmera</p>
+            <p><kbd className="font-mono">Scroll</kbd> — Zoom</p>
+            <p><kbd className="font-mono">Ctrl+Z</kbd> — Desfazer</p>
+            <p><kbd className="font-mono">Ctrl+Y</kbd> — Refazer</p>
+            <p><kbd className="font-mono">Click D.</kbd> — Apagar tile</p>
+            <p><kbd className="font-mono">Click E.</kbd> — Colocar tile</p>
+          </div>
+        )}
         <div className="flex gap-2">
           <button
             onClick={handleExport}
@@ -332,11 +386,17 @@ export function EditorSidebar() {
 
         {/* Publish */}
         <div className="pt-2 border-t border-border">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className={`text-xs font-medium ${tested ? "text-green-500" : "text-red-400"}`}>
+              {tested ? "✓ Testado" : "✗ Não testado"}
+            </span>
+          </div>
           {isLoggedIn ? (
             <button
               onClick={handlePublish}
-              disabled={publishing}
+              disabled={publishing || !tested}
               className="w-full text-xs bg-purple-700 text-white rounded px-2 py-1.5 hover:bg-purple-600 disabled:opacity-50"
+              title={!tested ? "Complete seu nível no modo teste antes de publicar" : undefined}
             >
               {publishing ? "Publicando..." : "🚀 Publicar"}
             </button>
@@ -354,5 +414,8 @@ export function EditorSidebar() {
         </div>
       </div>
     </div>
+
+    {rankUp && <RankUpToast rankUp={rankUp} onDismiss={dismiss} />}
+    </>
   );
 }

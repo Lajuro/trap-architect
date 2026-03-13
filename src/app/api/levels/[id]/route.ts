@@ -53,7 +53,7 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const allowed = ["name", "subtitle", "bg_color", "music", "grid_w", "grid_h", "tiles", "entities", "trolls", "player_start", "published"];
+  const allowed = ["name", "subtitle", "bg_color", "music", "grid_w", "grid_h", "tiles", "entities", "trolls", "player_start", "published", "thumbnail"];
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   for (const key of allowed) {
     if (body[key] !== undefined) {
