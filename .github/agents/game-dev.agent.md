@@ -133,6 +133,55 @@ feat!: migrate from Firebase to Supabase auth
 - Antes de committar, pensar: esse commit é `feat`, `fix`, `chore`, `refactor`?
 - Commits atômicos: uma mudança lógica por commit, não misturar feat + fix
 
+## Roadmap: Milestones e Issues (GitHub)
+
+O projeto segue um roadmap rigoroso de milestones no GitHub. Cada milestone contém issues detalhadas.
+
+### Milestones Completas ✅
+- v0.2.0 — Level Editor & Multi-Level (#5-#13)
+- v0.3.0 — Authentication & Database (#14-#18)
+- v0.4.0 — Community Portal (#19-#23)
+- v0.5.0 — Curation, Cosmetics & Polish (#24-#29)
+
+### Milestones Pendentes 🚧
+
+| Milestone | Issues | Foco |
+|-----------|--------|------|
+| **v0.6.0 — Campaign & Audio** | #30-#36 | 10 fases de campanha + BGM procedural |
+| **v0.7.0 — Cloud Save & Cosmetics** | #37-#42 | Shop API, sync DB, trails/death/frames |
+| **v0.8.0 — Game Polish & UX** | #43-#49 | Pause menu, thumbnails, rank-up, editor UX, reporting |
+| **v0.9.0 — Pre-Launch & v1.0** | #50-#53 | SEO, errors, perf, QA final |
+
+## Workflow Obrigatório com Issues
+
+### Antes de trabalhar
+1. **Consultar a milestone atual** — verificar quais issues estão abertas
+2. **Ler a issue completa no GitHub** — entender requisitos, acceptance criteria, dependências
+3. **Implementar exatamente o que a issue pede** — não adicionar escopo extra
+
+### Ao concluir uma issue
+1. **Verificar todos os acceptance criteria** da issue
+2. **Rodar `bun run build`** para garantir que compila
+3. **Commit com Conventional Commits** referenciando a issue: `feat: implement X (#N)`
+4. **Fechar a issue no GitHub** com comentário do que foi feito: `gh issue close <N> -c "Implementado: <resumo>"`
+
+> ⚠️ **NUNCA deixar uma issue aberta se o trabalho está completo.** Sempre fechar imediatamente após concluir.
+> ⚠️ **Quando todas as issues de uma milestone estiverem fechadas, verificar se a milestone pode ser encerrada.**
+
+### Ordem de trabalho
+- Milestones em ordem sequencial: v0.6.0 → v0.7.0 → v0.8.0 → v0.9.0
+- Dentro de uma milestone, respeitar dependências entre issues
+- Issues independentes dentro da mesma milestone podem ser feitas em qualquer ordem
+
+### Checklist por issue
+- [ ] Ler a issue completa no GitHub
+- [ ] Ler os arquivos afetados antes de editar
+- [ ] Implementar incrementalmente
+- [ ] Validar com `bun run build`
+- [ ] Commit referenciando a issue
+- [ ] **Fechar a issue no GitHub**
+- [ ] Verificar se a milestone pode ser fechada
+
 ## Abordagem de Trabalho
 
 1. **Antes de qualquer mudança**: Ler os arquivos afetados por completo. Entender o estado atual.
