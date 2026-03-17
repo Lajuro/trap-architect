@@ -5,37 +5,27 @@ import dynamic from "next/dynamic";
 
 const EditorCanvas = dynamic(() => import("@/components/EditorCanvas").then((m) => m.EditorCanvas), { ssr: false });
 const EditorSidebar = dynamic(() => import("@/components/EditorSidebar").then((m) => m.EditorSidebar), { ssr: false });
+const EditorToolbar = dynamic(() => import("@/components/EditorToolbar").then((m) => m.EditorToolbar), { ssr: false });
 
 export default function EditorPage() {
   return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="border-b border-border px-4 py-2 shrink-0">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-primary">
-            🐱 Trap Architect
-          </Link>
-          <span className="text-sm text-muted-foreground">
-            Editor de Níveis
-          </span>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span>WASD: mover câmera</span>
-            <span>Scroll: zoom</span>
-            <span>Click: pintar</span>
-            <span>Right-click: apagar</span>
-            <span>Ctrl+Z/Y: desfazer/refazer</span>
-          </div>
-        </div>
+    <div className="h-screen w-screen flex flex-col bg-[#0a0a0f] overflow-hidden select-none">
+      {/* Top navbar with integrated toolbar */}
+      <header className="h-11 border-b border-border/50 px-3 shrink-0 flex items-center bg-gradient-to-r from-[#111118] via-[#0f0f16] to-[#111118]">
+        <Link
+          href="/"
+          className="text-sm font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 mr-2 shrink-0"
+        >
+          Trap Architect
+        </Link>
+        <EditorToolbar />
       </header>
 
-      {/* Main */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Canvas area */}
-        <main className="flex-1 flex items-center justify-center p-4 bg-muted/30">
+      {/* Main editor area */}
+      <div className="flex-1 flex min-h-0">
+        <main className="flex-1 min-w-0 relative bg-[#08080e]">
           <EditorCanvas />
         </main>
-
-        {/* Sidebar */}
         <EditorSidebar />
       </div>
     </div>

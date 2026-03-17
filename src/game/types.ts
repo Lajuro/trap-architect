@@ -140,9 +140,11 @@ export interface ParsedLevel {
 export interface PaletteItem {
   id: number;
   name: string;
+  description: string;
   category: PaletteCategory;
   tileType?: TileType;
   entityType?: EntityType;
+  color: string;
 }
 
 export type PaletteCategory = "terrain" | "danger" | "interactive" | "entities";

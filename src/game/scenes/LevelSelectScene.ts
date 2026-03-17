@@ -149,8 +149,26 @@ export class LevelSelectScene extends Phaser.Scene {
       // Interactive
       if (isUnlocked) {
         bg.setInteractive({ useHandCursor: true });
-        bg.on("pointerover", () => bg.setFillStyle(0x333333));
-        bg.on("pointerout", () => bg.setFillStyle(0x222222));
+        bg.on("pointerover", () => {
+          bg.setFillStyle(0x333333);
+          this.tweens.add({
+            targets: container,
+            scaleX: 1.05,
+            scaleY: 1.05,
+            duration: 150,
+            ease: "Quad.easeOut",
+          });
+        });
+        bg.on("pointerout", () => {
+          bg.setFillStyle(0x222222);
+          this.tweens.add({
+            targets: container,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 150,
+            ease: "Quad.easeOut",
+          });
+        });
         bg.on("pointerdown", () => {
           this.startLevel(i);
         });

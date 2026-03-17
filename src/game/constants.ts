@@ -21,6 +21,10 @@ export const SPRING_MULTIPLIER = 1.5;
 export const TRAMPOLINE_MULTIPLIER = 2;
 export const FAKE_GROUND_TIMER = 20;
 
+// Fixed timestep for frame-rate independence (60 FPS physics)
+export const FIXED_STEP = 1000 / 60; // ~16.667ms
+export const MAX_ACCUMULATED = 100; // cap to prevent spiral of death
+
 // ============================================================
 // Display
 // ============================================================
@@ -136,42 +140,42 @@ export const FRAMES: CosmeticFrame[] = [
 // ============================================================
 export const PALETTE_ITEMS: PaletteItem[] = [
   // Terrain
-  { id: 0, name: "Borracha", category: "terrain", tileType: TileType.AIR },
-  { id: 1, name: "Chão (Topo)", category: "terrain", tileType: TileType.GROUND_TOP },
-  { id: 2, name: "Chão (Interior)", category: "terrain", tileType: TileType.GROUND },
-  { id: 3, name: "Tijolo", category: "terrain", tileType: TileType.BRICK },
-  { id: 4, name: "Castelo", category: "terrain", tileType: TileType.CASTLE },
-  { id: 5, name: "Bloco Usado", category: "terrain", tileType: TileType.USED },
-  { id: 6, name: "Cano (↖)", category: "terrain", tileType: TileType.PIPE_TL },
-  { id: 7, name: "Cano (↗)", category: "terrain", tileType: TileType.PIPE_TR },
-  { id: 8, name: "Cano (↙)", category: "terrain", tileType: TileType.PIPE_BL },
-  { id: 9, name: "Cano (↘)", category: "terrain", tileType: TileType.PIPE_BR },
-  { id: 10, name: "Gelo", category: "terrain", tileType: TileType.ICE },
-  { id: 11, name: "Nuvem", category: "terrain", tileType: TileType.CLOUD },
+  { id: 0, name: "Borracha", description: "Apaga qualquer tile ou entidade", category: "terrain", tileType: TileType.AIR, color: "#666666" },
+  { id: 1, name: "Chão (Topo)", description: "Grama verde — superfície pisável", category: "terrain", tileType: TileType.GROUND_TOP, color: "#228B22" },
+  { id: 2, name: "Chão (Interior)", description: "Terra marrom — preenchimento sólido", category: "terrain", tileType: TileType.GROUND, color: "#8B5A2B" },
+  { id: 3, name: "Tijolo", description: "Bloco destrutível clássico", category: "terrain", tileType: TileType.BRICK, color: "#CD853F" },
+  { id: 4, name: "Castelo", description: "Parede de pedra decorativa", category: "terrain", tileType: TileType.CASTLE, color: "#888888" },
+  { id: 5, name: "Bloco Usado", description: "Bloco já ativado — decorativo", category: "terrain", tileType: TileType.USED, color: "#8B7355" },
+  { id: 6, name: "Cano (↖)", description: "Cano verde — canto superior esquerdo", category: "terrain", tileType: TileType.PIPE_TL, color: "#00AA00" },
+  { id: 7, name: "Cano (↗)", description: "Cano verde — canto superior direito", category: "terrain", tileType: TileType.PIPE_TR, color: "#00AA00" },
+  { id: 8, name: "Cano (↙)", description: "Cano verde — canto inferior esquerdo", category: "terrain", tileType: TileType.PIPE_BL, color: "#00AA00" },
+  { id: 9, name: "Cano (↘)", description: "Cano verde — canto inferior direito", category: "terrain", tileType: TileType.PIPE_BR, color: "#00AA00" },
+  { id: 10, name: "Gelo", description: "Superfície escorregadia — cuidado!", category: "terrain", tileType: TileType.ICE, color: "#A0D8EF" },
+  { id: 11, name: "Nuvem", description: "Plataforma de nuvem — só decoração", category: "terrain", tileType: TileType.CLOUD, color: "#FFFFFF" },
   // Danger
-  { id: 12, name: "Espinho", category: "danger", tileType: TileType.SPIKE },
-  { id: 13, name: "Espinho Oculto", category: "danger", tileType: TileType.HIDDEN_SPIKE },
-  { id: 14, name: "Lava", category: "danger", tileType: TileType.LAVA },
-  { id: 15, name: "Chão Falso", category: "danger", tileType: TileType.FAKE_GROUND },
+  { id: 12, name: "Espinho", description: "Morte instantânea ao toque!", category: "danger", tileType: TileType.SPIKE, color: "#AAAAAA" },
+  { id: 13, name: "Espinho Oculto", description: "Parece grama, mas mata — troll!", category: "danger", tileType: TileType.HIDDEN_SPIKE, color: "#228B22" },
+  { id: 14, name: "Lava", description: "Mar de fogo — derrete tudo!", category: "danger", tileType: TileType.LAVA, color: "#FF3300" },
+  { id: 15, name: "Chão Falso", description: "Desmorona quando pisado — surpresa!", category: "danger", tileType: TileType.FAKE_GROUND, color: "#228B22" },
   // Interactive
-  { id: 16, name: "Bloco ?", category: "interactive", tileType: TileType.QUESTION },
-  { id: 17, name: "Bloco Troll !", category: "interactive", tileType: TileType.TROLL_Q },
-  { id: 18, name: "Invisível", category: "interactive", tileType: TileType.INVISIBLE },
-  { id: 19, name: "Mola", category: "interactive", tileType: TileType.SPRING },
-  { id: 20, name: "Trampolim", category: "interactive", tileType: TileType.TRAMPOLINE },
-  { id: 21, name: "Plataforma", category: "interactive", tileType: TileType.PLATFORM },
-  { id: 22, name: "Esteira ←", category: "interactive", tileType: TileType.CONVEYOR_L },
-  { id: 23, name: "Esteira →", category: "interactive", tileType: TileType.CONVEYOR_R },
-  { id: 24, name: "Checkpoint", category: "interactive", tileType: TileType.CHECKPOINT },
+  { id: 16, name: "Bloco ?", description: "Libera moedas ou surpresas ao bater", category: "interactive", tileType: TileType.QUESTION, color: "#FFCC00" },
+  { id: 17, name: "Bloco Troll !", description: "Parece um ?, mas trolls o jogador!", category: "interactive", tileType: TileType.TROLL_Q, color: "#FF4444" },
+  { id: 18, name: "Invisível", description: "Bloco invisível — só aparece ao bater", category: "interactive", tileType: TileType.INVISIBLE, color: "#4444FF" },
+  { id: 19, name: "Mola", description: "Lança o jogador para cima!", category: "interactive", tileType: TileType.SPRING, color: "#FF4444" },
+  { id: 20, name: "Trampolim", description: "Super pulo — alcance alturas extremas!", category: "interactive", tileType: TileType.TRAMPOLINE, color: "#8844CC" },
+  { id: 21, name: "Plataforma", description: "Semi-sólida — pule de baixo pra cima", category: "interactive", tileType: TileType.PLATFORM, color: "#B0804A" },
+  { id: 22, name: "Esteira ←", description: "Move o jogador para a esquerda", category: "interactive", tileType: TileType.CONVEYOR_L, color: "#555555" },
+  { id: 23, name: "Esteira →", description: "Move o jogador para a direita", category: "interactive", tileType: TileType.CONVEYOR_R, color: "#555555" },
+  { id: 24, name: "Checkpoint", description: "Ponto de respawn — salva o progresso", category: "interactive", tileType: TileType.CHECKPOINT, color: "#44AAFF" },
   // Entities
-  { id: 25, name: "Jogador", category: "entities", entityType: "player" },
-  { id: 26, name: "Moeda", category: "entities", entityType: "coin" },
-  { id: 27, name: "Goomba", category: "entities", entityType: "goomba" },
-  { id: 28, name: "Goomba Rápido", category: "entities", entityType: "fast_goomba" },
-  { id: 29, name: "Spiny", category: "entities", entityType: "spiny" },
-  { id: 30, name: "Voador", category: "entities", entityType: "flying" },
-  { id: 31, name: "Bandeira", category: "entities", entityType: "flag" },
-  { id: 32, name: "Bandeira Falsa", category: "entities", entityType: "fake_flag" },
+  { id: 25, name: "Jogador", description: "Posição inicial do gato herói", category: "entities", entityType: "player", color: "#FF8C00" },
+  { id: 26, name: "Moeda", description: "Coletável brilhante — pontos extras!", category: "entities", entityType: "coin", color: "#FFD700" },
+  { id: 27, name: "Goomba", description: "Inimigo patrulheiro — anda de um lado pro outro", category: "entities", entityType: "goomba", color: "#8B4513" },
+  { id: 28, name: "Goomba Rápido", description: "Goomba turbo — muito mais veloz!", category: "entities", entityType: "fast_goomba", color: "#FF6600" },
+  { id: 29, name: "Spiny", description: "Inimigo com espinhos — não pule em cima!", category: "entities", entityType: "spiny", color: "#CC0000" },
+  { id: 30, name: "Voador", description: "Inimigo flutuante — sobe e desce", category: "entities", entityType: "flying", color: "#6644AA" },
+  { id: 31, name: "Bandeira", description: "OBRIGATÓRIA — marca o objetivo do nível", category: "entities", entityType: "flag", color: "#00CC00" },
+  { id: 32, name: "Bandeira Falsa", description: "Parece a vitória, mas é trollagem pura!", category: "entities", entityType: "fake_flag", color: "#FF0000" },
 ];
 
 // ============================================================

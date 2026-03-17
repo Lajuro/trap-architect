@@ -10,6 +10,8 @@ import {
   EDITOR_MAX_UNDO,
   EDITOR_SCROLL_SPEED,
   PALETTE_ITEMS,
+  FIXED_STEP,
+  MAX_ACCUMULATED,
 } from "../constants";
 import { TileType, type EntityType, type LevelData, type TrollTrigger } from "../types";
 import { gameEvents } from "../events";
@@ -118,10 +120,12 @@ export class EditorScene extends Phaser.Scene {
     S: Phaser.Input.Keyboard.Key;
     D: Phaser.Input.Keyboard.Key;
   };
+  private arrowKeys!: Phaser.Types.Input.Keyboard.CursorKeys;
   private ctrlKey!: Phaser.Input.Keyboard.Key;
   private zKey!: Phaser.Input.Keyboard.Key;
   private yKey!: Phaser.Input.Keyboard.Key;
   private shiftKey!: Phaser.Input.Keyboard.Key;
+  private accumulator = 0;
 
   constructor() {
     super({ key: "EditorScene" });
@@ -173,17 +177,63 @@ export class EditorScene extends Phaser.Scene {
         S: this.input.keyboard.addKey("S"),
         D: this.input.keyboard.addKey("D"),
       };
+      this.arrowKeys = this.input.keyboard.createCursorKeys();
       this.ctrlKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.CTRL);
       this.zKey = this.input.keyboard.addKey("Z");
       this.yKey = this.input.keyboard.addKey("Y");
       this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+
+      // Number keys 0-9 for quick tile selection
+      for (let n = 0; n <= 9; n++) {
+        const key = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ZERO + n);
+        key.on("down", () => {
+          if (!this.ctrlKey.isDown) {
+            this.selectPaletteById(n);
+          }
+        });
+      }
+
+      // T = test level
+      const tKey = this.input.keyboard.addKey("T");
+      tKey.on("down", () => {
+        if (!this.ctrlKey.isDown) {
+          gameEvents.emit(EDITOR_EVENTS.TEST_REQUEST);
+        }
+      });
+
+      // G = toggle grid
+      const gKey = this.input.keyboard.addKey("G");
+      gKey.on("down", () => {
+        if (!this.ctrlKey.isDown) {
+          this.gridGraphics.setVisible(!this.gridGraphics.visible);
+        }
+      });
+
+      // TAB = cycle palette categories
+      const tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
+      tabKey.on("down", () => {
+        this.cyclePaletteCategory();
+      });
     }
 
-    // Mouse zoom
+    // Reset accumulator
+    this.accumulator = 0;
+
+    // Mouse scroll: pan level horizontally (like legacy), Ctrl+scroll = zoom
     this.input.on("wheel", (_pointer: Phaser.Input.Pointer, _gos: unknown[], _dx: number, dy: number) => {
       const cam = this.cameras.main;
-      const newZoom = Phaser.Math.Clamp(cam.zoom + (dy > 0 ? -0.1 : 0.1), 0.25, 3);
-      cam.setZoom(newZoom);
+      if (this.ctrlKey?.isDown) {
+        // Zoom with Ctrl+scroll
+        const step = dy > 0 ? -0.15 : 0.15;
+        const newZoom = Phaser.Math.Clamp(cam.zoom + step, 0.5, 3);
+        cam.setZoom(newZoom);
+      } else if (this.shiftKey?.isDown) {
+        // Vertical scroll with Shift+scroll
+        cam.scrollY += dy > 0 ? 96 : -96;
+      } else {
+        // Horizontal scroll (default, like legacy)
+        cam.scrollX += dy > 0 ? 96 : -96;
+      }
     });
 
     // Mouse draw
@@ -236,15 +286,26 @@ export class EditorScene extends Phaser.Scene {
     this.emitLevelData();
   }
 
-  update(): void {
-    // Camera scroll with WASD
-    if (this.wasd) {
-      const cam = this.cameras.main;
-      const speed = this.scrollSpeed / cam.zoom;
-      if (this.wasd.A.isDown) cam.scrollX -= speed;
-      if (this.wasd.D.isDown) cam.scrollX += speed;
-      if (this.wasd.W.isDown) cam.scrollY -= speed;
-      if (this.wasd.S.isDown) cam.scrollY += speed;
+  update(_time: number, delta: number): void {
+    // Fixed timestep for camera scroll
+    this.accumulator += Math.min(delta, MAX_ACCUMULATED);
+
+    while (this.accumulator >= FIXED_STEP) {
+      this.accumulator -= FIXED_STEP;
+
+      // Camera scroll with WASD + arrow keys
+      if (this.wasd || this.arrowKeys) {
+        const cam = this.cameras.main;
+        const speed = this.scrollSpeed / cam.zoom;
+        const left = this.wasd?.A.isDown || this.arrowKeys?.left.isDown;
+        const right = this.wasd?.D.isDown || this.arrowKeys?.right.isDown;
+        const up = this.wasd?.W.isDown || this.arrowKeys?.up.isDown;
+        const down = this.wasd?.S.isDown || this.arrowKeys?.down.isDown;
+        if (left) cam.scrollX -= speed;
+        if (right) cam.scrollX += speed;
+        if (up) cam.scrollY -= speed;
+        if (down) cam.scrollY += speed;
+      }
     }
 
     // Undo/Redo keyboard shortcuts
@@ -444,13 +505,13 @@ export class EditorScene extends Phaser.Scene {
       [TileType.HIDDEN_SPIKE]: "tile_ground_top",
       [TileType.FAKE_GROUND]: "tile_ground_top",
       [TileType.INVISIBLE]: "tile_ground",
-      [TileType.PIPE_TL]: "tile_pipe",
-      [TileType.PIPE_TR]: "tile_pipe",
-      [TileType.PIPE_BL]: "tile_pipe",
-      [TileType.PIPE_BR]: "tile_pipe",
+      [TileType.PIPE_TL]: "tile_pipe_tl",
+      [TileType.PIPE_TR]: "tile_pipe_tr",
+      [TileType.PIPE_BL]: "tile_pipe_bl",
+      [TileType.PIPE_BR]: "tile_pipe_br",
       [TileType.LAVA]: "tile_lava",
       [TileType.TROLL_Q]: "tile_question",
-      [TileType.USED]: "tile_ground",
+      [TileType.USED]: "tile_used",
       [TileType.CASTLE]: "tile_castle",
       [TileType.SPRING]: "tile_spring",
       [TileType.CLOUD]: "tile_cloud",
@@ -469,7 +530,7 @@ export class EditorScene extends Phaser.Scene {
       player: "player",
       coin: "entity_coin",
       goomba: "entity_goomba",
-      fast_goomba: "entity_goomba",
+      fast_goomba: "entity_fast_goomba",
       spiny: "entity_spiny",
       flying: "entity_flying",
       flag: "entity_flag",
@@ -642,15 +703,17 @@ export class EditorScene extends Phaser.Scene {
     this.minimapGraphics.clear();
     const MW = 200;
     const MH = 60;
-    const cam = this.cameras.main;
-    const mx = cam.width - MW - 10;
-    const my = cam.height - MH - 10;
+    // Use game config dimensions (fixed) instead of cam dimensions (affected by zoom)
+    const gameW = Number(this.game.config.width);
+    const gameH = Number(this.game.config.height);
+    const mx = gameW - MW - 10;
+    const my = gameH - MH - 10;
 
     // Background
-    this.minimapGraphics.fillStyle(0x000000, 0.5);
-    this.minimapGraphics.fillRect(mx, my, MW, MH);
+    this.minimapGraphics.fillStyle(0x000000, 0.6);
+    this.minimapGraphics.fillRoundedRect(mx, my, MW, MH, 4);
     this.minimapGraphics.lineStyle(1, 0x666666, 1);
-    this.minimapGraphics.strokeRect(mx, my, MW, MH);
+    this.minimapGraphics.strokeRoundedRect(mx, my, MW, MH, 4);
 
     // Scale factors
     const sx = MW / (this.gridW * TILE_SIZE);
@@ -661,7 +724,8 @@ export class EditorScene extends Phaser.Scene {
       for (let gx = 0; gx < this.gridW; gx++) {
         const t = this.tiles[gy]?.[gx];
         if (t && t !== TileType.AIR) {
-          this.minimapGraphics.fillStyle(0x44aa44, 0.8);
+          const color = this.getMinimapTileColor(t);
+          this.minimapGraphics.fillStyle(color, 0.9);
           this.minimapGraphics.fillRect(
             mx + gx * TILE_SIZE * sx,
             my + gy * TILE_SIZE * sy,
@@ -672,13 +736,52 @@ export class EditorScene extends Phaser.Scene {
       }
     }
 
+    // Draw entities as small colored dots
+    for (const e of this.entities) {
+      const ecolor = e.type === "player" ? 0xff8c00 : e.type === "flag" ? 0x00ff00 : 0xff4444;
+      this.minimapGraphics.fillStyle(ecolor, 1);
+      this.minimapGraphics.fillRect(
+        mx + e.gx * TILE_SIZE * sx - 1,
+        my + e.gy * TILE_SIZE * sy - 1,
+        Math.max(2, TILE_SIZE * sx + 1),
+        Math.max(2, TILE_SIZE * sy + 1),
+      );
+    }
+
     // Viewport rectangle
+    const cam = this.cameras.main;
     const vx = mx + cam.scrollX * sx;
     const vy = my + cam.scrollY * sy;
-    const vw = (cam.width / cam.zoom) * sx;
-    const vh = (cam.height / cam.zoom) * sy;
-    this.minimapGraphics.lineStyle(1, 0xffff00, 1);
-    this.minimapGraphics.strokeRect(vx, vy, vw, vh);
+    const vw = (gameW / cam.zoom) * sx;
+    const vh = (gameH / cam.zoom) * sy;
+    this.minimapGraphics.lineStyle(2, 0xffff00, 0.9);
+    this.minimapGraphics.strokeRect(
+      Phaser.Math.Clamp(vx, mx, mx + MW),
+      Phaser.Math.Clamp(vy, my, my + MH),
+      Math.min(vw, MW),
+      Math.min(vh, MH)
+    );
+  }
+
+  private getMinimapTileColor(t: number): number {
+    if (t === TileType.GROUND_TOP) return 0x228b22;
+    if (t === TileType.GROUND) return 0x8b5a2b;
+    if (t === TileType.BRICK) return 0xcd853f;
+    if (t === TileType.QUESTION || t === TileType.TROLL_Q) return 0xffcc00;
+    if (t === TileType.SPIKE || t === TileType.HIDDEN_SPIKE) return 0xaaaaaa;
+    if (t === TileType.LAVA) return 0xff3300;
+    if (t === TileType.PIPE_TL || t === TileType.PIPE_TR || t === TileType.PIPE_BL || t === TileType.PIPE_BR) return 0x00aa00;
+    if (t === TileType.CASTLE) return 0x888888;
+    if (t === TileType.ICE) return 0xa0d8ef;
+    if (t === TileType.CLOUD) return 0xffffff;
+    if (t === TileType.SPRING) return 0xff4444;
+    if (t === TileType.TRAMPOLINE) return 0x8844cc;
+    if (t === TileType.PLATFORM) return 0xb0804a;
+    if (t === TileType.CONVEYOR_L || t === TileType.CONVEYOR_R) return 0x555555;
+    if (t === TileType.CHECKPOINT) return 0x44aaff;
+    if (t === TileType.FAKE_GROUND) return 0x228b22;
+    if (t === TileType.INVISIBLE) return 0x4444ff;
+    return 0x44aa44;
   }
 
   // ============================================================
@@ -940,6 +1043,29 @@ export class EditorScene extends Phaser.Scene {
     this.buildAllTileSprites();
 
     this.emitLevelData();
+  }
+
+  // ============================================================
+  // Keyboard shortcuts helpers
+  // ============================================================
+  private selectPaletteById(id: number): void {
+    if (id >= 0 && id < PALETTE_ITEMS.length) {
+      this.selectedPaletteId = id;
+      gameEvents.emit(EDITOR_EVENTS.SELECTION_CHANGED, { paletteId: id });
+    }
+  }
+
+  private cyclePaletteCategory(): void {
+    const categories = ["terrain", "danger", "interactive", "entities"];
+    const currentItem = PALETTE_ITEMS.find((p) => p.id === this.selectedPaletteId);
+    const currentCat = currentItem?.category ?? "terrain";
+    const currentIdx = categories.indexOf(currentCat);
+    const nextCat = categories[(currentIdx + 1) % categories.length];
+    const firstItem = PALETTE_ITEMS.find((p) => p.category === nextCat);
+    if (firstItem) {
+      this.selectedPaletteId = firstItem.id;
+      gameEvents.emit(EDITOR_EVENTS.SELECTION_CHANGED, { paletteId: firstItem.id });
+    }
   }
 
   // ============================================================

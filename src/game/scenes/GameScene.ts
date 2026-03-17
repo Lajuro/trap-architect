@@ -17,6 +17,8 @@ import {
   SOLID_TILES,
   ONEWAY_TILES,
   LETHAL_TILES,
+  FIXED_STEP,
+  MAX_ACCUMULATED,
 } from "../constants";
 import { TileType, type ParsedLevel, type GameEntity } from "../types";
 import { gameEvents, GAME_EVENTS } from "../events";
@@ -42,6 +44,10 @@ interface CrumblingTile {
 export class GameScene extends Phaser.Scene {
   private player!: PlayerSprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private keyW!: Phaser.Input.Keyboard.Key;
+  private keyA!: Phaser.Input.Keyboard.Key;
+  private keyD!: Phaser.Input.Keyboard.Key;
+  private keySpace!: Phaser.Input.Keyboard.Key;
   private level!: ParsedLevel;
   private levelIndex = -1;
   private tileSprites: (Phaser.GameObjects.Image | null)[][] = [];
@@ -68,6 +74,12 @@ export class GameScene extends Phaser.Scene {
   private elapsedMs = 0;
   private pauseStartTime = 0;
   private totalPausedMs = 0;
+  // Fixed timestep
+  private accumulator = 0;
+  private frame = 0;
+  private wasGrounded = true;
+  // Parallax
+  private parallaxGfx!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super({ key: "GameScene" });
@@ -123,7 +135,14 @@ export class GameScene extends Phaser.Scene {
     // Input
     if (this.input.keyboard) {
       this.cursors = this.input.keyboard.createCursorKeys();
+      this.keyW = this.input.keyboard.addKey("W");
+      this.keyA = this.input.keyboard.addKey("A");
+      this.keyD = this.input.keyboard.addKey("D");
+      this.keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     }
+
+    // Parallax background graphics (behind everything)
+    this.parallaxGfx = this.add.graphics().setDepth(-10).setScrollFactor(0);
 
     // HUD (fixed to camera)
     this.hudCoins = this.add
@@ -174,7 +193,7 @@ export class GameScene extends Phaser.Scene {
     // Listen for React events
     gameEvents.on(GAME_EVENTS.RESTART_LEVEL, () => this.restartLevel());
 
-    // ESC to toggle pause
+    // ESC / P to toggle pause
     if (this.input.keyboard) {
       this.input.keyboard.on("keydown-ESC", () => {
         if (this.paused) {
@@ -183,49 +202,229 @@ export class GameScene extends Phaser.Scene {
           this.pauseGame();
         }
       });
+      this.input.keyboard.on("keydown-P", () => {
+        if (this.paused) {
+          this.resumeGame();
+        } else {
+          this.pauseGame();
+        }
+      });
     }
+
+    // Reset fixed timestep
+    this.accumulator = 0;
+    this.frame = 0;
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
     if (this.paused) return;
     if (!this.player.alive) return;
 
-    // Level name fade
-    if (this.levelNameTimer > 0) {
-      this.levelNameTimer--;
-      if (this.levelNameTimer < 30) {
-        this.levelNameText.setAlpha(this.levelNameTimer / 30);
+    // Fixed timestep accumulator — ensures consistent physics on any refresh rate
+    this.accumulator += Math.min(delta, MAX_ACCUMULATED);
+
+    while (this.accumulator >= FIXED_STEP) {
+      this.accumulator -= FIXED_STEP;
+      this.frame++;
+
+      // Level name fade
+      if (this.levelNameTimer > 0) {
+        this.levelNameTimer--;
+        if (this.levelNameTimer < 30) {
+          this.levelNameText.setAlpha(this.levelNameTimer / 30);
+        }
       }
+
+      // Input
+      this.handleInput();
+
+      // Physics
+      this.applyPhysics();
+
+      // Landing dust particles
+      if (this.player.grounded && !this.wasGrounded) {
+        this.emitDustParticles(this.player.x, this.player.y + PLAYER_H / 2);
+      }
+      this.wasGrounded = this.player.grounded;
+      // Crumbling tiles
+      this.updateCrumbling();
+
+      // Entity updates
+      this.updateEntities();
+
+      // Check death by falling
+      if (this.player.y > this.level.height * TILE_SIZE + 64) {
+        this.playerDie();
+        break;
+      }
+
+      // Troll triggers
+      this.checkTrolls();
+
+      // Trail effect
+      this.updateTrail();
     }
 
-    // Input
-    this.handleInput();
-
-    // Physics
-    this.applyPhysics();
-
-    // Crumbling tiles
-    this.updateCrumbling();
-
-    // Entity updates
-    this.updateEntities();
-
-    // Check death by falling
-    if (this.player.y > this.level.height * TILE_SIZE + 64) {
-      this.playerDie();
-    }
-
-    // Troll triggers
-    this.checkTrolls();
-
-    // Trail effect
-    this.updateTrail();
+    // Per-render updates (visual only, not physics)
+    this.drawParallax();
+    this.animateTiles();
+    this.animatePlayer();
 
     // Update HUD
     this.hudCoins.setText(`🪙 ${this.coins}`);
     this.hudDeaths.setText(`💀 ${this.deaths}`);
     const elapsedSecs = Math.floor((Date.now() - this.startTime - this.totalPausedMs) / 1000);
     this.hudTime.setText(`⏱ ${elapsedSecs}s`);
+  }
+
+  // ===========================================================
+  // Parallax Background
+  // ===========================================================
+  private drawParallax(): void {
+    const cam = this.cameras.main;
+    const camX = cam.scrollX;
+    const CW = GAME_WIDTH;
+    const CH = GAME_HEIGHT;
+    const gfx = this.parallaxGfx;
+    gfx.clear();
+
+    // Hills at 30% scroll speed
+    gfx.fillStyle(0x22aa22, 0.15);
+    for (let i = 0; i < 8; i++) {
+      const hx = ((i * 220 - camX * 0.3) % (CW + 400) + CW + 400) % (CW + 400) - 200;
+      gfx.fillCircle(hx + 80, CH - 25, 90 + (i % 3) * 15);
+    }
+
+    // Clouds at 20% scroll speed
+    gfx.fillStyle(0xffffff, 0.2);
+    for (let i = 0; i < 10; i++) {
+      const cx = ((i * 150 - camX * 0.2) % (CW + 200) + CW + 200) % (CW + 200) - 100;
+      const cy = 30 + (i % 4) * 35;
+      gfx.fillCircle(cx, cy, 18);
+      gfx.fillCircle(cx + 16, cy - 4, 14);
+      gfx.fillCircle(cx + 28, cy + 2, 12);
+    }
+  }
+
+  // ===========================================================
+  // Tile Animations (per-render-frame)
+  // ===========================================================
+  private animateTiles(): void {
+    const f = this.frame;
+    for (let gy = 0; gy < this.level.height; gy++) {
+      for (let gx = 0; gx < this.level.width; gx++) {
+        const tile = this.level.tiles[gy]?.[gx] ?? 0;
+        const sprite = this.tileSprites[gy]?.[gx];
+        if (!sprite) continue;
+
+        if (tile === TileType.QUESTION || tile === TileType.TROLL_Q) {
+          // Pulsing question block glow
+          const pulse = Math.sin(f * 0.08) * 0.15 + 0.85;
+          const tint = Phaser.Display.Color.GetColor(
+            Math.floor(255 * pulse),
+            Math.floor(204 * pulse),
+            0
+          );
+          sprite.setTint(tint);
+        } else if (tile === TileType.LAVA) {
+          // Lava ripple — slight y bob
+          sprite.y = gy * TILE_SIZE + TILE_SIZE / 2 + Math.sin(f * 0.15 + gx * 0.4) * 1.5;
+        } else if (tile === TileType.CONVEYOR_L || tile === TileType.CONVEYOR_R) {
+          // Conveyor subtle brightness pulse
+          const cPulse = Math.sin(f * 0.1 + gx * 0.3) * 0.1 + 0.9;
+          const cTint = Phaser.Display.Color.GetColor(
+            Math.floor(119 * cPulse),
+            Math.floor(119 * cPulse),
+            Math.floor(119 * cPulse)
+          );
+          sprite.setTint(cTint);
+        } else if (tile === TileType.SPRING) {
+          // Spring bounce idle
+          sprite.y = gy * TILE_SIZE + TILE_SIZE / 2 + Math.sin(f * 0.12) * 1.5;
+        } else if (tile === TileType.TRAMPOLINE) {
+          // Trampoline bob
+          sprite.y = gy * TILE_SIZE + TILE_SIZE / 2 + Math.sin(f * 0.12) * 2;
+        } else if (tile === TileType.CHECKPOINT) {
+          // Checkpoint flag bob
+          sprite.y = gy * TILE_SIZE + TILE_SIZE / 2 + Math.sin(f * 0.08) * 2;
+        }
+      }
+    }
+
+    // Coin entity animations (bob + stretch)
+    for (let i = 0; i < this.entities.length; i++) {
+      const ent = this.entities[i];
+      const sprite = this.entitySprites[i];
+      if (!ent.alive || !sprite) continue;
+
+      if (ent.type === "coin") {
+        // Floating bob
+        sprite.y = ent.y + Math.sin(f * 0.08 + ent.x * 0.1) * 4;
+        // Horizontal stretch
+        const stretch = 0.7 + Math.abs(Math.sin(f * 0.1)) * 0.3;
+        sprite.setScale(stretch, 1.0 / stretch);
+      }
+    }
+  }
+
+  // ===========================================================
+  // HUD Pulse Animation
+  // ===========================================================
+  private pulseHud(target: Phaser.GameObjects.Text): void {
+    this.tweens.add({
+      targets: target,
+      scaleX: 1.4,
+      scaleY: 1.4,
+      duration: 100,
+      yoyo: true,
+      ease: "Quad.easeOut",
+    });
+  }
+
+  // ===========================================================
+  // Player Animation (sprite swap based on state)
+  // ===========================================================
+  private animatePlayer(): void {
+    if (!this.player.alive) return;
+
+    const f = this.frame;
+    const moving = Math.abs(this.player.vx) > 0.2;
+    const grounded = this.player.grounded;
+
+    // Texture swap based on state
+    if (!grounded && this.player.vy < -1) {
+      // Jumping up
+      if (this.textures.exists("player_jump")) {
+        this.player.setTexture("player_jump");
+      }
+    } else if (!grounded && this.player.vy > 1) {
+      // Falling
+      if (this.textures.exists("player_fall")) {
+        this.player.setTexture("player_fall");
+      }
+    } else if (moving) {
+      // Walk cycle (4 frames)
+      const walkFrame = Math.floor(f / 5) % 4;
+      const walkKey = `player_walk${walkFrame}`;
+      if (this.textures.exists(walkKey)) {
+        this.player.setTexture(walkKey);
+      }
+      // Body bob while walking
+      this.player.y += (f % 2 === 0 ? 0.5 : -0.5) * 0.3;
+    } else {
+      // Idle — breathing animation
+      if (this.textures.exists("player_idle")) {
+        this.player.setTexture("player_idle");
+      } else {
+        this.player.setTexture("player");
+      }
+      // Subtle idle breathing
+      const breathe = Math.sin(f * 0.06) * 0.5;
+      this.player.y += breathe * 0.1;
+    }
+
+    // Flip sprite based on direction
+    this.player.setFlipX(this.player.dir === -1);
   }
 
   private buildTileMap(): void {
@@ -251,13 +450,13 @@ export class GameScene extends Phaser.Scene {
       [TileType.HIDDEN_SPIKE]: "tile_ground_top", // Looks like ground!
       [TileType.FAKE_GROUND]: "tile_ground_top", // Looks like ground!
       [TileType.INVISIBLE]: "tile_ground", // Will be hidden
-      [TileType.PIPE_TL]: "tile_pipe",
-      [TileType.PIPE_TR]: "tile_pipe",
-      [TileType.PIPE_BL]: "tile_pipe",
-      [TileType.PIPE_BR]: "tile_pipe",
+      [TileType.PIPE_TL]: "tile_pipe_tl",
+      [TileType.PIPE_TR]: "tile_pipe_tr",
+      [TileType.PIPE_BL]: "tile_pipe_bl",
+      [TileType.PIPE_BR]: "tile_pipe_br",
       [TileType.LAVA]: "tile_lava",
       [TileType.TROLL_Q]: "tile_question",
-      [TileType.USED]: "tile_ground",
+      [TileType.USED]: "tile_used",
       [TileType.CASTLE]: "tile_castle",
       [TileType.SPRING]: "tile_spring",
       [TileType.CLOUD]: "tile_cloud",
@@ -293,7 +492,7 @@ export class GameScene extends Phaser.Scene {
         flag: "entity_flag",
         fake_flag: "entity_fake_flag",
         goomba: "entity_goomba",
-        fast_goomba: "entity_goomba",
+        fast_goomba: "entity_fast_goomba",
         spiny: "entity_spiny",
         flying: "entity_flying",
       };
@@ -333,15 +532,20 @@ export class GameScene extends Phaser.Scene {
 
     const onIce = this.isOnTile(TileType.ICE);
 
+    const leftDown = this.cursors.left.isDown || this.keyA?.isDown;
+    const rightDown = this.cursors.right.isDown || this.keyD?.isDown;
+    const jumpDown = this.cursors.up.isDown || this.keyW?.isDown || this.keySpace?.isDown;
+    const jumpUp = this.cursors.up.isUp && (!this.keyW || this.keyW.isUp) && (!this.keySpace || this.keySpace.isUp);
+
     // Horizontal movement
-    if (this.cursors.left.isDown) {
+    if (leftDown) {
       if (onIce) {
         this.player.vx -= 0.15;
       } else {
         this.player.vx = -PLAYER_SPEED;
       }
       this.player.dir = -1;
-    } else if (this.cursors.right.isDown) {
+    } else if (rightDown) {
       if (onIce) {
         this.player.vx += 0.15;
       } else {
@@ -360,7 +564,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Jump
-    if (this.cursors.up.isDown && this.player.grounded && !this.player.jumpHeld) {
+    if (jumpDown && this.player.grounded && !this.player.jumpHeld) {
       this.player.vy = JUMP_FORCE;
       this.player.grounded = false;
       this.player.jumpHeld = true;
@@ -369,12 +573,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Variable jump height
-    if (!this.cursors.up.isDown && this.player.vy < -4) {
+    if (!jumpDown && this.player.vy < -4) {
       this.player.vy = -4;
       this.player.jumpHeld = false;
     }
 
-    if (this.cursors.up.isUp) {
+    if (jumpUp) {
       this.player.jumpHeld = false;
     }
   }
@@ -395,9 +599,6 @@ export class GameScene extends Phaser.Scene {
     // Move Y
     this.player.y += this.player.vy;
     this.resolveCollisionY();
-
-    // Flip sprite
-    this.player.setFlipX(this.player.dir === -1);
   }
 
   private getTile(gx: number, gy: number): TileType {
@@ -482,10 +683,12 @@ export class GameScene extends Phaser.Scene {
             this.player.vy = JUMP_FORCE * SPRING_MULTIPLIER;
             this.player.grounded = false;
             playSpring();
+            this.emitSpringParticles(this.player.x, this.player.y + PLAYER_H / 2);
           } else if (tile === TileType.TRAMPOLINE) {
             this.player.vy = JUMP_FORCE * TRAMPOLINE_MULTIPLIER;
             this.player.grounded = false;
             playSpring();
+            this.emitSpringParticles(this.player.x, this.player.y + PLAYER_H / 2);
           } else if (tile === TileType.FAKE_GROUND) {
             this.startCrumbling(gx, gyBottom);
           }
@@ -548,12 +751,16 @@ export class GameScene extends Phaser.Scene {
     this.updateTileSprite(gx, gy, TileType.USED);
     // Spawn coin
     this.coins++;
+    this.pulseHud(this.hudCoins);
     gameEvents.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
   }
 
   private breakBrick(gx: number, gy: number): void {
+    const px = gx * TILE_SIZE + TILE_SIZE / 2;
+    const py = gy * TILE_SIZE + TILE_SIZE / 2;
     this.level.tiles[gy][gx] = TileType.AIR;
     this.updateTileSprite(gx, gy, TileType.AIR);
+    this.emitBrickParticles(px, py);
   }
 
   private hitTrollBlock(gx: number, gy: number): void {
@@ -623,11 +830,30 @@ export class GameScene extends Phaser.Scene {
       if (ent.type === "goomba" || ent.type === "fast_goomba" || ent.type === "spiny") {
         const speed = ent.type === "fast_goomba" ? 3 : 1.5;
         ent.x += (ent.dir ?? -1) * speed;
-        // Reverse at walls
+
+        // Apply gravity
+        ent.vy = (ent.vy ?? 0) + GRAVITY;
+        if (ent.vy > MAX_FALL) ent.vy = MAX_FALL;
+        ent.y += ent.vy;
+
+        // Ground collision — snap to top of solid tile
+        const footGy = Math.floor((ent.y + 12) / TILE_SIZE);
         const gx = Math.floor(ent.x / TILE_SIZE);
+        if (this.isSolid(gx, footGy)) {
+          ent.y = footGy * TILE_SIZE - 12;
+          ent.vy = 0;
+        }
+
+        // Reverse at walls
         const gy = Math.floor(ent.y / TILE_SIZE);
         if (this.isSolid(gx + (ent.dir === 1 ? 1 : -1), gy)) {
           ent.dir = ((ent.dir ?? -1) * -1) as 1 | -1;
+        }
+
+        // Remove if fallen off the map
+        if (ent.y > this.level.height * TILE_SIZE + 64) {
+          ent.alive = false;
+          sprite.setVisible(false);
         }
       }
 
@@ -642,6 +868,25 @@ export class GameScene extends Phaser.Scene {
 
       sprite.setPosition(ent.x, ent.y);
 
+      // Enemy animations — texture-swap walk cycles + direction
+      if (ent.type === "goomba" || ent.type === "fast_goomba") {
+        const prefix = ent.type === "goomba" ? "entity_goomba" : "entity_fast_goomba";
+        const walkFrame = Math.floor(this.frame / 8) % 2;
+        sprite.setTexture(`${prefix}_walk${walkFrame}`);
+        sprite.setFlipX((ent.dir ?? -1) === 1);
+      } else if (ent.type === "spiny") {
+        const walkFrame = Math.floor(this.frame / 10) % 2;
+        sprite.setTexture(`entity_spiny_walk${walkFrame}`);
+        sprite.y += Math.sin(this.frame * 0.08) * 0.5;
+        sprite.setFlipX((ent.dir ?? -1) === 1);
+      } else if (ent.type === "flying") {
+        const wingFrame = Math.floor(this.frame / 6) % 2;
+        sprite.setTexture(`entity_flying_walk${wingFrame}`);
+        const bodyBob = Math.sin(this.frame * 0.1) * 2;
+        sprite.y += bodyBob;
+        sprite.setFlipX((ent.dir ?? -1) === 1);
+      }
+
       // Player collision with entity
       const dx = Math.abs(this.player.x - ent.x);
       const dy = Math.abs(this.player.y - ent.y);
@@ -651,11 +896,11 @@ export class GameScene extends Phaser.Scene {
           ent.alive = false;
           sprite.setVisible(false);
           this.coins++;
+          this.pulseHud(this.hudCoins);
           playCoin();
           this.emitCoinParticles(ent.x, ent.y);
           gameEvents.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
         } else if (ent.type === "flag") {
-          gameEvents.emit(GAME_EVENTS.LEVEL_COMPLETE);
           this.showLevelComplete();
         } else if (ent.type === "fake_flag") {
           this.playerDie();
@@ -668,6 +913,7 @@ export class GameScene extends Phaser.Scene {
             sprite.setVisible(false);
             this.player.vy = JUMP_FORCE * 0.6;
             playStomp();
+            this.emitStompParticles(ent.x, ent.y);
           } else {
             this.playerDie();
           }
@@ -687,7 +933,7 @@ export class GameScene extends Phaser.Scene {
             if (troll.entityType && troll.spawnX !== undefined && troll.spawnY !== undefined) {
               const textureMap: Record<string, string> = {
                 goomba: "entity_goomba",
-                fast_goomba: "entity_goomba",
+                fast_goomba: "entity_fast_goomba",
                 spiny: "entity_spiny",
                 flying: "entity_flying",
               };
@@ -761,6 +1007,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.player.alive) return;
     this.player.alive = false;
     this.deaths++;
+    this.pulseHud(this.hudDeaths);
     playDeath();
     this.emitDeathParticles();
 
@@ -852,7 +1099,11 @@ export class GameScene extends Phaser.Scene {
       } else if (this.levelIndex >= 0) {
         this.scene.start("LevelSelectScene");
       } else {
-        this.scene.start("MenuScene");
+        // Custom/test level — don't navigate, let React handle it
+        // (EditorCanvas listens for LEVEL_COMPLETE to return to editor)
+        if (this.scene.get("MenuScene")) {
+          this.scene.start("MenuScene");
+        }
       }
     });
   }
@@ -1259,6 +1510,78 @@ export class GameScene extends Phaser.Scene {
 
   private emitCoinParticles(x: number, y: number): void {
     this.coinEmitter.emitParticleAt(x, y);
+  }
+
+  private emitStompParticles(x: number, y: number): void {
+    if (this.textures.exists("particle_stomp")) {
+      for (let i = 0; i < 6; i++) {
+        const p = this.add.image(x + (Math.random() - 0.5) * 20, y, "particle_stomp");
+        p.setAlpha(0.8).setScale(0.5 + Math.random() * 0.5).setDepth(55);
+        this.tweens.add({
+          targets: p,
+          y: y - 10 - Math.random() * 15,
+          x: p.x + (Math.random() - 0.5) * 30,
+          alpha: 0,
+          scale: 0,
+          duration: 300 + Math.random() * 200,
+          onComplete: () => p.destroy(),
+        });
+      }
+    }
+  }
+
+  private emitBrickParticles(x: number, y: number): void {
+    if (this.textures.exists("particle_brick")) {
+      for (let i = 0; i < 8; i++) {
+        const p = this.add.image(x + (Math.random() - 0.5) * 16, y, "particle_brick");
+        p.setDepth(55);
+        this.tweens.add({
+          targets: p,
+          y: y - 20 - Math.random() * 40,
+          x: p.x + (Math.random() - 0.5) * 50,
+          angle: Math.random() * 360,
+          alpha: 0,
+          duration: 500 + Math.random() * 300,
+          onComplete: () => p.destroy(),
+        });
+      }
+    }
+  }
+
+  private emitDustParticles(x: number, y: number): void {
+    if (this.textures.exists("particle_dust")) {
+      for (let i = 0; i < 4; i++) {
+        const p = this.add.image(x + (Math.random() - 0.5) * 12, y, "particle_dust");
+        p.setAlpha(0.5).setScale(0.8).setDepth(40);
+        this.tweens.add({
+          targets: p,
+          y: y - 5,
+          x: p.x + (Math.random() - 0.5) * 16,
+          alpha: 0,
+          scale: 0.3,
+          duration: 250,
+          onComplete: () => p.destroy(),
+        });
+      }
+    }
+  }
+
+  private emitSpringParticles(x: number, y: number): void {
+    if (this.textures.exists("particle_spring")) {
+      for (let i = 0; i < 5; i++) {
+        const p = this.add.image(x + (Math.random() - 0.5) * 16, y, "particle_spring");
+        p.setScale(0.5 + Math.random() * 0.5).setDepth(55);
+        this.tweens.add({
+          targets: p,
+          y: y - 15 - Math.random() * 20,
+          x: p.x + (Math.random() - 0.5) * 24,
+          alpha: 0,
+          angle: Math.random() * 180,
+          duration: 400 + Math.random() * 200,
+          onComplete: () => p.destroy(),
+        });
+      }
+    }
   }
 
   // ===========================================================

@@ -14,6 +14,10 @@ export function createPhaserGame(parent: HTMLElement): Phaser.Game {
     parent,
     backgroundColor: "#0a0a0a",
     pixelArt: true,
+    fps: {
+      target: 60,
+      forceSetTimeOut: false,
+    },
     physics: {
       default: "arcade",
       arcade: {
@@ -37,8 +41,12 @@ export function createEditorGame(parent: HTMLElement): Phaser.Game {
     width: GAME_WIDTH,
     height: EDITOR_CANVAS_HEIGHT,
     parent,
-    backgroundColor: "#0a0a0a",
+    backgroundColor: "#08080e",
     pixelArt: true,
+    fps: {
+      target: 60,
+      forceSetTimeOut: false,
+    },
     physics: {
       default: "arcade",
       arcade: {
@@ -47,10 +55,10 @@ export function createEditorGame(parent: HTMLElement): Phaser.Game {
       },
     },
     scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
+      mode: Phaser.Scale.RESIZE,
+      autoCenter: Phaser.Scale.NO_CENTER,
     },
-    scene: [BootScene, EditorScene],
+    scene: [BootScene, EditorScene, GameScene],
   };
 
   return new Phaser.Game(config);

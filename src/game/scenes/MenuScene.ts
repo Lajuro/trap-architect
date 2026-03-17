@@ -4,22 +4,51 @@ import { gameEvents, GAME_EVENTS } from "../events";
 import { playBGM } from "../audio";
 
 export class MenuScene extends Phaser.Scene {
+  private bgElements: { x: number; y: number; size: number; speed: number }[] = [];
+  private bgGraphics!: Phaser.GameObjects.Graphics;
+  private frame = 0;
+
   constructor() {
     super({ key: "MenuScene" });
   }
 
   create(): void {
     this.cameras.main.setBackgroundColor("#0a0a0a");
+    this.frame = 0;
     playBGM("menu");
 
+    // Animated background elements (floating squares)
+    this.bgElements = [];
+    for (let i = 0; i < 15; i++) {
+      this.bgElements.push({
+        x: Math.random() * GAME_WIDTH,
+        y: Math.random() * GAME_HEIGHT,
+        size: 4 + Math.random() * 12,
+        speed: 0.2 + Math.random() * 0.5,
+      });
+    }
+    this.bgGraphics = this.add.graphics().setDepth(0).setAlpha(0.1);
+
     // Title
-    this.add
+    const title = this.add
       .text(GAME_WIDTH / 2, 100, "🐱 Trap Architect", {
         fontFamily: "monospace",
         fontSize: "36px",
         color: "#ff8c00",
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(1);
+
+    // Title pulse
+    this.tweens.add({
+      targets: title,
+      scaleX: 1.03,
+      scaleY: 1.03,
+      duration: 1200,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
 
     // Subtitle
     this.add
@@ -28,10 +57,11 @@ export class MenuScene extends Phaser.Scene {
         fontSize: "14px",
         color: "#a3a3a3",
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(1);
 
     // Animated cat
-    const cat = this.add.image(GAME_WIDTH / 2, 230, "player").setScale(4);
+    const cat = this.add.image(GAME_WIDTH / 2, 230, "player").setScale(4).setDepth(1);
     this.tweens.add({
       targets: cat,
       y: 220,
@@ -51,12 +81,24 @@ export class MenuScene extends Phaser.Scene {
         padding: { x: 24, y: 12 },
       })
       .setOrigin(0.5)
+      .setDepth(1)
       .setInteractive({ useHandCursor: true });
 
     playBtn.on("pointerover", () => playBtn.setAlpha(0.8));
     playBtn.on("pointerout", () => playBtn.setAlpha(1));
     playBtn.on("pointerdown", () => {
       this.scene.start("LevelSelectScene");
+    });
+
+    // Glow pulse on play button
+    this.tweens.add({
+      targets: playBtn,
+      scaleX: 1.05,
+      scaleY: 1.05,
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
     });
 
     // Quick play (demo level)
@@ -68,6 +110,7 @@ export class MenuScene extends Phaser.Scene {
         padding: { x: 16, y: 8 },
       })
       .setOrigin(0.5)
+      .setDepth(1)
       .setInteractive({ useHandCursor: true });
 
     quickBtn.on("pointerover", () => quickBtn.setColor("#ffffff"));
@@ -83,8 +126,27 @@ export class MenuScene extends Phaser.Scene {
         fontSize: "12px",
         color: "#555555",
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(1);
 
     gameEvents.emit(GAME_EVENTS.GAME_READY);
+  }
+
+  update(): void {
+    this.frame++;
+
+    // Animate floating background elements
+    const gfx = this.bgGraphics;
+    gfx.clear();
+    for (const el of this.bgElements) {
+      el.y -= el.speed;
+      if (el.y < -el.size) {
+        el.y = GAME_HEIGHT + el.size;
+        el.x = Math.random() * GAME_WIDTH;
+      }
+      const pulse = Math.sin(this.frame * 0.02 + el.x) * 0.3 + 0.7;
+      gfx.fillStyle(0xff8c00, pulse);
+      gfx.fillRect(el.x, el.y, el.size, el.size);
+    }
   }
 }
