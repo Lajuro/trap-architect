@@ -31,7 +31,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Title
     const title = this.add
-      .text(GAME_WIDTH / 2, 100, "🐱 Trap Architect", {
+      .text(GAME_WIDTH / 2, 100, "TRAP ARCHITECT", {
         fontFamily: "monospace",
         fontSize: "36px",
         color: "#ff8c00",
@@ -73,7 +73,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Play button — goes to Level Select
     const playBtn = this.add
-      .text(GAME_WIDTH / 2, 310, "▶  JOGAR", {
+      .text(GAME_WIDTH / 2, 310, ">  JOGAR", {
         fontFamily: "monospace",
         fontSize: "20px",
         color: "#ffffff",
@@ -103,7 +103,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Quick play (demo level)
     const quickBtn = this.add
-      .text(GAME_WIDTH / 2, 370, "⚡ Demo Rápida", {
+      .text(GAME_WIDTH / 2, 370, "* Demo Rapida", {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#a3a3a3",

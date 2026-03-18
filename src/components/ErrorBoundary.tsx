@@ -31,7 +31,7 @@ export class ErrorBoundary extends React.Component<
 
       return (
         <div className="flex flex-col items-center justify-center min-h-[200px] p-8 text-center">
-          <p className="text-2xl mb-2">Algo deu errado 😿</p>
+          <p className="text-[10px] font-bold mb-2">Algo deu errado</p>
           <p className="text-muted-foreground mb-4 text-sm">
             Um erro inesperado aconteceu.
           </p>
@@ -73,7 +73,7 @@ export function GameErrorFallback() {
   return (
     <div className="w-full max-w-[800px] aspect-[800/480] mx-auto rounded-lg overflow-hidden border-2 border-border flex items-center justify-center bg-muted/50">
       <div className="text-center p-8">
-        <p className="text-xl mb-2">O jogo travou 💥</p>
+        <p className="text-[10px] font-bold mb-2">O jogo travou</p>
         <button
           onClick={() => window.location.reload()}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90"

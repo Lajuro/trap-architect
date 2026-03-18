@@ -92,7 +92,7 @@ export const DEMO_LEVEL: ParsedLevel = {
     {
       triggerX: 22 * TILE_SIZE,
       action: "message",
-      text: "Cuidado com os espinhos! 😈",
+      text: "Cuidado com os espinhos!",
       duration: 90,
       triggered: false,
     },

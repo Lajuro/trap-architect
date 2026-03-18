@@ -35,7 +35,7 @@ function GameCanvasInner() {
   return (
     <div
       ref={containerRef}
-      className="w-full max-w-[800px] aspect-[800/480] mx-auto rounded-lg overflow-hidden border-2 border-border"
+      className="w-full h-full overflow-hidden"
     />
   );
 }

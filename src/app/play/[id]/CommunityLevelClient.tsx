@@ -8,6 +8,9 @@ import type { DbLevel } from "@/lib/database.types";
 import type { ParsedLevel, TrollTrigger, GameEntity, EntityType } from "@/game/types";
 import { TILE_SIZE } from "@/game/constants";
 import { getDifficultyLabel } from "@/lib/difficulty";
+import { PixelIcon } from "@/components/ui/PixelIcon";
+import HudPanel from "@/components/ui/HudPanel";
+import HudButton from "@/components/ui/HudButton";
 
 const CommunityGameCanvas = dynamic(
   () =>
@@ -202,60 +205,65 @@ export default function CommunityLevelClient() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="border-b border-border px-6 py-3">
+      <header className="border-b-2 border-border px-4 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-primary">
-            🐱 Trap Architect
+          <Link href="/" className="flex items-center gap-2 text-primary">
+            <PixelIcon name="cat" size={20} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Trap Architect</span>
           </Link>
-          <Link
-            href="/browse"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            ← Explorar
-          </Link>
+          <HudButton href="/browse" variant="ghost" size="small">
+            <PixelIcon name="arrow-left" size={10} />
+            Explorar
+          </HudButton>
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto px-6 py-8 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
         {/* Level Info */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-1">{level.name}</h1>
+        <HudPanel className="mb-6">
+          <h1 className="text-sm font-bold mb-1 uppercase">{level.name}</h1>
           {level.subtitle && (
-            <p className="text-muted-foreground mb-2">{level.subtitle}</p>
+            <p className="text-muted-foreground text-[9px] mb-2">{level.subtitle}</p>
           )}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-4 text-[9px] text-muted-foreground">
             <Link
               href={`/creator/${authorId}`}
               className="hover:text-foreground"
             >
               por {authorName}
             </Link>
-            <span>▶ {level.plays} plays</span>
+            <span className="flex items-center gap-1">
+              <PixelIcon name="play" size={10} color="#ff8c00" /> {level.plays}
+            </span>
             {(() => {
               const d = getDifficultyLabel(level.difficulty, level.plays);
-              return <span style={{ color: d.color }}>{d.emoji} {d.label}</span>;
+              return (
+                <span className="flex items-center gap-1" style={{ color: d.color }}>
+                  <PixelIcon name={d.icon} size={10} color={d.color} /> {d.label}
+                </span>
+              );
             })()}
           </div>
-        </div>
+        </HudPanel>
 
         {/* Game area */}
         {playing ? (
-          <div className="mb-8">
+          <div className="mb-6">
             <CommunityGameCanvas level={parsedLevel} />
-            <div className="text-center mt-4">
-              <p className="text-muted-foreground text-sm">
-                <kbd className="px-2 py-1 bg-muted rounded text-xs">←→</kbd>{" "}
-                Mover ·{" "}
-                <kbd className="px-2 py-1 bg-muted rounded text-xs">↑</kbd>{" "}
-                Pular ·{" "}
-                <kbd className="px-2 py-1 bg-muted rounded text-xs">ESC</kbd>{" "}
+            <div className="text-center mt-3">
+              <p className="text-muted-foreground text-[8px] uppercase tracking-wider">
+                <kbd className="px-2 py-1 bg-muted border border-border text-[7px]">A/D</kbd>{" "}
+                Mover{" / "}
+                <kbd className="px-2 py-1 bg-muted border border-border text-[7px]">W</kbd>{" "}
+                Pular{" / "}
+                <kbd className="px-2 py-1 bg-muted border border-border text-[7px]">ESC</kbd>{" "}
                 Menu
               </p>
             </div>
           </div>
         ) : (
           <div
-            className="h-64 rounded-lg mb-8 flex items-center justify-center relative overflow-hidden"
+            className="h-64 mb-6 flex items-center justify-center relative overflow-hidden border-2 border-border"
             style={{ backgroundColor: level.bg_color || "#1a1a2e" }}
           >
             {level.thumbnail && (
@@ -267,58 +275,56 @@ export default function CommunityLevelClient() {
                 style={{ imageRendering: "pixelated" }}
               />
             )}
-            <button
-              onClick={handlePlay}
-              className="relative bg-primary text-primary-foreground px-8 py-3 rounded-lg text-lg font-bold hover:opacity-90 transition-opacity"
-            >
-              ▶ Jogar
-            </button>
+            <HudButton onClick={handlePlay} variant="primary">
+              <PixelIcon name="play" size={14} /> Jogar
+            </HudButton>
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex items-center gap-4 mb-8">
-          <button
+        <div className="flex items-center gap-3 mb-6">
+          <HudButton
             onClick={handleLike}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-              liked
-                ? "bg-primary/20 border-primary text-primary"
-                : "border-border hover:border-primary/50"
-            }`}
+            variant={liked ? "primary" : "secondary"}
+            size="small"
           >
-            ♥ {likeCount}
-          </button>
-          <button
+            <PixelIcon name="heart" size={12} color={liked ? "#ff8c00" : "#888"} /> {likeCount}
+          </HudButton>
+          <HudButton
             onClick={() => { setShowReport(true); setReportMsg(null); }}
-            className="px-4 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:border-red-500/50 hover:text-red-400 transition-colors"
+            variant="ghost"
+            size="small"
           >
-            🚩 Denunciar
-          </button>
+            <PixelIcon name="flag" size={12} color="#888" /> Denunciar
+          </HudButton>
         </div>
 
         {/* Report Modal */}
         {showReport && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={() => setShowReport(false)}>
-            <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-bold mb-4">🚩 Denunciar Nível</h3>
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center" onClick={() => setShowReport(false)}>
+            <div className="max-w-md w-full mx-4" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+            <HudPanel variant="danger">
+              <h3 className="text-[11px] font-bold mb-4 flex items-center gap-2">
+                <PixelIcon name="flag" size={14} color="#EF4444" /> Denunciar Nivel
+              </h3>
               <div className="space-y-2 mb-4">
                 {[
-                  { value: "offensive", label: "🚫 Conteúdo ofensivo" },
-                  { value: "impossible", label: "❌ Impossível de completar" },
-                  { value: "spam", label: "📋 Spam / Nível vazio" },
-                  { value: "bug", label: "🐛 Bug / Nível quebrado" },
-                  { value: "other", label: "🔄 Outro" },
+                  { value: "offensive", label: "Conteudo ofensivo", icon: "ban" as const },
+                  { value: "impossible", label: "Impossivel de completar", icon: "skull" as const },
+                  { value: "spam", label: "Spam / Nivel vazio", icon: "warning" as const },
+                  { value: "bug", label: "Bug / Nivel quebrado", icon: "bug" as const },
+                  { value: "other", label: "Outro", icon: "info" as const },
                 ].map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => setReportReason(opt.value)}
-                    className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors ${
+                    className={`w-full text-left px-3 py-2 border-2 text-[9px] transition-colors flex items-center gap-2 ${
                       reportReason === opt.value
                         ? "border-red-500 bg-red-500/10 text-foreground"
                         : "border-border hover:border-red-500/30"
                     }`}
                   >
-                    {opt.label}
+                    <PixelIcon name={opt.icon} size={12} /> {opt.label}
                   </button>
                 ))}
               </div>
@@ -327,42 +333,47 @@ export default function CommunityLevelClient() {
                 value={reportDesc}
                 onChange={(e) => setReportDesc(e.target.value)}
                 maxLength={500}
-                className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm mb-4 resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-muted border-2 border-border px-3 py-2 text-[9px] mb-4 resize-none h-20 focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {reportMsg && (
-                <p className="text-sm text-muted-foreground mb-3">{reportMsg}</p>
+                <p className="text-[9px] text-muted-foreground mb-3">{reportMsg}</p>
               )}
               <div className="flex gap-3">
-                <button
+                <HudButton
                   onClick={() => setShowReport(false)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-border text-sm hover:bg-muted transition-colors"
+                  variant="secondary"
+                  className="flex-1"
                 >
                   Cancelar
-                </button>
-                <button
+                </HudButton>
+                <HudButton
                   onClick={handleReport}
                   disabled={!reportReason || reporting}
-                  className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 disabled:opacity-50 transition-colors"
+                  variant="danger"
+                  className="flex-1"
                 >
-                  {reporting ? "Enviando..." : "Enviar Denúncia"}
-                </button>
+                  {reporting ? "Enviando..." : "Enviar"}
+                </HudButton>
               </div>
-            </div>
+            </HudPanel>
+          </div>
           </div>
         )}
 
         {/* Leaderboard */}
         {leaderboard.length > 0 && (
-          <section>
-            <h2 className="text-xl font-bold mb-4">🏆 Melhores Jogadas</h2>
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
+          <HudPanel>
+            <h2 className="text-[11px] font-bold mb-4 flex items-center gap-2 uppercase">
+              <PixelIcon name="trophy" size={14} color="#FFD700" /> Melhores Jogadas
+            </h2>
+            <div className="overflow-hidden">
+              <table className="w-full text-[9px]">
                 <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="px-4 py-2">#</th>
-                    <th className="px-4 py-2">Jogador</th>
-                    <th className="px-4 py-2">Mortes</th>
-                    <th className="px-4 py-2">Tempo</th>
+                  <tr className="border-b-2 border-border text-left text-muted-foreground uppercase tracking-wider">
+                    <th className="px-3 py-2">#</th>
+                    <th className="px-3 py-2">Jogador</th>
+                    <th className="px-3 py-2">Mortes</th>
+                    <th className="px-3 py-2">Tempo</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -371,12 +382,14 @@ export default function CommunityLevelClient() {
                       key={i}
                       className="border-b border-border/50 last:border-0"
                     >
-                      <td className="px-4 py-2 font-bold">{i + 1}</td>
-                      <td className="px-4 py-2">
-                        {entry.profiles?.nickname || "Anônimo"}
+                      <td className="px-3 py-2 font-bold text-primary">{i + 1}</td>
+                      <td className="px-3 py-2">
+                        {entry.profiles?.nickname || "Anonimo"}
                       </td>
-                      <td className="px-4 py-2">💀 {entry.deaths}</td>
-                      <td className="px-4 py-2">
+                      <td className="px-3 py-2 flex items-center gap-1">
+                        <PixelIcon name="skull" size={10} color="#EF4444" /> {entry.deaths}
+                      </td>
+                      <td className="px-3 py-2">
                         {(entry.time_ms / 1000).toFixed(1)}s
                       </td>
                     </tr>
@@ -384,7 +397,7 @@ export default function CommunityLevelClient() {
                 </tbody>
               </table>
             </div>
-          </section>
+          </HudPanel>
         )}
       </main>
     </div>

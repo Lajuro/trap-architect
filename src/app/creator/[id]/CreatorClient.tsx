@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import LevelCard from "@/components/LevelCard";
 import RankBadge from "@/components/RankBadge";
+import HudBar from "@/components/ui/HudBar";
+import HudPanel from "@/components/ui/HudPanel";
+import HudButton from "@/components/ui/HudButton";
+import { PixelIcon } from "@/components/ui/PixelIcon";
 
 interface CreatorProfile {
   id: string;
@@ -42,7 +45,7 @@ export default function CreatorClient() {
       try {
         const res = await fetch(`/api/creators/${creatorId}`);
         if (!res.ok) {
-          setError("Criador não encontrado");
+          setError("Criador nao encontrado");
           return;
         }
         const data = await res.json();
@@ -61,7 +64,7 @@ export default function CreatorClient() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Carregando perfil...</p>
+        <p className="text-muted-foreground text-[9px] uppercase tracking-wider">Carregando perfil...</p>
       </div>
     );
   }
@@ -69,12 +72,12 @@ export default function CreatorClient() {
   if (error || !profile) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
-        <p className="text-destructive text-lg">
-          {error || "Criador não encontrado"}
+        <p className="text-destructive text-[10px]">
+          {error || "Criador nao encontrado"}
         </p>
-        <Link href="/browse" className="text-primary hover:underline">
-          ← Voltar para Explorar
-        </Link>
+        <HudButton href="/browse" variant="secondary" size="small">
+          Voltar para Explorar
+        </HudButton>
       </div>
     );
   }
@@ -86,66 +89,61 @@ export default function CreatorClient() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="border-b border-border px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-primary">
-            🐱 Trap Architect
-          </Link>
-          <Link
-            href="/browse"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            ← Explorar
-          </Link>
-        </div>
-      </header>
+      <HudBar />
 
-      <main className="flex-1 max-w-7xl mx-auto px-6 py-8 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
         {/* Profile card */}
-        <div className="bg-card border border-border rounded-lg p-8 mb-8">
-          <div className="flex items-start gap-6">
-            <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center text-3xl shrink-0">
-              🐱
+        <HudPanel variant="highlight" className="mb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-16 h-16 border-2 border-primary bg-primary/10 flex items-center justify-center shrink-0">
+              <PixelIcon name="cat" size={32} color="#ff8c00" />
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl font-bold mb-1">{profile.nickname}</h1>
+              <h1 className="text-[12px] font-bold mb-1">{profile.nickname}</h1>
               <div className="mb-2">
                 <RankBadge rankLevel={profile.creator_rank} />
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[8px] text-muted-foreground">
                 Membro desde {joinDate}
               </p>
             </div>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-muted rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold">{profile.levels_published}</p>
-              <p className="text-sm text-muted-foreground">Níveis Criados</p>
-            </div>
-            <div className="bg-muted rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold">{profile.total_plays}</p>
-              <p className="text-sm text-muted-foreground">Plays Totais</p>
-            </div>
-            <div className="bg-muted rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold">{profile.total_likes}</p>
-              <p className="text-sm text-muted-foreground">Likes Totais</p>
-            </div>
+          <div className="grid grid-cols-3 gap-3 mt-4">
+            <HudPanel className="text-center !p-3">
+              <p className="text-[14px] font-bold text-primary">{profile.levels_published}</p>
+              <p className="text-[7px] text-muted-foreground uppercase tracking-wider flex items-center justify-center gap-1">
+                <PixelIcon name="create" size={8} color="#888" /> Niveis
+              </p>
+            </HudPanel>
+            <HudPanel className="text-center !p-3">
+              <p className="text-[14px] font-bold text-primary">{profile.total_plays}</p>
+              <p className="text-[7px] text-muted-foreground uppercase tracking-wider flex items-center justify-center gap-1">
+                <PixelIcon name="play" size={8} color="#888" /> Plays
+              </p>
+            </HudPanel>
+            <HudPanel className="text-center !p-3">
+              <p className="text-[14px] font-bold text-primary">{profile.total_likes}</p>
+              <p className="text-[7px] text-muted-foreground uppercase tracking-wider flex items-center justify-center gap-1">
+                <PixelIcon name="heart" size={8} color="#888" /> Likes
+              </p>
+            </HudPanel>
           </div>
-        </div>
+        </HudPanel>
 
         {/* Levels */}
-        <h2 className="text-2xl font-bold mb-6">
-          Níveis de {profile.nickname}
+        <h2 className="text-[10px] font-bold mb-4 uppercase tracking-wider flex items-center gap-2">
+          <PixelIcon name="browse" size={14} color="#ff8c00" /> Niveis de {profile.nickname}
         </h2>
         {levels.length === 0 ? (
-          <p className="text-muted-foreground">
-            Este criador ainda não publicou nenhum nível.
-          </p>
+          <HudPanel className="text-center py-8">
+            <p className="text-[9px] text-muted-foreground">
+              Este criador ainda nao publicou nenhum nivel.
+            </p>
+          </HudPanel>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {levels.map((level) => (
               <LevelCard
                 key={level.id}

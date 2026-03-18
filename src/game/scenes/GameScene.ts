@@ -14,6 +14,10 @@ import {
   SPRING_MULTIPLIER,
   TRAMPOLINE_MULTIPLIER,
   FAKE_GROUND_TIMER,
+  HIDDEN_SPIKE_RUMBLE,
+  HIDDEN_SPIKE_EMERGE,
+  HIDDEN_SPIKE_HOLD,
+  HIDDEN_SPIKE_RETRACT,
   SOLID_TILES,
   ONEWAY_TILES,
   LETHAL_TILES,
@@ -41,6 +45,15 @@ interface CrumblingTile {
   timer: number;
 }
 
+interface SpikeAnimation {
+  gx: number;
+  gy: number;
+  phase: "rumble" | "emerge" | "hold" | "retract";
+  timer: number;
+  spikeSprite: Phaser.GameObjects.Image | null;
+  killed: boolean;
+}
+
 export class GameScene extends Phaser.Scene {
   private player!: PlayerSprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -56,6 +69,7 @@ export class GameScene extends Phaser.Scene {
   private coins = 0;
   private deaths = 0;
   private crumbling: CrumblingTile[] = [];
+  private spikeAnims: SpikeAnimation[] = [];
   private hudCoins!: Phaser.GameObjects.Text;
   private hudDeaths!: Phaser.GameObjects.Text;
   private hudTime!: Phaser.GameObjects.Text;
@@ -80,6 +94,8 @@ export class GameScene extends Phaser.Scene {
   private wasGrounded = true;
   // Parallax
   private parallaxGfx!: Phaser.GameObjects.Graphics;
+  // Activated checkpoints
+  private activatedCheckpoints = new Set<string>();
 
   constructor() {
     super({ key: "GameScene" });
@@ -102,6 +118,9 @@ export class GameScene extends Phaser.Scene {
     this.coins = 0;
     this.deaths = 0;
     this.crumbling = [];
+    this.spikeAnims.forEach((s) => s.spikeSprite?.destroy());
+    this.spikeAnims = [];
+    this.activatedCheckpoints.clear();
     this.startTime = Date.now();
     this.elapsedMs = 0;
     this.pauseStartTime = 0;
@@ -146,7 +165,7 @@ export class GameScene extends Phaser.Scene {
 
     // HUD (fixed to camera)
     this.hudCoins = this.add
-      .text(16, 16, "🪙 0", {
+      .text(16, 16, "$ 0", {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#ffd700",
@@ -155,7 +174,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(100);
 
     this.hudDeaths = this.add
-      .text(16, 40, "💀 0", {
+      .text(16, 40, "x 0", {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#ff4444",
@@ -164,7 +183,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(100);
 
     this.hudTime = this.add
-      .text(16, 64, "⏱ 0s", {
+      .text(16, 64, "T 0s", {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#aaaaaa",
@@ -249,6 +268,9 @@ export class GameScene extends Phaser.Scene {
       // Crumbling tiles
       this.updateCrumbling();
 
+      // Hidden spike animations
+      this.updateHiddenSpikes();
+
       // Entity updates
       this.updateEntities();
 
@@ -257,6 +279,9 @@ export class GameScene extends Phaser.Scene {
         this.playerDie();
         break;
       }
+
+      // Checkpoint activation
+      this.checkCheckpoints();
 
       // Troll triggers
       this.checkTrolls();
@@ -271,10 +296,10 @@ export class GameScene extends Phaser.Scene {
     this.animatePlayer();
 
     // Update HUD
-    this.hudCoins.setText(`🪙 ${this.coins}`);
-    this.hudDeaths.setText(`💀 ${this.deaths}`);
+    this.hudCoins.setText(`$ ${this.coins}`);
+    this.hudDeaths.setText(`x ${this.deaths}`);
     const elapsedSecs = Math.floor((Date.now() - this.startTime - this.totalPausedMs) / 1000);
-    this.hudTime.setText(`⏱ ${elapsedSecs}s`);
+    this.hudTime.setText(`T ${elapsedSecs}s`);
   }
 
   // ===========================================================
@@ -345,8 +370,8 @@ export class GameScene extends Phaser.Scene {
           // Trampoline bob
           sprite.y = gy * TILE_SIZE + TILE_SIZE / 2 + Math.sin(f * 0.12) * 2;
         } else if (tile === TileType.CHECKPOINT) {
-          // Checkpoint flag bob
-          sprite.y = gy * TILE_SIZE + TILE_SIZE / 2 + Math.sin(f * 0.08) * 2;
+          // Checkpoint flag anchored to bottom of tile, gentle bob
+          sprite.y = (gy + 1) * TILE_SIZE - TILE_SIZE / 2 + Math.sin(f * 0.08) * 2;
         }
       }
     }
@@ -592,6 +617,22 @@ export class GameScene extends Phaser.Scene {
     if (this.isOnTile(TileType.CONVEYOR_L)) this.player.vx -= CONVEYOR_SPEED;
     if (this.isOnTile(TileType.CONVEYOR_R)) this.player.vx += CONVEYOR_SPEED;
 
+    // Fake ground crumble when walking on top
+    if (this.player.grounded) {
+      const halfW = PLAYER_W / 2;
+      const gyBelow = Math.floor((this.player.y + PLAYER_H / 2 + 1) / TILE_SIZE);
+      const gxL = Math.floor((this.player.x - halfW + 2) / TILE_SIZE);
+      const gxR = Math.floor((this.player.x + halfW - 2) / TILE_SIZE);
+      for (let gx = gxL; gx <= gxR; gx++) {
+        if (this.getTile(gx, gyBelow) === TileType.FAKE_GROUND) {
+          this.startCrumbling(gx, gyBelow);
+        }
+        if (this.getTile(gx, gyBelow) === TileType.HIDDEN_SPIKE) {
+          this.triggerHiddenSpike(gx, gyBelow);
+        }
+      }
+    }
+
     // Move X
     this.player.x += this.player.vx;
     this.resolveCollisionX();
@@ -691,6 +732,8 @@ export class GameScene extends Phaser.Scene {
             this.emitSpringParticles(this.player.x, this.player.y + PLAYER_H / 2);
           } else if (tile === TileType.FAKE_GROUND) {
             this.startCrumbling(gx, gyBottom);
+          } else if (tile === TileType.HIDDEN_SPIKE) {
+            this.triggerHiddenSpike(gx, gyBottom);
           }
           break;
         }
@@ -736,6 +779,39 @@ export class GameScene extends Phaser.Scene {
       if (LETHAL_TILES.has(tile)) {
         this.playerDie();
         return;
+      }
+    }
+  }
+
+  private checkCheckpoints(): void {
+    const halfW = PLAYER_W / 2;
+    const halfH = PLAYER_H / 2;
+    const pLeft = this.player.x - halfW;
+    const pRight = this.player.x + halfW;
+    const pTop = this.player.y - halfH;
+    const pBottom = this.player.y + halfH;
+
+    const gxL = Math.floor(pLeft / TILE_SIZE);
+    const gxR = Math.floor(pRight / TILE_SIZE);
+    const gyT = Math.floor(pTop / TILE_SIZE);
+    const gyB = Math.floor(pBottom / TILE_SIZE);
+
+    for (let gy = gyT; gy <= gyB; gy++) {
+      for (let gx = gxL; gx <= gxR; gx++) {
+        if (this.getTile(gx, gy) !== TileType.CHECKPOINT) continue;
+
+        const key = `${gx},${gy}`;
+        if (this.activatedCheckpoints.has(key)) continue;
+
+        this.activatedCheckpoints.add(key);
+        this.level._checkpointX = gx * TILE_SIZE + TILE_SIZE / 2;
+        this.level._checkpointY = gy * TILE_SIZE;
+
+        // Visual feedback: tint the checkpoint sprite green
+        const sprite = this.tileSprites[gy]?.[gx];
+        if (sprite) {
+          sprite.setTint(0x44ff44);
+        }
       }
     }
   }
@@ -814,6 +890,114 @@ export class GameScene extends Phaser.Scene {
         this.updateTileSprite(c.gx, c.gy, TileType.AIR);
         this.crumbling.splice(i, 1);
       }
+    }
+  }
+
+  private triggerHiddenSpike(gx: number, gy: number): void {
+    if (this.spikeAnims.some((s) => s.gx === gx && s.gy === gy)) return;
+    this.spikeAnims.push({
+      gx,
+      gy,
+      phase: "rumble",
+      timer: HIDDEN_SPIKE_RUMBLE,
+      spikeSprite: null,
+      killed: false,
+    });
+  }
+
+  private updateHiddenSpikes(): void {
+    for (let i = this.spikeAnims.length - 1; i >= 0; i--) {
+      const s = this.spikeAnims[i];
+      s.timer--;
+
+      const tileSprite = this.tileSprites[s.gy]?.[s.gx];
+      const cx = s.gx * TILE_SIZE + TILE_SIZE / 2;
+      const cy = s.gy * TILE_SIZE + TILE_SIZE / 2;
+      const tileTop = s.gy * TILE_SIZE;
+      // Spike final position: sitting just above the tile
+      const spikeEndY = tileTop - TILE_SIZE / 2;
+
+      if (s.phase === "rumble") {
+        // Shake the ground tile as warning
+        if (tileSprite) {
+          tileSprite.x = cx + (Math.random() - 0.5) * 3;
+          tileSprite.y = cy + (Math.random() - 0.5) * 2;
+        }
+        if (s.timer <= 0) {
+          // Reset tile position and transition to emerge
+          if (tileSprite) {
+            tileSprite.x = cx;
+            tileSprite.y = cy;
+            // Ground tile covers the spike as it emerges from inside
+            tileSprite.setDepth(2);
+          }
+          s.phase = "emerge";
+          s.timer = HIDDEN_SPIKE_EMERGE;
+          // Create spike sprite starting inside the tile (hidden behind ground)
+          const spike = this.add.image(cx, cy, "tile_spike");
+          spike.setDepth(1);
+          s.spikeSprite = spike;
+        }
+      } else if (s.phase === "emerge") {
+        // Spike rises from inside the tile to above it
+        const progress = 1 - s.timer / HIDDEN_SPIKE_EMERGE;
+        if (s.spikeSprite) {
+          s.spikeSprite.y = cy + (spikeEndY - cy) * progress;
+        }
+        // Kill player when spike is 60% emerged
+        if (progress >= 0.6 && !s.killed && this.player.alive) {
+          this.checkSpikeHit(s, tileTop);
+        }
+        if (s.timer <= 0) {
+          // Snap spike to final position
+          if (s.spikeSprite) {
+            s.spikeSprite.y = spikeEndY;
+          }
+          s.phase = "hold";
+          s.timer = HIDDEN_SPIKE_HOLD;
+        }
+      } else if (s.phase === "hold") {
+        // Spike stays out — still lethal during hold
+        if (!s.killed && this.player.alive) {
+          this.checkSpikeHit(s, tileTop);
+        }
+        if (s.timer <= 0) {
+          s.phase = "retract";
+          s.timer = HIDDEN_SPIKE_RETRACT;
+        }
+      } else if (s.phase === "retract") {
+        // Spike retracts back down into the tile
+        const progress = 1 - s.timer / HIDDEN_SPIKE_RETRACT;
+        if (s.spikeSprite) {
+          s.spikeSprite.y = spikeEndY + (cy - spikeEndY) * progress;
+        }
+        if (s.timer <= 0) {
+          if (s.spikeSprite) {
+            s.spikeSprite.destroy();
+          }
+          // Reset ground tile depth
+          if (tileSprite) {
+            tileSprite.setDepth(0);
+          }
+          this.spikeAnims.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  private checkSpikeHit(s: SpikeAnimation, tileTop: number): void {
+    const halfW = PLAYER_W / 2;
+    const halfH = PLAYER_H / 2;
+    const pLeft = this.player.x - halfW;
+    const pRight = this.player.x + halfW;
+    const pBottom = this.player.y + halfH;
+    const pTop = this.player.y - halfH;
+    const tileLeft = s.gx * TILE_SIZE;
+    const tileRight = tileLeft + TILE_SIZE;
+    // Spike occupies the area just above the tile
+    if (pRight > tileLeft + 2 && pLeft < tileRight - 2 && pBottom > tileTop - TILE_SIZE && pTop < tileTop) {
+      s.killed = true;
+      this.playerDie();
     }
   }
 
@@ -1051,7 +1235,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     const overlay = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "🎉 NÍVEL COMPLETO!", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "NIVEL COMPLETO!", {
         fontFamily: "monospace",
         fontSize: "28px",
         color: "#44ff44",
@@ -1144,7 +1328,7 @@ export class GameScene extends Phaser.Scene {
 
     // Title
     const title = this.add
-      .text(GAME_WIDTH / 2, 60, "🏆 CAMPANHA COMPLETA! 🏆", {
+      .text(GAME_WIDTH / 2, 60, "CAMPANHA COMPLETA!", {
         fontFamily: "monospace",
         fontSize: "28px",
         color: "#FFD700",
@@ -1167,7 +1351,7 @@ export class GameScene extends Phaser.Scene {
 
     // Stats
     this.add
-      .text(GAME_WIDTH / 2, 140, `💀 Mortes totais: ${totalDeaths}`, {
+      .text(GAME_WIDTH / 2, 140, `x${totalDeaths} Mortes`, {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#ffffff",
@@ -1177,7 +1361,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(301);
 
     this.add
-      .text(GAME_WIDTH / 2, 170, `🪙 Moedas totais: ${totalCoins}`, {
+      .text(GAME_WIDTH / 2, 170, `$${totalCoins} Moedas`, {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#ffffff",
@@ -1188,7 +1372,7 @@ export class GameScene extends Phaser.Scene {
 
     // Unlock message
     this.add
-      .text(GAME_WIDTH / 2, 220, "🎁 Skin desbloqueada: Gato Dourado!", {
+      .text(GAME_WIDTH / 2, 220, "[!] Skin desbloqueada: Gato Dourado!", {
         fontFamily: "monospace",
         fontSize: "14px",
         color: "#FFD700",
@@ -1199,7 +1383,7 @@ export class GameScene extends Phaser.Scene {
 
     // CTA
     this.add
-      .text(GAME_WIDTH / 2, 270, "Agora é sua vez de criar! 🎮", {
+      .text(GAME_WIDTH / 2, 270, "Agora e sua vez de criar!", {
         fontFamily: "monospace",
         fontSize: "14px",
         color: "#a3a3a3",
@@ -1625,7 +1809,7 @@ export class GameScene extends Phaser.Scene {
 
     // Title
     const title = this.add
-      .text(panelX, panelY - 140, "⏸ Pausado", {
+      .text(panelX, panelY - 140, "|| Pausado", {
         fontFamily: "monospace",
         fontSize: "24px",
         color: "#ffffff",
@@ -1637,7 +1821,7 @@ export class GameScene extends Phaser.Scene {
     // Stats
     const elapsed = Date.now() - this.startTime - this.totalPausedMs;
     const secs = Math.floor(elapsed / 1000);
-    const statsText = `💀 ${this.deaths}  ·  🪙 ${this.coins}  ·  ⏱ ${secs}s`;
+    const statsText = `x${this.deaths}  |  $${this.coins}  |  T ${secs}s`;
     const stats = this.add
       .text(panelX, panelY - 105, statsText, {
         fontFamily: "monospace",
@@ -1671,15 +1855,15 @@ export class GameScene extends Phaser.Scene {
       return btn;
     };
 
-    const btnContinue = makeBtn(panelY - 60, "▶  Continuar", "#4ade80", () => this.resumeGame());
-    const btnRestart = makeBtn(panelY - 15, "↻  Reiniciar", "#fbbf24", () => {
+    const btnContinue = makeBtn(panelY - 60, ">  Continuar", "#4ade80", () => this.resumeGame());
+    const btnRestart = makeBtn(panelY - 15, "R  Reiniciar", "#fbbf24", () => {
       this.resumeGame();
       this.restartLevel();
     });
 
     // Settings section
     const settingsLabel = this.add
-      .text(panelX, panelY + 30, "⚙  Configurações", {
+      .text(panelX, panelY + 30, "*  Configuracoes", {
         fontFamily: "monospace",
         fontSize: "13px",
         color: "#6366f1",
@@ -1691,7 +1875,7 @@ export class GameScene extends Phaser.Scene {
     // SFX toggle
     let sfxOn = isSoundEnabled();
     const sfxBtn = this.add
-      .text(panelX, panelY + 60, `SFX: ${sfxOn ? "✅ Ligado" : "❌ Desligado"}`, {
+      .text(panelX, panelY + 60, `SFX: ${sfxOn ? "[ON] Ligado" : "[--] Desligado"}`, {
         fontFamily: "monospace",
         fontSize: "14px",
         color: sfxOn ? "#4ade80" : "#ef4444",
@@ -1706,14 +1890,14 @@ export class GameScene extends Phaser.Scene {
         ev.stopPropagation();
         sfxOn = !sfxOn;
         setSoundEnabled(sfxOn);
-        sfxBtn.setText(`SFX: ${sfxOn ? "✅ Ligado" : "❌ Desligado"}`);
+        sfxBtn.setText(`SFX: ${sfxOn ? "[ON] Ligado" : "[--] Desligado"}`);
         sfxBtn.setColor(sfxOn ? "#4ade80" : "#ef4444");
       });
 
     // Music toggle
     let musicOn = isMusicEnabled();
     const musicBtn = this.add
-      .text(panelX, panelY + 95, `Música: ${musicOn ? "✅ Ligada" : "❌ Desligada"}`, {
+      .text(panelX, panelY + 95, `Musica: ${musicOn ? "[ON] Ligada" : "[--] Desligada"}`, {
         fontFamily: "monospace",
         fontSize: "14px",
         color: musicOn ? "#4ade80" : "#ef4444",
@@ -1732,12 +1916,12 @@ export class GameScene extends Phaser.Scene {
           const m = this.level.music;
           playBGM((m === "easy" || m === "medium" || m === "hard") ? m : "medium");
         }
-        musicBtn.setText(`Música: ${musicOn ? "✅ Ligada" : "❌ Desligada"}`);
+        musicBtn.setText(`Musica: ${musicOn ? "[ON] Ligada" : "[--] Desligada"}`);
         musicBtn.setColor(musicOn ? "#4ade80" : "#ef4444");
       });
 
     // Quit button
-    const btnQuit = makeBtn(panelY + 140, "✕  Sair", "#ef4444", () => {
+    const btnQuit = makeBtn(panelY + 140, "X  Sair", "#ef4444", () => {
       this.resumeGame();
       stopBGM();
       if (this.levelIndex >= 0) {

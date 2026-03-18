@@ -2,9 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import HudBar from "@/components/ui/HudBar";
+import HudPanel from "@/components/ui/HudPanel";
+import HudButton from "@/components/ui/HudButton";
+import { PixelIcon } from "@/components/ui/PixelIcon";
 
 const SKINS = [
-  { id: "default", name: "Clássico", color: "#22c55e" },
+  { id: "default", name: "Classico", color: "#22c55e" },
   { id: "fire", name: "Fogo", color: "#ef4444" },
   { id: "ice", name: "Gelo", color: "#38bdf8" },
   { id: "gold", name: "Dourado", color: "#fbbf24" },
@@ -54,95 +58,90 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-border px-6 py-4">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-primary">
-            🐱 Trap Architect
-          </Link>
-          <Link
-            href="/"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            ← Voltar
-          </Link>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col">
+      <HudBar />
 
-      <main className="max-w-3xl mx-auto px-6 py-8">
-        <h1 className="text-3xl font-bold mb-8">Configurações</h1>
+      <main className="max-w-3xl mx-auto px-4 py-6 w-full">
+        <HudPanel className="mb-6">
+          <h1 className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-2">
+            <PixelIcon name="settings" size={16} /> Configuracoes
+          </h1>
+        </HudPanel>
 
         {message && (
-          <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 mb-6 text-sm">
-            {message}
-          </div>
+          <HudPanel variant="highlight" className="mb-4">
+            <p className="text-[9px]">{message}</p>
+          </HudPanel>
         )}
 
         {/* Sound */}
-        <section className="bg-card border border-border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-bold mb-4">🔊 Áudio</h2>
+        <HudPanel className="mb-4">
+          <h2 className="text-[10px] font-bold mb-3 uppercase tracking-wider flex items-center gap-2">
+            <PixelIcon name={soundEnabled ? "sound-on" : "sound-off"} size={14} /> Audio
+          </h2>
           <div className="flex items-center justify-between">
-            <span className="text-sm">Efeitos Sonoros</span>
+            <span className="text-[9px]">Efeitos Sonoros</span>
             <button
               onClick={toggleSound}
-              className={`relative w-12 h-6 rounded-full transition-colors ${
-                soundEnabled ? "bg-primary" : "bg-muted"
+              className={`relative w-10 h-5 transition-colors border-2 ${
+                soundEnabled ? "bg-primary/30 border-primary" : "bg-muted border-border"
               }`}
             >
               <span
-                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                  soundEnabled ? "left-6.5" : "left-0.5"
+                className={`absolute top-0.5 w-3.5 h-3.5 bg-foreground transition-transform ${
+                  soundEnabled ? "left-[18px]" : "left-0.5"
                 }`}
               />
             </button>
           </div>
-        </section>
+        </HudPanel>
 
         {/* Skin selector */}
-        <section className="bg-card border border-border rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-bold mb-4">🎨 Skin Ativa</h2>
-          <div className="grid grid-cols-4 gap-3">
+        <HudPanel className="mb-4">
+          <h2 className="text-[10px] font-bold mb-3 uppercase tracking-wider flex items-center gap-2">
+            <PixelIcon name="paint" size={14} /> Skin Ativa
+          </h2>
+          <div className="grid grid-cols-4 gap-2">
             {SKINS.filter((s) => ownedSkins.includes(s.id)).map((skin) => (
               <button
                 key={skin.id}
                 onClick={() => selectSkin(skin.id)}
-                className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-colors ${
+                className={`flex flex-col items-center gap-2 p-2 border-2 transition-colors ${
                   equippedSkin === skin.id
                     ? "border-primary bg-primary/10"
                     : "border-border hover:border-border/80"
                 }`}
               >
                 <div
-                  className="w-10 h-10 rounded-full border border-white/10"
+                  className="w-8 h-8 border-2 border-white/10"
                   style={{ backgroundColor: skin.color }}
                 />
-                <span className="text-xs">{skin.name}</span>
+                <span className="text-[7px] uppercase">{skin.name}</span>
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground mt-3">
+          <p className="text-[8px] text-muted-foreground mt-3">
             Compre mais skins na{" "}
             <Link href="/shop" className="text-primary hover:underline">
               Loja
             </Link>
             .
           </p>
-        </section>
+        </HudPanel>
 
         {/* Reset progress */}
-        <section className="bg-card border border-border rounded-lg p-6">
-          <h2 className="text-xl font-bold mb-4">🗑️ Dados</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Resetar o progresso da campanha irá apagar as fases desbloqueadas e
+        <HudPanel variant="danger">
+          <h2 className="text-[10px] font-bold mb-3 uppercase tracking-wider flex items-center gap-2">
+            <PixelIcon name="warning" size={14} color="#EF4444" /> Dados
+          </h2>
+          <p className="text-[8px] text-muted-foreground mb-3">
+            Resetar o progresso da campanha ira apagar as fases desbloqueadas e
             seus tempos salvos localmente.
           </p>
-          <button
-            onClick={resetProgress}
-            className="text-sm bg-red-500/20 text-red-400 px-4 py-2 rounded font-medium hover:bg-red-500/30 transition-colors"
-          >
-            Resetar Progresso da Campanha
-          </button>
-        </section>
+          <HudButton onClick={resetProgress} variant="danger" size="small">
+            Resetar Progresso
+          </HudButton>
+        </HudPanel>
       </main>
     </div>
   );

@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import RankBadge from "@/components/RankBadge";
 import { RankUpToast, useRankUpToast } from "@/components/RankUpToast";
 import type { User } from "@supabase/supabase-js";
+import HudBar from "@/components/ui/HudBar";
+import HudPanel from "@/components/ui/HudPanel";
+import HudButton from "@/components/ui/HudButton";
+import { PixelIcon } from "@/components/ui/PixelIcon";
 
 interface Profile {
   id: string;
@@ -80,69 +83,61 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
+        <p className="text-muted-foreground text-[9px] uppercase tracking-wider">Carregando...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-border px-6 py-4">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-primary">
-            🐱 Trap Architect
-          </Link>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Sair
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col">
+      <HudBar />
 
-      <main className="max-w-3xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold mb-8">Meu Perfil</h1>
+      <main className="max-w-3xl mx-auto px-4 py-6 w-full">
+        <HudPanel className="mb-6">
+          <h1 className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 mb-1">
+            <PixelIcon name="profile" size={16} /> Meu Perfil
+          </h1>
+        </HudPanel>
 
         {profile && (
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <div className="bg-card border border-border rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold">{profile.levels_created}</p>
-              <p className="text-sm text-muted-foreground">Níveis Criados</p>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold">{profile.total_plays_received}</p>
-              <p className="text-sm text-muted-foreground">Plays Totais</p>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold">{profile.total_likes_received}</p>
-              <p className="text-sm text-muted-foreground">Likes Totais</p>
-            </div>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <HudPanel className="text-center">
+              <p className="text-sm font-bold text-primary">{profile.levels_created}</p>
+              <p className="text-[8px] text-muted-foreground uppercase tracking-wider">Niveis</p>
+            </HudPanel>
+            <HudPanel className="text-center">
+              <p className="text-sm font-bold text-primary">{profile.total_plays_received}</p>
+              <p className="text-[8px] text-muted-foreground uppercase tracking-wider">Plays</p>
+            </HudPanel>
+            <HudPanel className="text-center">
+              <p className="text-sm font-bold text-primary">{profile.total_likes_received}</p>
+              <p className="text-[8px] text-muted-foreground uppercase tracking-wider">Likes</p>
+            </HudPanel>
           </div>
         )}
 
-        <div className="bg-card border border-border rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold mb-4">Informações</h2>
+        <HudPanel className="mb-6">
+          <h2 className="text-[10px] font-bold mb-4 uppercase tracking-wider">Informacoes</h2>
 
           {message && (
-            <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 mb-4 text-sm">
-              {message}
-            </div>
+            <HudPanel variant="highlight" className="mb-4">
+              <p className="text-[9px]">{message}</p>
+            </HudPanel>
           )}
 
           <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <label htmlFor="email-display" className="block text-sm font-medium mb-1">E-mail</label>
+              <label htmlFor="email-display" className="block text-[8px] font-bold mb-1 uppercase tracking-wider">E-mail</label>
               <input
                 id="email-display"
                 type="email"
                 value={user.email || ""}
                 disabled
-                className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm opacity-60"
+                className="w-full border-2 border-border bg-muted px-3 py-2 text-[9px] opacity-60"
               />
             </div>
             <div>
-              <label htmlFor="nickname-input" className="block text-sm font-medium mb-1">Nickname</label>
+              <label htmlFor="nickname-input" className="block text-[8px] font-bold mb-1 uppercase tracking-wider">Nickname</label>
               <input
                 id="nickname-input"
                 type="text"
@@ -150,50 +145,37 @@ export default function ProfilePage() {
                 onChange={(e) => setNickname(e.target.value)}
                 minLength={2}
                 maxLength={30}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full border-2 border-border bg-background px-3 py-2 text-[9px] focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             {profile && (
               <div>
-                <label className="block text-sm font-medium mb-1">Rank</label>
+                <label className="block text-[8px] font-bold mb-1 uppercase tracking-wider">Rank</label>
                 <RankBadge rankLevel={profile.creator_rank} />
               </div>
             )}
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
+            <HudButton type="submit" disabled={saving} variant="primary">
               {saving ? "Salvando..." : "Salvar"}
-            </button>
+            </HudButton>
           </form>
-        </div>
+        </HudPanel>
 
-        <div className="flex gap-4">
-          <Link
-            href="/editor"
-            className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:opacity-90 transition-opacity"
-          >
-            Criar Novo Nível
-          </Link>
-          <Link
-            href="/play"
-            className="border border-border px-6 py-2 rounded-md font-medium hover:bg-muted transition-colors"
-          >
-            Jogar Campanha
-          </Link>
-          <Link
-            href="/shop"
-            className="border border-border px-6 py-2 rounded-md font-medium hover:bg-muted transition-colors"
-          >
-            🛒 Loja
-          </Link>
-          <Link
-            href="/settings"
-            className="border border-border px-6 py-2 rounded-md font-medium hover:bg-muted transition-colors"
-          >
-            ⚙ Configurações
-          </Link>
+        <div className="flex flex-wrap gap-3">
+          <HudButton href="/editor" variant="primary">
+            <PixelIcon name="create" size={12} /> Criar Nivel
+          </HudButton>
+          <HudButton href="/play" variant="secondary">
+            <PixelIcon name="play" size={12} /> Campanha
+          </HudButton>
+          <HudButton href="/shop" variant="gold">
+            <PixelIcon name="shop" size={12} /> Loja
+          </HudButton>
+          <HudButton href="/settings" variant="ghost">
+            <PixelIcon name="settings" size={12} /> Config
+          </HudButton>
+          <HudButton onClick={handleLogout} variant="ghost">
+            <PixelIcon name="logout" size={12} /> Sair
+          </HudButton>
         </div>
       </main>
 

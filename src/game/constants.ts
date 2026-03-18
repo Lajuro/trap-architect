@@ -19,7 +19,11 @@ export const FLYING_SPEED = 1.5;
 export const FLYING_BOB_AMPLITUDE = 40;
 export const SPRING_MULTIPLIER = 1.5;
 export const TRAMPOLINE_MULTIPLIER = 2;
-export const FAKE_GROUND_TIMER = 20;
+export const FAKE_GROUND_TIMER = 50;
+export const HIDDEN_SPIKE_RUMBLE = 20;
+export const HIDDEN_SPIKE_EMERGE = 8;
+export const HIDDEN_SPIKE_HOLD = 60;
+export const HIDDEN_SPIKE_RETRACT = 15;
 
 // Fixed timestep for frame-rate independence (60 FPS physics)
 export const FIXED_STEP = 1000 / 60; // ~16.667ms
@@ -64,15 +68,15 @@ export const SOLID_TILES = new Set([
   TileType.ICE,
   TileType.CONVEYOR_L,
   TileType.CONVEYOR_R,
-  TileType.CHECKPOINT,
   TileType.TRAMPOLINE,
+  TileType.FAKE_GROUND,
+  TileType.HIDDEN_SPIKE,
 ]);
 
 export const ONEWAY_TILES = new Set([TileType.PLATFORM]);
 
 export const LETHAL_TILES = new Set([
   TileType.SPIKE,
-  TileType.HIDDEN_SPIKE,
   TileType.LAVA,
 ]);
 

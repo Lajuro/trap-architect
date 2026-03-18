@@ -3,10 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { SKINS, TRAILS, DEATH_EFFECTS, FRAMES } from "@/game/constants";
+import HudBar from "@/components/ui/HudBar";
+import HudPanel from "@/components/ui/HudPanel";
+import HudButton from "@/components/ui/HudButton";
+import { PixelIcon, type PixelIconName } from "@/components/ui/PixelIcon";
 
-// localStorage keys
 const LS_EQUIPPED_SKIN = "trap_equipped_skin";
 const LS_EQUIPPED_TRAIL = "trap_equipped_trail";
 const LS_EQUIPPED_DEATH = "trap_equipped_death_effect";
@@ -80,7 +82,7 @@ export default function ShopPage() {
         localStorage.setItem(LS_UNLOCKED, JSON.stringify(updated));
         return updated;
       });
-      setMessage("Item comprado com sucesso!");
+      setMessage("Item comprado!");
     } else {
       setMessage(data.error || "Erro ao comprar");
     }
@@ -102,143 +104,169 @@ export default function ShopPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
+        <p className="text-muted-foreground text-[9px] uppercase tracking-wider">Carregando...</p>
       </div>
     );
   }
 
-  const tabs = [
-    { id: "skins" as const, label: "🎨 Skins" },
-    { id: "trails" as const, label: "✨ Trilhas" },
-    { id: "deaths" as const, label: "💀 Efeitos" },
-    { id: "frames" as const, label: "🖼 Molduras" },
+  const tabs: { id: typeof tab; label: string; icon: PixelIconName }[] = [
+    { id: "skins", label: "Skins", icon: "paint" },
+    { id: "trails", label: "Trilhas", icon: "sparkle" },
+    { id: "deaths", label: "Efeitos", icon: "skull" },
+    { id: "frames", label: "Molduras", icon: "crown" },
   ];
 
-  return (
-    <div className="min-h-screen">
-      <header className="border-b border-border px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-primary">
-            🐱 Trap Architect
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-bold text-yellow-400">🪙 {coins} moedas</span>
-            <Link href="/profile" className="text-sm text-muted-foreground hover:text-foreground">Perfil</Link>
-          </div>
-        </div>
-      </header>
+  function renderCosmeticCard(
+    id: string,
+    name: string,
+    cost: number,
+    owned: boolean,
+    equipped: boolean,
+    onEquip: () => void,
+    preview: React.ReactNode,
+  ) {
+    return (
+      <HudPanel
+        key={id}
+        variant={equipped ? "highlight" : "default"}
+        className="text-center"
+      >
+        <div className="mb-3">{preview}</div>
+        <h3 className="text-[9px] font-bold mb-2 uppercase">{name}</h3>
+        {equipped ? (
+          <span className="text-[8px] text-primary font-medium uppercase tracking-wider">Equipado</span>
+        ) : owned ? (
+          <HudButton onClick={onEquip} variant="secondary" size="small">Equipar</HudButton>
+        ) : (
+          <HudButton onClick={() => purchaseItem(id)} disabled={coins < cost} variant="gold" size="small">
+            <PixelIcon name="coin" size={10} color="#FFD700" /> {cost}
+          </HudButton>
+        )}
+      </HudPanel>
+    );
+  }
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <h1 className="text-3xl font-bold mb-2">Loja de Cosméticos</h1>
-        <p className="text-muted-foreground mb-6">Ganhe moedas de criador quando outros jogam seus níveis.</p>
+  return (
+    <div className="min-h-screen flex flex-col">
+      <HudBar />
+
+      <main className="max-w-5xl mx-auto px-4 py-6 w-full">
+        <HudPanel variant="gold" className="mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-2">
+                <PixelIcon name="shop" size={16} color="#FFD700" /> Loja
+              </h1>
+              <p className="text-[8px] text-muted-foreground mt-1">
+                Ganhe moedas quando outros jogam seus niveis.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-bold text-yellow-400">
+              <PixelIcon name="coin" size={14} color="#FFD700" /> {coins}
+            </div>
+          </div>
+        </HudPanel>
 
         {message && (
-          <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 mb-6 text-sm">{message}</div>
+          <HudPanel variant="highlight" className="mb-4">
+            <p className="text-[9px]">{message}</p>
+          </HudPanel>
         )}
 
-        <div className="flex gap-2 mb-6 border-b border-border">
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 border-b-2 border-border">
           {tabs.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tab === t.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              {t.label}
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-3 py-2 text-[8px] font-bold uppercase tracking-wider transition-colors border-b-2 -mb-[2px] flex items-center gap-1 ${
+                tab === t.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <PixelIcon name={t.icon} size={10} /> {t.label}
             </button>
           ))}
         </div>
 
         {tab === "skins" && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {SKINS.map((skin) => {
               const owned = skin.id === "default" || unlocked.includes(skin.id);
               const equipped = equippedSkin === skin.id;
-              return (
-                <div key={skin.id} className={`bg-card border rounded-lg p-4 text-center transition-colors ${equipped ? "border-primary" : "border-border"}`}>
-                  <div className="w-16 h-16 rounded-full mx-auto mb-3 border-2 border-white/10" style={{ backgroundColor: skin.color }} />
-                  <h3 className="font-bold text-sm mb-1">{skin.name}</h3>
-                  {equipped ? (
-                    <span className="text-xs text-primary font-medium">✓ Equipada</span>
-                  ) : owned ? (
-                    <button onClick={() => equipItem("equipped_skin", skin.id)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded font-medium hover:bg-primary/30 transition-colors">Equipar</button>
-                  ) : (
-                    <button onClick={() => purchaseItem(skin.id)} disabled={coins < skin.cost} className="text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded font-medium hover:bg-yellow-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">🪙 {skin.cost}</button>
-                  )}
-                </div>
+              return renderCosmeticCard(
+                skin.id, skin.name, skin.cost, owned, equipped,
+                () => equipItem("equipped_skin", skin.id),
+                <div className="w-14 h-14 mx-auto border-2 border-border" style={{ backgroundColor: skin.color }} />,
               );
             })}
           </div>
         )}
 
         {tab === "trails" && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {TRAILS.map((trail) => {
               const owned = trail.id === "trail_none" || unlocked.includes(trail.id);
               const equipped = equippedTrail === trail.id;
-              return (
-                <div key={trail.id} className={`bg-card border rounded-lg p-4 text-center transition-colors ${equipped ? "border-primary" : "border-border"}`}>
-                  <div className="w-16 h-16 rounded-full mx-auto mb-3 border-2 border-white/10 flex items-center justify-center"
-                    style={{ background: trail.colors.length >= 2 ? `linear-gradient(135deg, ${trail.colors.join(", ")})` : "#333" }}>
-                    {trail.colors.length === 0 && <span className="text-2xl opacity-40">✕</span>}
-                  </div>
-                  <h3 className="font-bold text-sm mb-1">{trail.name}</h3>
-                  {equipped ? (
-                    <span className="text-xs text-primary font-medium">✓ Equipada</span>
-                  ) : owned ? (
-                    <button onClick={() => equipItem("equipped_trail", trail.id)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded font-medium hover:bg-primary/30 transition-colors">Equipar</button>
-                  ) : (
-                    <button onClick={() => purchaseItem(trail.id)} disabled={coins < trail.cost} className="text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded font-medium hover:bg-yellow-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">🪙 {trail.cost}</button>
-                  )}
-                </div>
+              return renderCosmeticCard(
+                trail.id, trail.name, trail.cost, owned, equipped,
+                () => equipItem("equipped_trail", trail.id),
+                <div
+                  className="w-14 h-14 mx-auto border-2 border-border flex items-center justify-center"
+                  style={{ background: trail.colors.length >= 2 ? `linear-gradient(135deg, ${trail.colors.join(", ")})` : "#333" }}
+                >
+                  {trail.colors.length === 0 && <PixelIcon name="close" size={16} color="#555" />}
+                </div>,
               );
             })}
           </div>
         )}
 
         {tab === "deaths" && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {DEATH_EFFECTS.map((effect) => {
               const owned = effect.id === "death_default" || unlocked.includes(effect.id);
               const equipped = equippedDeath === effect.id;
-              const icons: Record<string, string> = { death_default: "💥", death_pixelate: "🟥", death_ghost: "👻", death_confetti: "🎊", death_shatter: "💎" };
-              return (
-                <div key={effect.id} className={`bg-card border rounded-lg p-4 text-center transition-colors ${equipped ? "border-primary" : "border-border"}`}>
-                  <div className="w-16 h-16 rounded-full mx-auto mb-3 border-2 border-white/10 bg-card flex items-center justify-center text-2xl">{icons[effect.id] || "💀"}</div>
-                  <h3 className="font-bold text-sm mb-1">{effect.name}</h3>
-                  {equipped ? (
-                    <span className="text-xs text-primary font-medium">✓ Equipado</span>
-                  ) : owned ? (
-                    <button onClick={() => equipItem("equipped_death_effect", effect.id)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded font-medium hover:bg-primary/30 transition-colors">Equipar</button>
-                  ) : (
-                    <button onClick={() => purchaseItem(effect.id)} disabled={coins < effect.cost} className="text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded font-medium hover:bg-yellow-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">🪙 {effect.cost}</button>
-                  )}
-                </div>
+              const icons: Record<string, PixelIconName> = {
+                death_default: "fire",
+                death_pixelate: "diff-hard",
+                death_ghost: "ghost",
+                death_confetti: "confetti",
+                death_shatter: "sparkle",
+              };
+              return renderCosmeticCard(
+                effect.id, effect.name, effect.cost, owned, equipped,
+                () => equipItem("equipped_death_effect", effect.id),
+                <div className="w-14 h-14 mx-auto border-2 border-border bg-card flex items-center justify-center">
+                  <PixelIcon name={icons[effect.id] || "skull"} size={24} />
+                </div>,
               );
             })}
           </div>
         )}
 
         {tab === "frames" && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {FRAMES.map((frame) => {
               const owned = frame.id === "frame_none" || unlocked.includes(frame.id);
               const equipped = equippedFrame === frame.id;
-              const frameStyles: Record<string, string> = {
-                frame_none: "border-border",
-                frame_gold: "border-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.3)]",
-                frame_diamond: "border-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.4)]",
-                frame_troll: "border-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.3)]",
-                frame_fire: "border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.4)]",
+              const frameColors: Record<string, string> = {
+                frame_none: "#333",
+                frame_gold: "#EAB308",
+                frame_diamond: "#06B6D4",
+                frame_troll: "#A855F7",
+                frame_fire: "#F97316",
               };
-              return (
-                <div key={frame.id} className={`bg-card border rounded-lg p-4 text-center transition-colors ${equipped ? "border-primary" : "border-border"}`}>
-                  <div className={`w-16 h-16 rounded-full mx-auto mb-3 border-4 bg-card flex items-center justify-center text-lg ${frameStyles[frame.id] || "border-border"}`}>🐱</div>
-                  <h3 className="font-bold text-sm mb-1">{frame.name}</h3>
-                  {equipped ? (
-                    <span className="text-xs text-primary font-medium">✓ Equipada</span>
-                  ) : owned ? (
-                    <button onClick={() => equipItem("equipped_frame", frame.id)} className="text-xs bg-primary/20 text-primary px-3 py-1 rounded font-medium hover:bg-primary/30 transition-colors">Equipar</button>
-                  ) : (
-                    <button onClick={() => purchaseItem(frame.id)} disabled={coins < frame.cost} className="text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded font-medium hover:bg-yellow-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">🪙 {frame.cost}</button>
-                  )}
-                </div>
+              return renderCosmeticCard(
+                frame.id, frame.name, frame.cost, owned, equipped,
+                () => equipItem("equipped_frame", frame.id),
+                <div
+                  className="w-14 h-14 mx-auto border-4 bg-card flex items-center justify-center"
+                  style={{ borderColor: frameColors[frame.id] || "#333" }}
+                >
+                  <PixelIcon name="cat" size={20} />
+                </div>,
               );
             })}
           </div>

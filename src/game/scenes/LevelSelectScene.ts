@@ -118,7 +118,7 @@ export class LevelSelectScene extends Phaser.Scene {
         const prog = this.progress[i]!;
         container.add(
           this.add
-            .text(cardW / 2, 95, `💀 ${prog.bestDeaths}  🪙 ${prog.bestCoins}`, {
+            .text(cardW / 2, 95, `x${prog.bestDeaths}  $${prog.bestCoins}`, {
               fontFamily: "monospace",
               fontSize: "10px",
               color: "#44ff44",
@@ -128,7 +128,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
         container.add(
           this.add
-            .text(cardW / 2, 115, "✅ COMPLETA", {
+            .text(cardW / 2, 115, "COMPLETA", {
               fontFamily: "monospace",
               fontSize: "10px",
               color: "#44ff44",
@@ -138,7 +138,7 @@ export class LevelSelectScene extends Phaser.Scene {
       } else if (!isUnlocked) {
         container.add(
           this.add
-            .text(cardW / 2, 100, "🔒", {
+            .text(cardW / 2, 100, "[X]", {
               fontFamily: "monospace",
               fontSize: "20px",
             })
