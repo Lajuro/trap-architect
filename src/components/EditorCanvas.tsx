@@ -33,6 +33,8 @@ function levelDataToParsedLevel(data: LevelData): ParsedLevel {
     tiles: data.tiles.map((row) => [...row]),
     entities,
     trolls,
+    slideBlocks: data.slideBlocks ? [...data.slideBlocks] : [],
+    movingPlatforms: data.movingPlatforms ? [...data.movingPlatforms] : [],
     playerStart: {
       x: data.playerStart.x * TILE_SIZE + TILE_SIZE / 2,
       y: data.playerStart.y * TILE_SIZE + TILE_SIZE / 2,

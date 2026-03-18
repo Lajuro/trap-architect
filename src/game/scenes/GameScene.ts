@@ -23,12 +23,28 @@ import {
   LETHAL_TILES,
   FIXED_STEP,
   MAX_ACCUMULATED,
+  STAR_DURATION,
+  FIRE_FLOWER_DURATION,
+  MUSHROOM_SPEED_BOOST,
+  POWERUP_MOVE_SPEED,
+  POWERUP_GRAVITY,
+  WALL_JUMP_FORCE_X,
+  WALL_JUMP_FORCE_Y,
+  WALL_SLIDE_SPEED,
+  DASH_SPEED,
+  DASH_DURATION,
+  GRAVITY_FLIP_DEFAULT_DURATION,
+  TIMED_BLOCK_ON,
+  TIMED_BLOCK_OFF,
+  SLIDE_BLOCK_SPEED,
+  MOVING_PLATFORM_DEFAULT_SPEED,
+  MOVING_PLATFORM_DEFAULT_RANGE,
 } from "../constants";
-import { TileType, type ParsedLevel, type GameEntity } from "../types";
+import { TileType, type ParsedLevel, type GameEntity, type SlideBlockConfig, type MovingPlatformConfig, type PowerUpType } from "../types";
 import { gameEvents, GAME_EVENTS } from "../events";
 import { DEMO_LEVEL } from "../levels/demo";
 import { getCampaignLevel, CAMPAIGN_LEVELS } from "../levels/campaign";
-import { playJump, playDeath, playCoin, playComplete, playSpring, playStomp, playBGM, isSoundEnabled, isMusicEnabled, setMusicEnabled, setSoundEnabled, stopBGM } from "../audio";
+import { playJump, playDeath, playCoin, playComplete, playSpring, playStomp, playBGM, isSoundEnabled, isMusicEnabled, setMusicEnabled, setSoundEnabled, stopBGM, playPowerUp, playWallJump, playDash, playGravityFlip, playSlideBlock, playFireball } from "../audio";
 
 interface PlayerSprite extends Phaser.GameObjects.Image {
   vx: number;
@@ -52,6 +68,42 @@ interface SpikeAnimation {
   timer: number;
   spikeSprite: Phaser.GameObjects.Image | null;
   killed: boolean;
+}
+
+interface SlideBlockAnim {
+  config: SlideBlockConfig;
+  currentX: number;
+  currentY: number;
+  targetX: number;
+  targetY: number;
+  sprite: Phaser.GameObjects.Image | null;
+  done: boolean;
+}
+
+interface MovingPlatformState {
+  config: MovingPlatformConfig;
+  x: number;
+  y: number;
+  dir: number;
+  sprite: Phaser.GameObjects.Image;
+}
+
+interface Fireball {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  bounces: number;
+  sprite: Phaser.GameObjects.Image;
+  alive: boolean;
+}
+
+interface StateSnapshot {
+  tiles: number[][];
+  entities: GameEntity[];
+  coins: number;
+  trollTriggered: boolean[];
+  slideBlocks: SlideBlockConfig[];
 }
 
 export class GameScene extends Phaser.Scene {
@@ -96,6 +148,35 @@ export class GameScene extends Phaser.Scene {
   private parallaxGfx!: Phaser.GameObjects.Graphics;
   // Activated checkpoints
   private activatedCheckpoints = new Set<string>();
+  // State snapshot for respawn restoration
+  private snapshot!: StateSnapshot;
+  // Power-up state
+  private powered = false;
+  private powerType: PowerUpType | null = null;
+  private powerTimer = 0;
+  // Wall jump state
+  private wallSliding = false;
+  private wallDir: 1 | -1 | 0 = 0;
+  // Dash state
+  private canDash = true;
+  private dashing = false;
+  private dashTimer = 0;
+  // Gravity flip state
+  private gravityFlipped = false;
+  private gravityFlipTimer = 0;
+  // Slide blocks
+  private slideBlockAnims: SlideBlockAnim[] = [];
+  // Moving platforms
+  private movingPlatforms: MovingPlatformState[] = [];
+  // Timed blocks state
+  private timedBlockTimer = 0;
+  private timedBlockVisible = true;
+  // Fireballs
+  private fireballs: Fireball[] = [];
+  // Power-up indicator HUD
+  private hudPower!: Phaser.GameObjects.Text;
+  // Dash indicator
+  private hudDash!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: "GameScene" });
@@ -125,6 +206,22 @@ export class GameScene extends Phaser.Scene {
     this.elapsedMs = 0;
     this.pauseStartTime = 0;
     this.totalPausedMs = 0;
+    // Reset new mechanics
+    this.powered = false;
+    this.powerType = null;
+    this.powerTimer = 0;
+    this.wallSliding = false;
+    this.wallDir = 0;
+    this.canDash = true;
+    this.dashing = false;
+    this.dashTimer = 0;
+    this.gravityFlipped = false;
+    this.gravityFlipTimer = 0;
+    this.slideBlockAnims = [];
+    this.timedBlockTimer = 0;
+    this.timedBlockVisible = true;
+    this.fireballs.forEach(f => f.sprite.destroy());
+    this.fireballs = [];
 
     this.cameras.main.setBackgroundColor(this.level.bgColor);
 
@@ -143,6 +240,12 @@ export class GameScene extends Phaser.Scene {
 
     // Spawn entities
     this.spawnEntities();
+
+    // Initialize moving platforms
+    this.initMovingPlatforms();
+
+    // Initialize slide blocks
+    this.initSlideBlocks();
 
     // Create player
     this.createPlayer();
@@ -191,6 +294,27 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(100);
 
+    this.hudPower = this.add
+      .text(GAME_WIDTH - 16, 16, "", {
+        fontFamily: "monospace",
+        fontSize: "14px",
+        color: "#ff88ff",
+      })
+      .setOrigin(1, 0)
+      .setScrollFactor(0)
+      .setDepth(100);
+
+    this.hudDash = this.add
+      .text(GAME_WIDTH - 16, 36, "[SHIFT] Dash", {
+        fontFamily: "monospace",
+        fontSize: "12px",
+        color: "#88ccff",
+      })
+      .setOrigin(1, 0)
+      .setScrollFactor(0)
+      .setDepth(100)
+      .setAlpha(0.6);
+
     // Level name overlay
     this.levelNameText = this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, this.level.name, {
@@ -233,6 +357,9 @@ export class GameScene extends Phaser.Scene {
     // Reset fixed timestep
     this.accumulator = 0;
     this.frame = 0;
+
+    // Save initial state snapshot for respawn restoration
+    this.saveSnapshot();
   }
 
   update(_time: number, delta: number): void {
@@ -288,6 +415,27 @@ export class GameScene extends Phaser.Scene {
 
       // Trail effect
       this.updateTrail();
+
+      // Power-up timer
+      this.updatePowerUpState();
+
+      // Dash timer
+      this.updateDashState();
+
+      // Gravity flip timer
+      this.updateGravityFlip();
+
+      // Timed blocks
+      this.updateTimedBlocks();
+
+      // Slide blocks
+      this.updateSlideBlocks();
+
+      // Moving platforms
+      this.updateMovingPlatforms();
+
+      // Fireballs
+      this.updateFireballs();
     }
 
     // Per-render updates (visual only, not physics)
@@ -300,6 +448,19 @@ export class GameScene extends Phaser.Scene {
     this.hudDeaths.setText(`x ${this.deaths}`);
     const elapsedSecs = Math.floor((Date.now() - this.startTime - this.totalPausedMs) / 1000);
     this.hudTime.setText(`T ${elapsedSecs}s`);
+
+    // Power-up HUD
+    if (this.powered && this.powerType) {
+      const names: Record<string, string> = { mushroom: "Cogumelo", star: "Estrela", fire_flower: "Fogo" };
+      const secs = Math.ceil(this.powerTimer / 60);
+      this.hudPower.setText(`${names[this.powerType] ?? ""} ${secs}s`);
+      this.hudPower.setAlpha(this.powerTimer < 120 ? (Math.sin(this.frame * 0.3) * 0.5 + 0.5) : 1);
+    } else {
+      this.hudPower.setText("");
+    }
+
+    // Dash HUD
+    this.hudDash.setAlpha(this.canDash ? 0.6 : 0.15);
   }
 
   // ===========================================================
@@ -491,6 +652,11 @@ export class GameScene extends Phaser.Scene {
       [TileType.CONVEYOR_R]: "tile_conveyor",
       [TileType.CHECKPOINT]: "tile_checkpoint",
       [TileType.TRAMPOLINE]: "tile_trampoline",
+      [TileType.POWERUP_BLOCK]: "tile_powerup_block",
+      [TileType.SLIDE_BLOCK]: "tile_slide_block",
+      [TileType.TIMED_BLOCK]: "tile_timed_block",
+      [TileType.GRAVITY_ZONE]: "tile_gravity_zone",
+      [TileType.MOVING_PLATFORM]: "tile_moving_platform",
     };
 
     const key = textureMap[tile];
@@ -501,6 +667,11 @@ export class GameScene extends Phaser.Scene {
     // Invisible tiles start hidden
     if (tile === TileType.INVISIBLE) {
       sprite.setAlpha(0);
+    }
+
+    // Gravity zone is semi-transparent
+    if (tile === TileType.GRAVITY_ZONE) {
+      sprite.setAlpha(0.6);
     }
 
     return sprite;
@@ -520,6 +691,9 @@ export class GameScene extends Phaser.Scene {
         fast_goomba: "entity_fast_goomba",
         spiny: "entity_spiny",
         flying: "entity_flying",
+        mushroom: "entity_mushroom",
+        star: "entity_star",
+        fire_flower: "entity_fire_flower",
       };
 
       const key = textureMap[ent.type];
@@ -527,7 +701,7 @@ export class GameScene extends Phaser.Scene {
 
       const sprite = this.add.image(ent.x, ent.y, key);
       ent.alive = true;
-      ent.vx = ent.vx ?? (ent.type === "coin" || ent.type === "flag" || ent.type === "fake_flag" ? 0 : -1.5);
+      ent.vx = ent.vx ?? (ent.type === "coin" || ent.type === "flag" || ent.type === "fake_flag" || ent.type === "mushroom" || ent.type === "star" || ent.type === "fire_flower" ? 0 : -1.5);
       ent.vy = ent.vy ?? 0;
       ent.dir = ent.dir ?? -1;
 
@@ -555,6 +729,9 @@ export class GameScene extends Phaser.Scene {
   private handleInput(): void {
     if (!this.cursors) return;
 
+    // Skip input during dash
+    if (this.dashing) return;
+
     const onIce = this.isOnTile(TileType.ICE);
 
     const leftDown = this.cursors.left.isDown || this.keyA?.isDown;
@@ -562,19 +739,22 @@ export class GameScene extends Phaser.Scene {
     const jumpDown = this.cursors.up.isDown || this.keyW?.isDown || this.keySpace?.isDown;
     const jumpUp = this.cursors.up.isUp && (!this.keyW || this.keyW.isUp) && (!this.keySpace || this.keySpace.isUp);
 
+    // Speed modifier from mushroom power-up
+    const speedMod = (this.powered && this.powerType === "mushroom") ? MUSHROOM_SPEED_BOOST : 1;
+
     // Horizontal movement
     if (leftDown) {
       if (onIce) {
-        this.player.vx -= 0.15;
+        this.player.vx -= 0.15 * speedMod;
       } else {
-        this.player.vx = -PLAYER_SPEED;
+        this.player.vx = -PLAYER_SPEED * speedMod;
       }
       this.player.dir = -1;
     } else if (rightDown) {
       if (onIce) {
-        this.player.vx += 0.15;
+        this.player.vx += 0.15 * speedMod;
       } else {
-        this.player.vx = PLAYER_SPEED;
+        this.player.vx = PLAYER_SPEED * speedMod;
       }
       this.player.dir = 1;
     } else if (onIce) {
@@ -585,33 +765,96 @@ export class GameScene extends Phaser.Scene {
 
     // Clamp ice speed
     if (onIce) {
-      this.player.vx = Phaser.Math.Clamp(this.player.vx, -4.16, 4.16);
+      this.player.vx = Phaser.Math.Clamp(this.player.vx, -4.16 * speedMod, 4.16 * speedMod);
     }
 
-    // Jump
-    if (jumpDown && this.player.grounded && !this.player.jumpHeld) {
-      this.player.vy = JUMP_FORCE;
-      this.player.grounded = false;
-      this.player.jumpHeld = true;
-      playJump();
-      this.emitJumpParticles();
+    // Wall slide detection
+    this.wallSliding = false;
+    this.wallDir = 0;
+    if (!this.player.grounded && this.player.vy > 0) {
+      const halfW = PLAYER_W / 2;
+      const midY = Math.floor(this.player.y / TILE_SIZE);
+      const gxRight = Math.floor((this.player.x + halfW + 1) / TILE_SIZE);
+      const gxLeft = Math.floor((this.player.x - halfW - 1) / TILE_SIZE);
+      if (rightDown && this.isSolid(gxRight, midY)) {
+        this.wallSliding = true;
+        this.wallDir = 1;
+        this.player.vy = Math.min(this.player.vy, WALL_SLIDE_SPEED);
+      } else if (leftDown && this.isSolid(gxLeft, midY)) {
+        this.wallSliding = true;
+        this.wallDir = -1;
+        this.player.vy = Math.min(this.player.vy, WALL_SLIDE_SPEED);
+      }
+    }
+
+    // Jump (ground jump + wall jump)
+    if (jumpDown && !this.player.jumpHeld) {
+      if (this.player.grounded) {
+        this.player.vy = this.gravityFlipped ? -JUMP_FORCE : JUMP_FORCE;
+        this.player.grounded = false;
+        this.player.jumpHeld = true;
+        playJump();
+        this.emitJumpParticles();
+      } else if (this.wallSliding) {
+        // Wall jump
+        this.player.vx = -this.wallDir * WALL_JUMP_FORCE_X;
+        this.player.vy = this.gravityFlipped ? -WALL_JUMP_FORCE_Y : WALL_JUMP_FORCE_Y;
+        this.player.dir = (-this.wallDir) as 1 | -1;
+        this.player.jumpHeld = true;
+        this.wallSliding = false;
+        playWallJump();
+        this.emitJumpParticles();
+      }
     }
 
     // Variable jump height
-    if (!jumpDown && this.player.vy < -4) {
-      this.player.vy = -4;
+    const gravUp = this.gravityFlipped ? (this.player.vy > 4) : (this.player.vy < -4);
+    if (!jumpDown && gravUp) {
+      this.player.vy = this.gravityFlipped ? 4 : -4;
       this.player.jumpHeld = false;
     }
 
     if (jumpUp) {
       this.player.jumpHeld = false;
     }
+
+    // Dash (Shift key)
+    if (this.input.keyboard) {
+      const shiftDown = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+      if (shiftDown.isDown && this.canDash && !this.player.grounded) {
+        this.dashing = true;
+        this.dashTimer = DASH_DURATION;
+        this.canDash = false;
+        this.player.vx = this.player.dir * DASH_SPEED;
+        this.player.vy = 0;
+        playDash();
+      }
+    }
+
+    // Fireball (F key or X key) - only with fire_flower power-up
+    if (this.powered && this.powerType === "fire_flower" && this.input.keyboard) {
+      const fKey = this.input.keyboard.addKey("F");
+      const xKey = this.input.keyboard.addKey("X");
+      if (Phaser.Input.Keyboard.JustDown(fKey) || Phaser.Input.Keyboard.JustDown(xKey)) {
+        this.shootFireball();
+      }
+    }
+
+    // Reset dash on ground
+    if (this.player.grounded) {
+      this.canDash = true;
+    }
   }
 
   private applyPhysics(): void {
-    // Gravity
-    this.player.vy += GRAVITY;
-    if (this.player.vy > MAX_FALL) this.player.vy = MAX_FALL;
+    // Gravity (supports flipped gravity)
+    if (this.gravityFlipped) {
+      this.player.vy -= GRAVITY;
+      if (this.player.vy < -MAX_FALL) this.player.vy = -MAX_FALL;
+    } else {
+      this.player.vy += GRAVITY;
+      if (this.player.vy > MAX_FALL) this.player.vy = MAX_FALL;
+    }
 
     // Conveyor push
     if (this.isOnTile(TileType.CONVEYOR_L)) this.player.vx -= CONVEYOR_SPEED;
@@ -633,6 +876,9 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Gravity zone contact
+    this.checkGravityZoneContact();
+
     // Move X
     this.player.x += this.player.vx;
     this.resolveCollisionX();
@@ -651,6 +897,7 @@ export class GameScene extends Phaser.Scene {
 
   private isSolid(gx: number, gy: number): boolean {
     const t = this.getTile(gx, gy);
+    if (t === TileType.TIMED_BLOCK && !this.timedBlockVisible) return false;
     return SOLID_TILES.has(t);
   }
 
@@ -710,9 +957,9 @@ export class GameScene extends Phaser.Scene {
 
         if (isSolid || isOneway) {
           if (isOneway) {
-            // One-way: only if feet were above
+            // One-way: only collide if feet were at or above the tile top (2px tolerance for float precision)
             const prevBottom = this.player.y + halfH - this.player.vy;
-            if (prevBottom > gyBottom * TILE_SIZE) continue;
+            if (prevBottom > gyBottom * TILE_SIZE + 2) continue;
           }
 
           this.player.y = gyBottom * TILE_SIZE - halfH;
@@ -753,6 +1000,8 @@ export class GameScene extends Phaser.Scene {
           this.hitTrollBlock(gx, gyTop);
         } else if (tile === TileType.INVISIBLE) {
           this.revealInvisible(gx, gyTop);
+        } else if (tile === TileType.POWERUP_BLOCK) {
+          this.hitPowerUpBlock(gx, gyTop);
         }
         break;
       }
@@ -777,6 +1026,8 @@ export class GameScene extends Phaser.Scene {
       const gy = Math.floor(p.y / TILE_SIZE);
       const tile = this.getTile(gx, gy);
       if (LETHAL_TILES.has(tile)) {
+        // Star invincibility protects from lethal tiles
+        if (this.powered && this.powerType === "star") return;
         this.playerDie();
         return;
       }
@@ -806,6 +1057,9 @@ export class GameScene extends Phaser.Scene {
         this.activatedCheckpoints.add(key);
         this.level._checkpointX = gx * TILE_SIZE + TILE_SIZE / 2;
         this.level._checkpointY = gy * TILE_SIZE;
+
+        // Save state snapshot at checkpoint for respawn restoration
+        this.saveSnapshot();
 
         // Visual feedback: tint the checkpoint sprite green
         const sprite = this.tileSprites[gy]?.[gx];
@@ -1071,6 +1325,58 @@ export class GameScene extends Phaser.Scene {
         sprite.setFlipX((ent.dir ?? -1) === 1);
       }
 
+      // Power-up entity movement (mushroom moves like a goomba, star bounces)
+      if (ent.type === "mushroom") {
+        ent.vx = ent.vx ?? POWERUP_MOVE_SPEED;
+        ent.x += ent.vx;
+        ent.vy = (ent.vy ?? 0) + POWERUP_GRAVITY;
+        if (ent.vy > MAX_FALL) ent.vy = MAX_FALL;
+        ent.y += ent.vy;
+        const footGy = Math.floor((ent.y + 10) / TILE_SIZE);
+        const gx = Math.floor(ent.x / TILE_SIZE);
+        if (this.isSolid(gx, footGy)) {
+          ent.y = footGy * TILE_SIZE - 10;
+          ent.vy = 0;
+        }
+        const gy = Math.floor(ent.y / TILE_SIZE);
+        if (this.isSolid(gx + (ent.vx > 0 ? 1 : -1), gy)) {
+          ent.vx = -ent.vx;
+        }
+        if (ent.y > this.level.height * TILE_SIZE + 64) {
+          ent.alive = false;
+          sprite.setVisible(false);
+        }
+      }
+
+      if (ent.type === "star") {
+        ent.vx = ent.vx ?? POWERUP_MOVE_SPEED;
+        ent.x += ent.vx;
+        ent.vy = (ent.vy ?? 0) + POWERUP_GRAVITY;
+        if (ent.vy > 6) ent.vy = 6;
+        ent.y += ent.vy;
+        const footGy = Math.floor((ent.y + 10) / TILE_SIZE);
+        const gx = Math.floor(ent.x / TILE_SIZE);
+        if (this.isSolid(gx, footGy)) {
+          ent.y = footGy * TILE_SIZE - 10;
+          ent.vy = -6; // Bounce!
+        }
+        const gy = Math.floor(ent.y / TILE_SIZE);
+        if (this.isSolid(gx + (ent.vx > 0 ? 1 : -1), gy)) {
+          ent.vx = -ent.vx;
+        }
+        // Star sparkle rotation
+        sprite.setAngle((this.frame * 4) % 360);
+        if (ent.y > this.level.height * TILE_SIZE + 64) {
+          ent.alive = false;
+          sprite.setVisible(false);
+        }
+      }
+
+      // Fire flower stays still but bobs
+      if (ent.type === "fire_flower") {
+        sprite.y = ent.y + Math.sin(this.frame * 0.1) * 3;
+      }
+
       // Player collision with entity
       const dx = Math.abs(this.player.x - ent.x);
       const dy = Math.abs(this.player.y - ent.y);
@@ -1084,22 +1390,48 @@ export class GameScene extends Phaser.Scene {
           playCoin();
           this.emitCoinParticles(ent.x, ent.y);
           gameEvents.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
+        } else if (ent.type === "mushroom") {
+          ent.alive = false;
+          sprite.setVisible(false);
+          this.activatePowerUp("mushroom");
+        } else if (ent.type === "star") {
+          ent.alive = false;
+          sprite.setVisible(false);
+          this.activatePowerUp("star");
+        } else if (ent.type === "fire_flower") {
+          ent.alive = false;
+          sprite.setVisible(false);
+          this.activatePowerUp("fire_flower");
         } else if (ent.type === "flag") {
           this.showLevelComplete();
         } else if (ent.type === "fake_flag") {
-          this.playerDie();
+          this.handleEnemyHit();
         } else if (ent.type === "spiny") {
-          this.playerDie();
+          // Star power kills spiny too
+          if (this.powered && this.powerType === "star") {
+            ent.alive = false;
+            sprite.setVisible(false);
+            playStomp();
+            this.emitStompParticles(ent.x, ent.y);
+          } else {
+            this.handleEnemyHit();
+          }
         } else if (ent.type === "goomba" || ent.type === "fast_goomba" || ent.type === "flying") {
-          // Stomp from above
-          if (this.player.vy > 0 && this.player.y < ent.y - 4) {
+          // Star power kills everything
+          if (this.powered && this.powerType === "star") {
+            ent.alive = false;
+            sprite.setVisible(false);
+            playStomp();
+            this.emitStompParticles(ent.x, ent.y);
+          } else if (this.player.vy > 0 && this.player.y < ent.y - 4) {
+            // Stomp from above
             ent.alive = false;
             sprite.setVisible(false);
             this.player.vy = JUMP_FORCE * 0.6;
             playStomp();
             this.emitStompParticles(ent.x, ent.y);
           } else {
-            this.playerDie();
+            this.handleEnemyHit();
           }
         }
       }
@@ -1120,6 +1452,9 @@ export class GameScene extends Phaser.Scene {
                 fast_goomba: "entity_fast_goomba",
                 spiny: "entity_spiny",
                 flying: "entity_flying",
+                mushroom: "entity_mushroom",
+                star: "entity_star",
+                fire_flower: "entity_fire_flower",
               };
               const ent: GameEntity = {
                 type: troll.entityType,
@@ -1158,6 +1493,40 @@ export class GameScene extends Phaser.Scene {
                 });
               }
             }
+            break;
+          case "spawn_powerup":
+            if (troll.powerUpType && troll.spawnX !== undefined && troll.spawnY !== undefined) {
+              const pTexMap: Record<string, string> = {
+                mushroom: "entity_mushroom",
+                star: "entity_star",
+                fire_flower: "entity_fire_flower",
+              };
+              const pEnt: GameEntity = {
+                type: troll.powerUpType,
+                x: troll.spawnX,
+                y: troll.spawnY,
+                vx: POWERUP_MOVE_SPEED,
+                vy: 0,
+                dir: 1,
+                alive: true,
+              };
+              this.entities.push(pEnt);
+              const pSprite = this.add.image(pEnt.x, pEnt.y, pTexMap[troll.powerUpType] ?? "entity_mushroom");
+              this.entitySprites.push(pSprite);
+            }
+            break;
+          case "slide_block":
+            if (troll.slideFromX !== undefined && troll.slideFromY !== undefined &&
+                troll.slideToX !== undefined && troll.slideToY !== undefined) {
+              this.triggerSlideBlock(troll.slideFromX, troll.slideFromY, troll.slideToX, troll.slideToY);
+            }
+            break;
+          case "gravity_flip":
+            this.gravityFlipped = !this.gravityFlipped;
+            this.gravityFlipTimer = troll.flipDuration ?? GRAVITY_FLIP_DEFAULT_DURATION;
+            playGravityFlip();
+            this.showMessage("Gravidade invertida!");
+            this.player.setFlipY(this.gravityFlipped);
             break;
         }
       }
@@ -1210,13 +1579,114 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private saveSnapshot(): void {
+    this.snapshot = {
+      tiles: this.level.tiles.map((row) => [...row]),
+      entities: structuredClone(this.entities),
+      coins: this.coins,
+      trollTriggered: this.level.trolls.map((t) => t.triggered),
+      slideBlocks: structuredClone(this.level.slideBlocks ?? []),
+    };
+  }
+
+  private restoreSnapshot(): void {
+    // Restore tiles
+    this.level.tiles = this.snapshot.tiles.map((row) => [...row]);
+
+    // Rebuild tile sprites
+    for (let gy = 0; gy < this.level.height; gy++) {
+      for (let gx = 0; gx < this.level.width; gx++) {
+        const old = this.tileSprites[gy]?.[gx];
+        if (old) old.destroy();
+        this.tileSprites[gy][gx] = this.createTileSprite(gx, gy, this.level.tiles[gy][gx]);
+      }
+    }
+
+    // Re-tint activated checkpoints
+    for (const key of this.activatedCheckpoints) {
+      const [gxStr, gyStr] = key.split(",");
+      const sprite = this.tileSprites[Number(gyStr)]?.[Number(gxStr)];
+      if (sprite) sprite.setTint(0x44ff44);
+    }
+
+    // Restore entities
+    this.entitySprites.forEach((s) => s.destroy());
+    this.entitySprites = [];
+    this.entities = structuredClone(this.snapshot.entities);
+    for (const ent of this.entities) {
+      const textureMap: Record<string, string> = {
+        coin: "entity_coin",
+        flag: "entity_flag",
+        fake_flag: "entity_fake_flag",
+        goomba: "entity_goomba",
+        fast_goomba: "entity_fast_goomba",
+        spiny: "entity_spiny",
+        flying: "entity_flying",
+        mushroom: "entity_mushroom",
+        star: "entity_star",
+        fire_flower: "entity_fire_flower",
+      };
+      const key = textureMap[ent.type];
+      if (!key) continue;
+      const sprite = this.add.image(ent.x, ent.y, key);
+      if (!ent.alive) sprite.setVisible(false);
+      this.entitySprites.push(sprite);
+    }
+
+    // Restore coins
+    this.coins = this.snapshot.coins;
+    gameEvents.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
+
+    // Restore troll triggers
+    for (let i = 0; i < this.level.trolls.length; i++) {
+      this.level.trolls[i].triggered = this.snapshot.trollTriggered[i] ?? false;
+    }
+
+    // Clear in-progress crumbling and spike animations
+    this.crumbling = [];
+    this.spikeAnims.forEach((s) => s.spikeSprite?.destroy());
+    this.spikeAnims = [];
+
+    // Restore slide blocks
+    if (this.snapshot.slideBlocks) {
+      this.level.slideBlocks = structuredClone(this.snapshot.slideBlocks);
+    }
+    this.slideBlockAnims.forEach((a) => a.sprite?.destroy());
+    this.slideBlockAnims = [];
+
+    // Clear fireballs
+    this.fireballs.forEach((fb) => fb.sprite.destroy());
+    this.fireballs = [];
+
+    // Reset power-up state
+    this.powered = false;
+    this.powerType = null;
+    this.powerTimer = 0;
+    this.dashing = false;
+    this.dashTimer = 0;
+    this.canDash = true;
+    this.gravityFlipped = false;
+    this.gravityFlipTimer = 0;
+    this.timedBlockTimer = 0;
+    this.timedBlockVisible = true;
+    this.wallSliding = false;
+
+    // Re-initialize moving platforms
+    this.movingPlatforms.forEach((mp) => mp.sprite.destroy());
+    this.initMovingPlatforms();
+  }
+
   private respawn(): void {
+    this.restoreSnapshot();
+
     const spawnX = this.level._checkpointX ?? this.level.playerStart.x;
     const spawnY = this.level._checkpointY ?? this.level.playerStart.y;
     this.player.setPosition(spawnX, spawnY);
     this.player.vx = 0;
     this.player.vy = 0;
     this.player.setAlpha(1);
+    this.player.setTint(0xffffff);
+    this.player.setFlipY(false);
     this.player.alive = true;
     this.player.grounded = false;
   }
@@ -1229,6 +1699,13 @@ export class GameScene extends Phaser.Scene {
     if (this.levelIndex >= 0) {
       gameEvents.emit(GAME_EVENTS.LEVEL_COMPLETE, {
         levelIndex: this.levelIndex,
+        deaths: this.deaths,
+        coins: this.coins,
+      });
+    } else {
+      // Custom/editor test level — also emit so EditorCanvas can handle return
+      gameEvents.emit(GAME_EVENTS.LEVEL_COMPLETE, {
+        levelIndex: -1,
         deaths: this.deaths,
         coins: this.coins,
       });
@@ -1283,8 +1760,8 @@ export class GameScene extends Phaser.Scene {
       } else if (this.levelIndex >= 0) {
         this.scene.start("LevelSelectScene");
       } else {
-        // Custom/test level — don't navigate, let React handle it
-        // (EditorCanvas listens for LEVEL_COMPLETE to return to editor)
+        // Custom/test level — EditorCanvas handles return via LEVEL_COMPLETE event
+        // For standalone play, go to MenuScene if available
         if (this.scene.get("MenuScene")) {
           this.scene.start("MenuScene");
         }
@@ -1460,6 +1937,396 @@ export class GameScene extends Phaser.Scene {
 
   private restartLevel(): void {
     this.scene.restart();
+  }
+
+  // ===========================================================
+  // Power-ups & New Mechanics
+  // ===========================================================
+
+  private handleEnemyHit(): void {
+    if (this.powered) {
+      // Lose power-up instead of dying
+      this.powered = false;
+      this.powerType = null;
+      this.powerTimer = 0;
+      this.player.setTint(0xffffff);
+      this.player.setScale(1);
+      playDeath();
+      // Brief invincibility flash
+      this.tweens.add({
+        targets: this.player,
+        alpha: 0.3,
+        duration: 100,
+        yoyo: true,
+        repeat: 5,
+        onComplete: () => this.player.setAlpha(1),
+      });
+    } else {
+      this.playerDie();
+    }
+  }
+
+  private activatePowerUp(type: PowerUpType): void {
+    this.powered = true;
+    this.powerType = type;
+    playPowerUp();
+
+    switch (type) {
+      case "mushroom":
+        this.powerTimer = 0; // Lasts until hit
+        this.player.setTint(0xff8c00);
+        break;
+      case "star":
+        this.powerTimer = STAR_DURATION;
+        this.player.setTint(0xffd700);
+        break;
+      case "fire_flower":
+        this.powerTimer = FIRE_FLOWER_DURATION;
+        this.player.setTint(0xff4500);
+        break;
+    }
+  }
+
+  private hitPowerUpBlock(gx: number, gy: number): void {
+    this.level.tiles[gy][gx] = TileType.USED;
+    this.updateTileSprite(gx, gy, TileType.USED);
+
+    // Spawn a random power-up above the block
+    const types: PowerUpType[] = ["mushroom", "star", "fire_flower"];
+    const chosen = types[Math.floor(Math.random() * types.length)];
+    const texMap: Record<string, string> = {
+      mushroom: "entity_mushroom",
+      star: "entity_star",
+      fire_flower: "entity_fire_flower",
+    };
+
+    const ent: GameEntity = {
+      type: chosen,
+      x: gx * TILE_SIZE + TILE_SIZE / 2,
+      y: (gy - 1) * TILE_SIZE + TILE_SIZE / 2,
+      vx: chosen === "fire_flower" ? 0 : POWERUP_MOVE_SPEED,
+      vy: 0,
+      dir: 1,
+      alive: true,
+    };
+    this.entities.push(ent);
+    const sprite = this.add.image(ent.x, ent.y, texMap[chosen]);
+    this.entitySprites.push(sprite);
+  }
+
+  private shootFireball(): void {
+    if (this.fireballs.length >= 2) return; // Max 2 active fireballs
+    const fb: Fireball = {
+      x: this.player.x + this.player.dir * 12,
+      y: this.player.y,
+      vx: this.player.dir * 6,
+      vy: 0,
+      bounces: 0,
+      sprite: this.add.image(this.player.x, this.player.y, "entity_fireball").setDepth(55),
+      alive: true,
+    };
+    this.fireballs.push(fb);
+    playFireball();
+  }
+
+  private updateFireballs(): void {
+    for (let i = this.fireballs.length - 1; i >= 0; i--) {
+      const fb = this.fireballs[i];
+      if (!fb.alive) {
+        fb.sprite.destroy();
+        this.fireballs.splice(i, 1);
+        continue;
+      }
+
+      // Apply gravity
+      fb.vy += 0.4;
+      fb.x += fb.vx;
+      fb.y += fb.vy;
+      fb.sprite.setPosition(fb.x, fb.y);
+      fb.sprite.rotation += 0.3;
+
+      // Wall collision
+      const gx = Math.floor(fb.x / TILE_SIZE);
+      const gy = Math.floor(fb.y / TILE_SIZE);
+      if (this.isSolid(gx, gy)) {
+        fb.alive = false;
+        continue;
+      }
+
+      // Floor bounce
+      const gyBelow = Math.floor((fb.y + 5) / TILE_SIZE);
+      if (fb.vy > 0 && this.isSolid(gx, gyBelow)) {
+        fb.vy = -4;
+        fb.bounces++;
+        if (fb.bounces > 3) {
+          fb.alive = false;
+          continue;
+        }
+      }
+
+      // Out of bounds
+      if (fb.x < 0 || fb.x > this.level.width * TILE_SIZE || fb.y > this.level.height * TILE_SIZE) {
+        fb.alive = false;
+        continue;
+      }
+
+      // Hit enemies
+      for (let e = 0; e < this.entities.length; e++) {
+        const ent = this.entities[e];
+        if (!ent.alive) continue;
+        if (ent.type === "coin" || ent.type === "flag" || ent.type === "fake_flag" ||
+            ent.type === "mushroom" || ent.type === "star" || ent.type === "fire_flower") continue;
+        const dx = Math.abs(fb.x - ent.x);
+        const dy = Math.abs(fb.y - ent.y);
+        if (dx < 14 && dy < 14) {
+          ent.alive = false;
+          this.entitySprites[e]?.setVisible(false);
+          fb.alive = false;
+          playStomp();
+          this.emitStompParticles(ent.x, ent.y);
+          break;
+        }
+      }
+    }
+  }
+
+  private updatePowerUpState(): void {
+    if (!this.powered || this.powerType === "mushroom") return;
+    if (this.powerTimer > 0) {
+      this.powerTimer--;
+      // Flash near end
+      if (this.powerTimer < 60 && this.powerTimer % 4 < 2) {
+        this.player.setAlpha(0.5);
+      } else {
+        this.player.setAlpha(1);
+      }
+      if (this.powerTimer <= 0) {
+        this.powered = false;
+        this.powerType = null;
+        this.player.setTint(0xffffff);
+        this.player.setAlpha(1);
+      }
+    }
+  }
+
+  private updateDashState(): void {
+    if (!this.dashing) return;
+    this.dashTimer--;
+    if (this.dashTimer <= 0) {
+      this.dashing = false;
+      // Reduce speed to normal after dash
+      this.player.vx = this.player.dir * PLAYER_SPEED;
+    }
+  }
+
+  private updateGravityFlip(): void {
+    if (!this.gravityFlipped) return;
+    if (this.gravityFlipTimer > 0) {
+      this.gravityFlipTimer--;
+      if (this.gravityFlipTimer <= 0) {
+        this.gravityFlipped = false;
+        this.player.setFlipY(false);
+        this.showMessage("Gravidade normalizada!");
+      }
+    }
+  }
+
+  private checkGravityZoneContact(): void {
+    const cx = Math.floor(this.player.x / TILE_SIZE);
+    const cy = Math.floor(this.player.y / TILE_SIZE);
+    // Check tiles player overlaps
+    for (let gy = cy - 1; gy <= cy; gy++) {
+      for (let gx = cx - 1; gx <= cx; gx++) {
+        if (this.getTile(gx, gy) === TileType.GRAVITY_ZONE && !this.gravityFlipped) {
+          this.gravityFlipped = true;
+          this.gravityFlipTimer = GRAVITY_FLIP_DEFAULT_DURATION;
+          this.player.setFlipY(true);
+          playGravityFlip();
+          return;
+        }
+      }
+    }
+  }
+
+  private updateTimedBlocks(): void {
+    this.timedBlockTimer++;
+    const totalCycle = TIMED_BLOCK_ON + TIMED_BLOCK_OFF;
+    const inCycle = this.timedBlockTimer % totalCycle;
+    const shouldBeVisible = inCycle < TIMED_BLOCK_ON;
+
+    if (shouldBeVisible !== this.timedBlockVisible) {
+      this.timedBlockVisible = shouldBeVisible;
+      for (let gy = 0; gy < this.level.height; gy++) {
+        for (let gx = 0; gx < this.level.width; gx++) {
+          if (this.level.tiles[gy][gx] === TileType.TIMED_BLOCK) {
+            const sprite = this.tileSprites[gy]?.[gx];
+            if (sprite) {
+              sprite.setAlpha(shouldBeVisible ? 1.0 : 0.2);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private updateSlideBlocks(): void {
+    for (const anim of this.slideBlockAnims) {
+      if (anim.done) continue;
+
+      // Move toward target
+      const dx = anim.targetX - anim.currentX;
+      const dy = anim.targetY - anim.currentY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < SLIDE_BLOCK_SPEED) {
+        anim.currentX = anim.targetX;
+        anim.currentY = anim.targetY;
+        anim.done = true;
+      } else {
+        anim.currentX += (dx / dist) * SLIDE_BLOCK_SPEED;
+        anim.currentY += (dy / dist) * SLIDE_BLOCK_SPEED;
+      }
+
+      if (anim.sprite) {
+        anim.sprite.setPosition(
+          anim.currentX * TILE_SIZE + TILE_SIZE / 2,
+          anim.currentY * TILE_SIZE + TILE_SIZE / 2
+        );
+      }
+
+      // When done, place tile at new grid position
+      if (anim.done) {
+        const newGx = Math.round(anim.targetX);
+        const newGy = Math.round(anim.targetY);
+        this.level.tiles[newGy][newGx] = TileType.SLIDE_BLOCK;
+        this.updateTileSprite(newGx, newGy, TileType.SLIDE_BLOCK);
+        if (anim.sprite) {
+          anim.sprite.destroy();
+          anim.sprite = null;
+        }
+      }
+    }
+  }
+
+  private updateMovingPlatforms(): void {
+    for (const mp of this.movingPlatforms) {
+      const speed = mp.config.speed ?? MOVING_PLATFORM_DEFAULT_SPEED;
+      const range = (mp.config.range ?? MOVING_PLATFORM_DEFAULT_RANGE) * TILE_SIZE;
+      const axis = mp.config.axis ?? "x";
+      const startX = mp.config.gx * TILE_SIZE + TILE_SIZE / 2;
+      const startY = mp.config.gy * TILE_SIZE + TILE_SIZE / 2;
+
+      if (axis === "x") {
+        mp.x += speed * mp.dir;
+        if (mp.x > startX + range) { mp.x = startX + range; mp.dir = -1; }
+        else if (mp.x < startX - range) { mp.x = startX - range; mp.dir = 1; }
+      } else {
+        mp.y += speed * mp.dir;
+        if (mp.y > startY + range) { mp.y = startY + range; mp.dir = -1; }
+        else if (mp.y < startY - range) { mp.y = startY - range; mp.dir = 1; }
+      }
+
+      mp.sprite.setPosition(mp.x, mp.y);
+
+      // Carry player if standing on platform
+      const platTop = mp.y - TILE_SIZE / 2;
+      const platLeft = mp.x - TILE_SIZE / 2;
+      const platRight = mp.x + TILE_SIZE / 2;
+      const playerBottom = this.player.y + PLAYER_H / 2;
+      const playerLeft = this.player.x - PLAYER_W / 2;
+      const playerRight = this.player.x + PLAYER_W / 2;
+
+      if (
+        this.player.alive &&
+        this.player.vy >= 0 &&
+        playerBottom >= platTop - 2 &&
+        playerBottom <= platTop + 4 &&
+        playerRight > platLeft &&
+        playerLeft < platRight
+      ) {
+        this.player.y = platTop - PLAYER_H / 2;
+        this.player.vy = 0;
+        this.player.grounded = true;
+        if (axis === "x") this.player.x += speed * mp.dir;
+        if (axis === "y") this.player.y += speed * mp.dir;
+      }
+    }
+  }
+
+  private initMovingPlatforms(): void {
+    this.movingPlatforms = [];
+    for (let gy = 0; gy < this.level.height; gy++) {
+      for (let gx = 0; gx < this.level.width; gx++) {
+        if (this.level.tiles[gy][gx] === TileType.MOVING_PLATFORM) {
+          // Remove the static tile — the platform moves as a sprite
+          this.level.tiles[gy][gx] = TileType.AIR;
+          this.updateTileSprite(gx, gy, TileType.AIR);
+
+          const config: MovingPlatformConfig = {
+            gx,
+            gy,
+            axis: "x",
+            speed: MOVING_PLATFORM_DEFAULT_SPEED,
+            range: MOVING_PLATFORM_DEFAULT_RANGE,
+          };
+
+          // Check if level data has custom config for this position
+          if (this.level.movingPlatforms) {
+            const custom = this.level.movingPlatforms.find((mp) => mp.gx === gx && mp.gy === gy);
+            if (custom) {
+              config.speed = custom.speed ?? config.speed;
+              config.range = custom.range ?? config.range;
+            }
+          }
+
+          const sprite = this.add.image(
+            gx * TILE_SIZE + TILE_SIZE / 2,
+            gy * TILE_SIZE + TILE_SIZE / 2,
+            "tile_moving_platform"
+          ).setDepth(20);
+
+          this.movingPlatforms.push({
+            config,
+            x: gx * TILE_SIZE + TILE_SIZE / 2,
+            y: gy * TILE_SIZE + TILE_SIZE / 2,
+            dir: 1,
+            sprite,
+          });
+        }
+      }
+    }
+  }
+
+  private initSlideBlocks(): void {
+    this.slideBlockAnims = [];
+    if (!this.level.slideBlocks) return;
+    // Slide blocks are initialized from level data but only animate when triggered
+  }
+
+  private triggerSlideBlock(fromGx: number, fromGy: number, toGx: number, toGy: number): void {
+    // Remove tile from original position
+    if (fromGy >= 0 && fromGy < this.level.height && fromGx >= 0 && fromGx < this.level.width) {
+      this.level.tiles[fromGy][fromGx] = TileType.AIR;
+      this.updateTileSprite(fromGx, fromGy, TileType.AIR);
+    }
+
+    // Create a moving sprite
+    const sprite = this.add.image(
+      fromGx * TILE_SIZE + TILE_SIZE / 2,
+      fromGy * TILE_SIZE + TILE_SIZE / 2,
+      "tile_slide_block"
+    ).setDepth(25);
+
+    playSlideBlock();
+
+    this.slideBlockAnims.push({
+      config: { id: `slide_${fromGx}_${fromGy}`, fromGx, fromGy, toGx, toGy, triggered: true },
+      currentX: fromGx,
+      currentY: fromGy,
+      targetX: toGx,
+      targetY: toGy,
+      sprite,
+      done: false,
+    });
   }
 
   // ===========================================================
@@ -1926,8 +2793,15 @@ export class GameScene extends Phaser.Scene {
       stopBGM();
       if (this.levelIndex >= 0) {
         this.scene.start("LevelSelectScene");
-      } else {
+      } else if (this.scene.get("MenuScene")) {
         this.scene.start("MenuScene");
+      } else {
+        // Editor test mode — emit event so EditorCanvas can handle return
+        gameEvents.emit(GAME_EVENTS.LEVEL_COMPLETE, {
+          levelIndex: -1,
+          deaths: this.deaths,
+          coins: this.coins,
+        });
       }
     });
 

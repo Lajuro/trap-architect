@@ -83,6 +83,55 @@ function parseLevel(config: RawLevelConfig): ParsedLevel {
 }
 
 // ============================================================
+// LEVEL 0: "Meu Nível" — O Castelo Sombrio
+// ============================================================
+const LEVEL_0 = parseLevel({
+  name: "Meu Nível",
+  subtitle: "O Castelo Sombrio",
+  bgColor: "#2d0a31",
+  music: "level3",
+  map: [
+    "###############WW.........WWW....WWWWWWWWWWWWWWWWWWWW...................WWW......WWWWWWWWWWWWWWWWWWWWWWWWWWW...C.......W......",
+    ".............CCW-.........WW-....WWWWW--------WWWWWWC..R..C..C..........---......--WWWWWWWWWWWWWWWWWWWWWWWWW...-..C....W......",
+    "..........C..CCW...WWWWWWWWWC....WWWW-.C.R.C..--WWWWC.....-GG-....C................WWWWWWWWWWWWWWWWWWWWWWWWW...===-....W......",
+    ".......R.C...GGW...WWW--WWWWW....WW--...C.C.....--WWGv-....##.....C......H...CCC...--WWWWWWWWWWWW--------WWW...W====.C=W......",
+    "........C....##W..BWW-..--WW-....CC...............-W##...C.##.....[....-WWW-----.....---WWWWWW---.......C-WW...W===..--W......",
+    ".P.CC..CC....##W.B.--..R..--....................[..-.....-G##...C.[..K..WWW...=.........------......R...CCWW...W==.C..=W......",
+    "GGGGG.GGC....##WJ..........CC..J.......H.......E[....E.[..###...-~~GGGBBWWWC..=.....CCCCCCCCCCCCCCC....---WW.F.W==.-R..W......",
+    "#####.##J....##WW..CC.....---..--WW---WWWWWGG~~GGWWGGGG[..###.....####..WWWCC.=.R..>>>>>><<>>>>>>>>.......WWWWWW==..-..W......",
+    "####..C#GG~BB#WWBBBWWBBW.........CCCCCCCWWW##..##WWW###[..###.....####K.WWWCC.=....W##############W.......WWWWWWBB....CW......",
+    "###....C##....W-.................CCCCCCCWWWW#..#WWWWWW#[..###.....####-.WWWCC.=...CW##############W....W..---WWW...=..-W......",
+    "#CCC.......C......CCC..K........WWWWWWCCWWWWW..WWWWWWW#[...##......###..WWWCC.J...CWWW##########WWW.E.^W.....-WW...=..KW......",
+    "#CCC...H...GGWWWWWWWWG~W>>>>.......CCCCC-----..-----WWW[...##....CCCCC.-#WWGGGG...CWWWWWWWWWWWWWWWWWWWWWCC....-WWBBBBBBW......",
+    "#CCC..vG--.##WWWWWWWW..WWWWW.......CCCCC............-WW[...##...CCCCCC..#WW####....WWWWWWWWWWWWWWWWWWWWWWW.....--.....WW......",
+    "#GGG..##LLL#WWWWWWWWWLLWWW.........--WWWWWWWWWLLLLLLLWW[...##...GGGGGGGG##W####^^^^WWWWWWWWWWWWWWWWWWWWW....E.E......WWW......",
+    "####..######WWWWWWWWWWWWWLLLLLLLLLLLLWWWWWWWWWWLLLLLLWW[...##.....########W########WWWWWWWWWWWWWWWWWWWWWWWWWW-WWWWWWWWWW......",
+  ],
+  entities: [],
+  trolls: [
+    { triggerX: 64, action: "message", text: "Bem-vindo ao Castelo Sombrio... cuidado!", duration: 120, triggered: false },
+    { triggerX: 416, action: "spawn", entityType: "goomba", spawnX: 616, spawnY: 32, triggered: false },
+    { triggerX: 640, action: "fall_blocks", startX: 640, count: 9, triggered: false },
+    { triggerX: 640, action: "shake", duration: 20, triggered: false },
+    { triggerX: 800, action: "spawn", entityType: "goomba", spawnX: 1000, spawnY: 32, triggered: false },
+    { triggerX: 1248, action: "message", text: "Checkpoint? Não se anime tanto...", duration: 90, triggered: false },
+    { triggerX: 1500, action: "spawn", entityType: "fast_goomba", spawnX: 1700, spawnY: 32, triggered: false },
+    { triggerX: 1800, action: "fall_blocks", startX: 1850, count: 6, triggered: false },
+    { triggerX: 2100, action: "shake", duration: 25, triggered: false },
+    { triggerX: 2100, action: "spawn", entityType: "spiny", spawnX: 2300, spawnY: 320, triggered: false },
+    { triggerX: 2100, action: "spawn", entityType: "flying", spawnX: 2400, spawnY: 128, triggered: false },
+    { triggerX: 2400, action: "message", text: "Você ainda está vivo? Impressionante!", duration: 90, triggered: false },
+    { triggerX: 2600, action: "spawn", entityType: "fast_goomba", spawnX: 2800, spawnY: 128, triggered: false },
+    { triggerX: 2600, action: "spawn", entityType: "fast_goomba", spawnX: 2850, spawnY: 320, triggered: false },
+    { triggerX: 3000, action: "fall_blocks", startX: 3050, count: 5, triggered: false },
+    { triggerX: 3000, action: "shake", duration: 15, triggered: false },
+    { triggerX: 3300, action: "message", text: "A bandeira! Será que é de verdade?", duration: 90, triggered: false },
+    { triggerX: 3400, action: "spawn", entityType: "flying", spawnX: 3500, spawnY: 160, triggered: false },
+    { triggerX: 3400, action: "spawn", entityType: "spiny", spawnX: 3500, spawnY: 320, triggered: false },
+  ],
+});
+
+// ============================================================
 // LEVEL 1: "Parece Fácil"
 // ============================================================
 const LEVEL_1 = parseLevel({
@@ -448,7 +497,7 @@ const LEVEL_10 = parseLevel({
 
 /** All campaign levels in order */
 export const CAMPAIGN_LEVELS: ParsedLevel[] = [
-  LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5,
+  LEVEL_0, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5,
   LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10,
 ];
 

@@ -27,6 +27,7 @@ import {
   Keyboard,
   Lock,
   Loader2,
+  Save,
 } from "lucide-react";
 
 export function EditorToolbar() {
@@ -38,6 +39,7 @@ export function EditorToolbar() {
   const [trolls, setTrolls] = useState<TrollTrigger[]>([]);
   const [ready, setReady] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [publishMsg, setPublishMsg] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [tested, setTested] = useState(false);
@@ -57,7 +59,7 @@ export function EditorToolbar() {
 
   useEffect(() => {
     const onReady = () => setReady(true);
-    const onDataChanged = (data: unknown) => {
+    const onDataChanged = (data: unknown, userEdit?: unknown) => {
       const d = data as LevelData;
       setLevelName(d.name);
       setBgColor(d.bgColor);
@@ -65,7 +67,7 @@ export function EditorToolbar() {
       setGridW(d.gridW);
       setGridH(d.gridH);
       setTrolls(d.trolls);
-      setTested(false);
+      if (userEdit) setTested(false);
     };
     const onTestComplete = () => setTested(true);
     const onValidation = (w: unknown) => setWarnings(w as string[]);
@@ -106,8 +108,10 @@ export function EditorToolbar() {
       const a = document.createElement("a");
       a.href = url;
       a.download = `${levelName || "level"}.json`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     };
     gameEvents.on(EDITOR_EVENTS.EXPORT_REQUEST, handler);
     gameEvents.emit(EDITOR_EVENTS.EXPORT_LEVEL);
@@ -121,11 +125,22 @@ export function EditorToolbar() {
       const file = input.files?.[0];
       if (!file) return;
       const text = await file.text();
+      let data: LevelData;
       try {
-        const data = JSON.parse(text) as LevelData;
-        gameEvents.emit(EDITOR_EVENTS.IMPORT_LEVEL, data);
+        data = JSON.parse(text) as LevelData;
       } catch {
-        alert("Arquivo JSON invalido");
+        alert("Arquivo JSON invalido — nao foi possivel ler o arquivo.");
+        return;
+      }
+      if (!data.tiles || !data.gridW || !data.gridH || !data.name) {
+        alert("Formato invalido — o arquivo nao contem dados de nivel validos.");
+        return;
+      }
+      try {
+        gameEvents.emit(EDITOR_EVENTS.IMPORT_LEVEL, data);
+      } catch (err) {
+        console.error("Erro ao importar nivel:", err);
+        alert("Erro ao importar o nivel no editor.");
       }
     };
     input.click();
@@ -152,6 +167,7 @@ export function EditorToolbar() {
           body: JSON.stringify({
             name: levelData.name,
             bgColor: levelData.bgColor,
+            music: levelData.music,
             gridW: levelData.gridW,
             gridH: levelData.gridH,
             tiles: levelData.tiles,
@@ -180,6 +196,55 @@ export function EditorToolbar() {
     gameEvents.on(EDITOR_EVENTS.EXPORT_REQUEST, handler);
     gameEvents.emit(EDITOR_EVENTS.EXPORT_LEVEL);
   }, [checkRankUp]);
+
+  const handleSaveDraft = useCallback(() => {
+    setPublishMsg(null);
+    const handler = async (data: unknown) => {
+      gameEvents.off(EDITOR_EVENTS.EXPORT_REQUEST, handler);
+      setSaving(true);
+      try {
+        const levelData = data as LevelData;
+        const thumbnail = generateThumbnail(
+          levelData.tiles,
+          levelData.gridW,
+          levelData.gridH,
+          levelData.entities,
+          levelData.playerStart,
+          levelData.bgColor,
+        );
+        const res = await fetch("/api/levels", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: levelData.name,
+            bgColor: levelData.bgColor,
+            music: levelData.music,
+            gridW: levelData.gridW,
+            gridH: levelData.gridH,
+            tiles: levelData.tiles,
+            entities: levelData.entities,
+            trolls: levelData.trolls,
+            playerStart: levelData.playerStart,
+            published: false,
+            thumbnail,
+          }),
+        });
+        if (res.ok) {
+          setPublishMsg("Rascunho salvo com sucesso!");
+        } else if (res.status === 401) {
+          setPublishMsg("Faca login para salvar.");
+        } else {
+          const { error } = await res.json();
+          setPublishMsg(error || "Erro ao salvar rascunho.");
+        }
+      } catch {
+        setPublishMsg("Erro de conexao.");
+      }
+      setSaving(false);
+    };
+    gameEvents.on(EDITOR_EVENTS.EXPORT_REQUEST, handler);
+    gameEvents.emit(EDITOR_EVENTS.EXPORT_LEVEL);
+  }, []);
 
   const handleTestPlay = useCallback(() => {
     const handler = (data: unknown) => {
@@ -233,16 +298,25 @@ export function EditorToolbar() {
 
         <div className="w-px h-5 bg-border/30 mx-1" />
 
-        {/* Publish */}
+        {/* Save Draft / Publish */}
         {isLoggedIn ? (
-          <ToolbarButton
-            icon={publishing ? Loader2 : Rocket}
-            label={publishing ? "Publicando..." : "Publicar"}
-            onClick={handlePublish}
-            disabled={publishing || !tested}
-            variant="publish"
-            iconClassName={publishing ? "animate-spin" : undefined}
-          />
+          <>
+            <ToolbarButton
+              icon={saving ? Loader2 : Save}
+              label={saving ? "Salvando..." : "Salvar"}
+              onClick={handleSaveDraft}
+              disabled={saving || publishing}
+              iconClassName={saving ? "animate-spin" : undefined}
+            />
+            <ToolbarButton
+              icon={publishing ? Loader2 : Rocket}
+              label={publishing ? "Publicando..." : "Publicar"}
+              onClick={handlePublish}
+              disabled={publishing || saving || !tested}
+              variant="publish"
+              iconClassName={publishing ? "animate-spin" : undefined}
+            />
+          </>
         ) : (
           <ToolbarButton icon={Lock} label="Login para publicar" onClick={() => { window.location.href = "/login"; }} />
         )}

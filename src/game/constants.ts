@@ -25,6 +25,37 @@ export const HIDDEN_SPIKE_EMERGE = 8;
 export const HIDDEN_SPIKE_HOLD = 60;
 export const HIDDEN_SPIKE_RETRACT = 15;
 
+// Power-up durations (in fixed-step frames)
+export const STAR_DURATION = 480; // ~8 seconds
+export const FIRE_FLOWER_DURATION = 600; // ~10 seconds
+export const MUSHROOM_SPEED_BOOST = 1.3;
+export const POWERUP_MOVE_SPEED = 2;
+export const POWERUP_GRAVITY = 0.3;
+
+// Wall jump
+export const WALL_JUMP_FORCE_X = 5;
+export const WALL_JUMP_FORCE_Y = -9;
+export const WALL_SLIDE_SPEED = 1.5;
+
+// Dash
+export const DASH_SPEED = 8;
+export const DASH_DURATION = 8; // frames
+export const DASH_COOLDOWN = 30; // frames until can dash again on ground
+
+// Gravity flip
+export const GRAVITY_FLIP_DEFAULT_DURATION = 300; // ~5 seconds
+
+// Timed blocks
+export const TIMED_BLOCK_ON = 90; // frames visible
+export const TIMED_BLOCK_OFF = 60; // frames invisible
+
+// Slide block
+export const SLIDE_BLOCK_SPEED = 3; // pixels per frame
+
+// Moving platform
+export const MOVING_PLATFORM_DEFAULT_SPEED = 1;
+export const MOVING_PLATFORM_DEFAULT_RANGE = 4; // tiles
+
 // Fixed timestep for frame-rate independence (60 FPS physics)
 export const FIXED_STEP = 1000 / 60; // ~16.667ms
 export const MAX_ACCUMULATED = 100; // cap to prevent spiral of death
@@ -71,6 +102,10 @@ export const SOLID_TILES = new Set([
   TileType.TRAMPOLINE,
   TileType.FAKE_GROUND,
   TileType.HIDDEN_SPIKE,
+  TileType.POWERUP_BLOCK,
+  TileType.SLIDE_BLOCK,
+  TileType.TIMED_BLOCK,
+  TileType.MOVING_PLATFORM,
 ]);
 
 export const ONEWAY_TILES = new Set([TileType.PLATFORM]);
@@ -180,6 +215,16 @@ export const PALETTE_ITEMS: PaletteItem[] = [
   { id: 30, name: "Voador", description: "Inimigo flutuante — sobe e desce", category: "entities", entityType: "flying", color: "#6644AA" },
   { id: 31, name: "Bandeira", description: "OBRIGATÓRIA — marca o objetivo do nível", category: "entities", entityType: "flag", color: "#00CC00" },
   { id: 32, name: "Bandeira Falsa", description: "Parece a vitória, mas é trollagem pura!", category: "entities", entityType: "fake_flag", color: "#FF0000" },
+  // Power-ups
+  { id: 33, name: "Bloco Power-Up", description: "Libera cogumelo, estrela ou flor ao bater", category: "interactive", tileType: TileType.POWERUP_BLOCK, color: "#FF88FF" },
+  { id: 34, name: "Cogumelo", description: "Power-up: velocidade e resistência a 1 hit", category: "entities", entityType: "mushroom", color: "#FF4444" },
+  { id: 35, name: "Estrela", description: "Power-up: invencibilidade temporária!", category: "entities", entityType: "star", color: "#FFD700" },
+  { id: 36, name: "Flor de Fogo", description: "Power-up: atira bolas de fogo!", category: "entities", entityType: "fire_flower", color: "#FF6600" },
+  // New tiles
+  { id: 37, name: "Bloco Deslizante", description: "Desliza para nova posição ao ser ativado", category: "interactive", tileType: TileType.SLIDE_BLOCK, color: "#8888FF" },
+  { id: 38, name: "Bloco Temporal", description: "Aparece e desaparece em ciclos", category: "interactive", tileType: TileType.TIMED_BLOCK, color: "#FF88CC" },
+  { id: 39, name: "Zona de Gravidade", description: "Inverte a gravidade do jogador!", category: "danger", tileType: TileType.GRAVITY_ZONE, color: "#AA44FF" },
+  { id: 40, name: "Plataforma Móvel", description: "Plataforma que se move automaticamente", category: "interactive", tileType: TileType.MOVING_PLATFORM, color: "#44BBAA" },
 ];
 
 // ============================================================
@@ -211,4 +256,9 @@ export const CHAR_TO_TILE: Record<string, TileType> = {
   ">": TileType.CONVEYOR_R,
   H: TileType.CHECKPOINT,
   J: TileType.TRAMPOLINE,
+  M: TileType.POWERUP_BLOCK,
+  D: TileType.SLIDE_BLOCK,
+  T: TileType.TIMED_BLOCK,
+  Z: TileType.GRAVITY_ZONE,
+  O: TileType.MOVING_PLATFORM,
 };

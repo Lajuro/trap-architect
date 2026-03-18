@@ -127,6 +127,10 @@ export class EditorScene extends Phaser.Scene {
   private shiftKey!: Phaser.Input.Keyboard.Key;
   private accumulator = 0;
 
+  // Stored event handler references for proper cleanup
+  private eventHandlers: Array<{ event: string; handler: (...args: unknown[]) => void }> = [];
+  private listenersRegistered = false;
+
   constructor() {
     super({ key: "EditorScene" });
   }
@@ -197,7 +201,7 @@ export class EditorScene extends Phaser.Scene {
       const tKey = this.input.keyboard.addKey("T");
       tKey.on("down", () => {
         if (!this.ctrlKey.isDown) {
-          gameEvents.emit(EDITOR_EVENTS.TEST_REQUEST);
+          gameEvents.emit(EDITOR_EVENTS.TEST_PLAY);
         }
       });
 
@@ -283,7 +287,7 @@ export class EditorScene extends Phaser.Scene {
 
     // Signal ready
     gameEvents.emit(EDITOR_EVENTS.READY);
-    this.emitLevelData();
+    this.emitLevelData(false);
   }
 
   update(_time: number, delta: number): void {
@@ -521,6 +525,11 @@ export class EditorScene extends Phaser.Scene {
       [TileType.CONVEYOR_R]: "tile_conveyor",
       [TileType.CHECKPOINT]: "tile_checkpoint",
       [TileType.TRAMPOLINE]: "tile_trampoline",
+      [TileType.POWERUP_BLOCK]: "tile_powerup_block",
+      [TileType.SLIDE_BLOCK]: "tile_slide_block",
+      [TileType.TIMED_BLOCK]: "tile_timed_block",
+      [TileType.GRAVITY_ZONE]: "tile_gravity_zone",
+      [TileType.MOVING_PLATFORM]: "tile_moving_platform",
     };
     return map[tile] ?? null;
   }
@@ -535,6 +544,9 @@ export class EditorScene extends Phaser.Scene {
       flying: "entity_flying",
       flag: "entity_flag",
       fake_flag: "entity_fake_flag",
+      mushroom: "entity_mushroom",
+      star: "entity_star",
+      fire_flower: "entity_fire_flower",
     };
     return map[type] ?? "entity_goomba";
   }
@@ -894,9 +906,9 @@ export class EditorScene extends Phaser.Scene {
   // ============================================================
   // Level data export
   // ============================================================
-  private emitLevelData(): void {
+  private emitLevelData(userEdit = true): void {
     const data = this.exportLevelData();
-    gameEvents.emit(EDITOR_EVENTS.LEVEL_DATA_CHANGED, data);
+    gameEvents.emit(EDITOR_EVENTS.LEVEL_DATA_CHANGED, data, userEdit);
     this.emitValidation(data);
   }
 
@@ -927,6 +939,8 @@ export class EditorScene extends Phaser.Scene {
         .filter((e) => e.type !== "player")
         .map((e) => ({ type: e.type, gx: e.gx, gy: e.gy })),
       trolls: this.trolls.map((t) => ({ ...t })),
+      slideBlocks: [],
+      movingPlatforms: [],
       playerStart: { x: this.playerStart.gx, y: this.playerStart.gy },
     };
   }
@@ -935,22 +949,31 @@ export class EditorScene extends Phaser.Scene {
   // Event listeners from React
   // ============================================================
   private registerEventListeners(): void {
-    gameEvents.on(EDITOR_EVENTS.SET_PALETTE_ITEM, (id: unknown) => {
+    // Skip if already registered — prevents duplicate listeners after scene restart
+    if (this.listenersRegistered) return;
+    this.listenersRegistered = true;
+
+    const register = (event: string, handler: (...args: unknown[]) => void) => {
+      gameEvents.on(event, handler);
+      this.eventHandlers.push({ event, handler });
+    };
+
+    register(EDITOR_EVENTS.SET_PALETTE_ITEM, (id: unknown) => {
       this.selectedPaletteId = id as number;
     });
 
-    gameEvents.on(EDITOR_EVENTS.SET_LEVEL_META, (meta: unknown) => {
+    register(EDITOR_EVENTS.SET_LEVEL_META, (meta: unknown) => {
       const m = meta as { name?: string; bgColor?: string; music?: string };
       if (m.name !== undefined) this.levelName = m.name;
       if (m.bgColor !== undefined) {
         this.bgColor = m.bgColor;
-        this.cameras.main.setBackgroundColor(m.bgColor);
+        if (this.scene.isActive()) this.cameras.main.setBackgroundColor(m.bgColor);
       }
       if (m.music !== undefined) this.music = m.music;
       this.emitLevelData();
     });
 
-    gameEvents.on(EDITOR_EVENTS.RESIZE_LEVEL, (size: unknown) => {
+    register(EDITOR_EVENTS.RESIZE_LEVEL, (size: unknown) => {
       const s = size as { w: number; h: number };
       this.resizeLevel(
         Phaser.Math.Clamp(s.w, EDITOR_MIN_WIDTH, EDITOR_MAX_WIDTH),
@@ -958,37 +981,37 @@ export class EditorScene extends Phaser.Scene {
       );
     });
 
-    gameEvents.on(EDITOR_EVENTS.UNDO, () => this.undo());
-    gameEvents.on(EDITOR_EVENTS.REDO, () => this.redo());
+    register(EDITOR_EVENTS.UNDO, () => this.undo());
+    register(EDITOR_EVENTS.REDO, () => this.redo());
 
-    gameEvents.on(EDITOR_EVENTS.EXPORT_LEVEL, () => {
+    register(EDITOR_EVENTS.EXPORT_LEVEL, () => {
       const data = this.exportLevelData();
       gameEvents.emit(EDITOR_EVENTS.EXPORT_REQUEST, data);
     });
 
-    gameEvents.on(EDITOR_EVENTS.IMPORT_LEVEL, (data: unknown) => {
+    register(EDITOR_EVENTS.IMPORT_LEVEL, (data: unknown) => {
       this.importLevelData(data as LevelData);
       this.scene.restart({ levelData: data as LevelData });
     });
 
-    gameEvents.on(EDITOR_EVENTS.TEST_PLAY, () => {
+    register(EDITOR_EVENTS.TEST_PLAY, () => {
       const data = this.exportLevelData();
       gameEvents.emit(EDITOR_EVENTS.TEST_REQUEST, data);
     });
 
-    gameEvents.on(EDITOR_EVENTS.ADD_TROLL, (troll: unknown) => {
+    register(EDITOR_EVENTS.ADD_TROLL, (troll: unknown) => {
       this.trolls.push(troll as TrollTrigger);
       this.buildTrollMarkers();
       this.emitLevelData();
     });
 
-    gameEvents.on(EDITOR_EVENTS.REMOVE_TROLL, (index: unknown) => {
+    register(EDITOR_EVENTS.REMOVE_TROLL, (index: unknown) => {
       this.trolls.splice(index as number, 1);
       this.buildTrollMarkers();
       this.emitLevelData();
     });
 
-    gameEvents.on(EDITOR_EVENTS.UPDATE_TROLL, (payload: unknown) => {
+    register(EDITOR_EVENTS.UPDATE_TROLL, (payload: unknown) => {
       const p = payload as { index: number; troll: TrollTrigger };
       this.trolls[p.index] = p.troll;
       this.buildTrollMarkers();
@@ -1072,17 +1095,11 @@ export class EditorScene extends Phaser.Scene {
   // Cleanup
   // ============================================================
   shutdown(): void {
-    // Remove all event listeners
-    gameEvents.off(EDITOR_EVENTS.SET_PALETTE_ITEM, () => {});
-    gameEvents.off(EDITOR_EVENTS.SET_LEVEL_META, () => {});
-    gameEvents.off(EDITOR_EVENTS.RESIZE_LEVEL, () => {});
-    gameEvents.off(EDITOR_EVENTS.UNDO, () => {});
-    gameEvents.off(EDITOR_EVENTS.REDO, () => {});
-    gameEvents.off(EDITOR_EVENTS.EXPORT_LEVEL, () => {});
-    gameEvents.off(EDITOR_EVENTS.IMPORT_LEVEL, () => {});
-    gameEvents.off(EDITOR_EVENTS.TEST_PLAY, () => {});
-    gameEvents.off(EDITOR_EVENTS.ADD_TROLL, () => {});
-    gameEvents.off(EDITOR_EVENTS.REMOVE_TROLL, () => {});
-    gameEvents.off(EDITOR_EVENTS.UPDATE_TROLL, () => {});
+    // Properly remove all registered event listeners by reference
+    for (const { event, handler } of this.eventHandlers) {
+      gameEvents.off(event, handler);
+    }
+    this.eventHandlers = [];
+    this.listenersRegistered = false;
   }
 }

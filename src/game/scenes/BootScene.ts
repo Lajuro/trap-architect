@@ -1963,6 +1963,259 @@ export class BootScene extends Phaser.Scene {
     }
 
     // ============================================================
+    // NEW ENTITIES — Power-ups
+    // ============================================================
+
+    // Mushroom — red cap with white spots (Mario-style)
+    {
+      const ctx = makeCanvas("entity_mushroom", 24, 24);
+      // Stem
+      ctx.fillStyle = "#EEDDCC";
+      ctx.fillRect(8, 14, 8, 10);
+      ctx.fillStyle = "#DDC8AA";
+      ctx.fillRect(8, 22, 8, 2);
+      // Stem face
+      ctx.fillStyle = "#222";
+      ctx.fillRect(10, 16, 2, 2);
+      ctx.fillRect(14, 16, 2, 2);
+      // Cap
+      ctx.fillStyle = "#DD2222";
+      ctx.beginPath();
+      ctx.arc(12, 10, 10, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(2, 10, 20, 4);
+      // White spots
+      ctx.fillStyle = "#FFF";
+      ctx.beginPath();
+      ctx.arc(8, 6, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(16, 6, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(12, 3, 2, 0, Math.PI * 2);
+      ctx.fill();
+      // Cap highlight
+      ctx.fillStyle = "#FF5555";
+      ctx.fillRect(4, 8, 4, 2);
+      refreshTex("entity_mushroom");
+    }
+
+    // Star — golden spinning star
+    {
+      const ctx = makeCanvas("entity_star", 24, 24);
+      ctx.fillStyle = "#FFD700";
+      ctx.beginPath();
+      const cx = 12, cy = 12, outerR = 10, innerR = 4;
+      for (let i = 0; i < 5; i++) {
+        const outerAngle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+        const innerAngle = outerAngle + Math.PI / 5;
+        ctx.lineTo(cx + Math.cos(outerAngle) * outerR, cy + Math.sin(outerAngle) * outerR);
+        ctx.lineTo(cx + Math.cos(innerAngle) * innerR, cy + Math.sin(innerAngle) * innerR);
+      }
+      ctx.closePath();
+      ctx.fill();
+      // Highlight
+      ctx.fillStyle = "#FFEE88";
+      ctx.beginPath();
+      ctx.arc(10, 9, 3, 0, Math.PI * 2);
+      ctx.fill();
+      // Eyes
+      ctx.fillStyle = "#222";
+      ctx.fillRect(9, 11, 2, 2);
+      ctx.fillRect(13, 11, 2, 2);
+      refreshTex("entity_star");
+    }
+
+    // Fire Flower — orange/red flower
+    {
+      const ctx = makeCanvas("entity_fire_flower", 24, 28);
+      // Stem
+      ctx.fillStyle = "#228B22";
+      ctx.fillRect(10, 16, 4, 12);
+      ctx.fillStyle = "#2EA02E";
+      ctx.fillRect(10, 16, 2, 12);
+      // Leaf
+      ctx.fillStyle = "#33AA33";
+      ctx.fillRect(14, 20, 6, 3);
+      ctx.fillRect(14, 19, 3, 1);
+      // Petals
+      const petalColors = ["#FF4400", "#FF6600", "#FF4400", "#FF6600", "#FF4400"];
+      const petalAngles = [0, 1, 2, 3, 4];
+      for (let i = 0; i < 5; i++) {
+        ctx.fillStyle = petalColors[i];
+        const angle = (petalAngles[i] * 2 * Math.PI) / 5 - Math.PI / 2;
+        const px = 12 + Math.cos(angle) * 7;
+        const py = 10 + Math.sin(angle) * 7;
+        ctx.beginPath();
+        ctx.arc(px, py, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Center
+      ctx.fillStyle = "#FFD700";
+      ctx.beginPath();
+      ctx.arc(12, 10, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#FFF";
+      ctx.fillRect(11, 9, 2, 2);
+      refreshTex("entity_fire_flower");
+    }
+
+    // ============================================================
+    // NEW TILES
+    // ============================================================
+
+    // Power-Up Block — pink/magenta ? block variant
+    {
+      const ctx = makeCanvas("tile_powerup_block", S, S);
+      ctx.fillStyle = "#CC44CC";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#DD66DD";
+      ctx.fillRect(0, 0, S, 3);
+      ctx.fillRect(0, 0, 3, S);
+      ctx.fillStyle = "#993399";
+      ctx.fillRect(0, S - 3, S, 3);
+      ctx.fillRect(S - 3, 0, 3, S);
+      ctx.fillStyle = "#BB55BB";
+      ctx.fillRect(3, 3, S - 6, S - 6);
+      // Star symbol
+      ctx.fillStyle = "#FFD700";
+      const scx = S / 2, scy = S / 2;
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const oA = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+        const iA = oA + Math.PI / 5;
+        ctx.lineTo(scx + Math.cos(oA) * 8, scy + Math.sin(oA) * 8);
+        ctx.lineTo(scx + Math.cos(iA) * 3, scy + Math.sin(iA) * 3);
+      }
+      ctx.closePath();
+      ctx.fill();
+      // Rivets
+      ctx.fillStyle = "#AA44AA";
+      ctx.fillRect(4, 4, 3, 3);
+      ctx.fillRect(S - 7, 4, 3, 3);
+      ctx.fillRect(4, S - 7, 3, 3);
+      ctx.fillRect(S - 7, S - 7, 3, 3);
+      refreshTex("tile_powerup_block");
+    }
+
+    // Slide Block — blue brick with arrows
+    {
+      const ctx = makeCanvas("tile_slide_block", S, S);
+      ctx.fillStyle = "#5566CC";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#6677DD";
+      ctx.fillRect(0, 0, S, 3);
+      ctx.fillRect(0, 0, 3, S);
+      ctx.fillStyle = "#4455AA";
+      ctx.fillRect(0, S - 3, S, 3);
+      ctx.fillRect(S - 3, 0, 3, S);
+      ctx.fillStyle = "#5F70CC";
+      ctx.fillRect(3, 3, S - 6, S - 6);
+      // Arrow (pointing right)
+      ctx.fillStyle = "#AABBFF";
+      ctx.beginPath();
+      ctx.moveTo(8, 10);
+      ctx.lineTo(24, 16);
+      ctx.lineTo(8, 22);
+      ctx.closePath();
+      ctx.fill();
+      refreshTex("tile_slide_block");
+    }
+
+    // Timed Block — pink/translucent block with clock symbol
+    {
+      const ctx = makeCanvas("tile_timed_block", S, S);
+      ctx.fillStyle = "#DD5599";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#EE77AA";
+      ctx.fillRect(0, 0, S, 3);
+      ctx.fillRect(0, 0, 3, S);
+      ctx.fillStyle = "#BB3377";
+      ctx.fillRect(0, S - 3, S, 3);
+      ctx.fillRect(S - 3, 0, 3, S);
+      // Clock outline
+      ctx.fillStyle = "#FFF";
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#DD5599";
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, 6, 0, Math.PI * 2);
+      ctx.fill();
+      // Clock hands
+      ctx.fillStyle = "#FFF";
+      ctx.fillRect(S / 2 - 1, S / 2 - 5, 2, 6);
+      ctx.fillRect(S / 2, S / 2, 4, 2);
+      refreshTex("tile_timed_block");
+    }
+
+    // Gravity Zone — purple field with arrows pointing up
+    {
+      const ctx = makeCanvas("tile_gravity_zone", S, S);
+      ctx.fillStyle = "rgba(140,50,220,0.5)";
+      ctx.fillRect(0, 0, S, S);
+      // Up arrows
+      ctx.fillStyle = "rgba(200,120,255,0.8)";
+      for (let i = 0; i < 3; i++) {
+        const ax = 4 + i * 10;
+        ctx.beginPath();
+        ctx.moveTo(ax, 22);
+        ctx.lineTo(ax + 5, 6);
+        ctx.lineTo(ax + 10, 22);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // Border
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(180,80,255,0.6)";
+      ctx.strokeRect(1, 1, S - 2, S - 2);
+      refreshTex("tile_gravity_zone");
+    }
+
+    // Moving Platform — metallic platform with gears
+    {
+      const ctx = makeCanvas("tile_moving_platform", S, S);
+      ctx.fillStyle = "#448888";
+      ctx.fillRect(0, 0, S, 12);
+      // Top highlight
+      ctx.fillStyle = "#55BBAA";
+      ctx.fillRect(0, 0, S, 3);
+      // Bottom shadow
+      ctx.fillStyle = "#336666";
+      ctx.fillRect(0, 10, S, 2);
+      // Gear details
+      ctx.fillStyle = "#66CCBB";
+      ctx.fillRect(4, 4, 3, 3);
+      ctx.fillRect(25, 4, 3, 3);
+      // Rails indicator
+      ctx.fillStyle = "#3A7A7A";
+      ctx.fillRect(0, 12, S, 2);
+      ctx.fillStyle = "#55AA99";
+      ctx.fillRect(8, 12, 2, 2);
+      ctx.fillRect(22, 12, 2, 2);
+      refreshTex("tile_moving_platform");
+    }
+
+    // Fireball projectile
+    {
+      const ctx = makeCanvas("entity_fireball", 10, 10);
+      ctx.fillStyle = "#FF4400";
+      ctx.beginPath();
+      ctx.arc(5, 5, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#FF8800";
+      ctx.beginPath();
+      ctx.arc(4, 4, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#FFCC00";
+      ctx.beginPath();
+      ctx.arc(3, 3, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      refreshTex("entity_fireball");
+    }
+
+    // ============================================================
     // PARTICLES
     // ============================================================
 

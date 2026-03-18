@@ -74,6 +74,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
+  // Ensure profile exists (handles users created before the DB trigger)
+  await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: user.id,
+        nickname: user.user_metadata?.nickname || `Jogador_${user.id.slice(0, 8)}`,
+      },
+      { onConflict: "id", ignoreDuplicates: true },
+    );
+
   const body = await request.json();
   const { name, subtitle, bgColor, music, gridW, gridH, tiles, entities, trolls, playerStart, published, thumbnail } = body;
 

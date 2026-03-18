@@ -30,6 +30,11 @@ export enum TileType {
   CONVEYOR_R = 22,
   CHECKPOINT = 23,
   TRAMPOLINE = 24,
+  POWERUP_BLOCK = 25,
+  SLIDE_BLOCK = 26,
+  TIMED_BLOCK = 27,
+  GRAVITY_ZONE = 28,
+  MOVING_PLATFORM = 29,
 }
 
 /** Entity types that can be placed on the map */
@@ -41,7 +46,13 @@ export type EntityType =
   | "spiny"
   | "flying"
   | "flag"
-  | "fake_flag";
+  | "fake_flag"
+  | "mushroom"
+  | "star"
+  | "fire_flower";
+
+/** Power-up types that can be spawned from blocks or triggers */
+export type PowerUpType = "mushroom" | "star" | "fire_flower";
 
 /** A spawned entity in the game world */
 export interface GameEntity {
@@ -58,7 +69,7 @@ export interface GameEntity {
 }
 
 /** Troll trigger actions */
-export type TrollAction = "spawn" | "shake" | "message" | "fall_blocks";
+export type TrollAction = "spawn" | "shake" | "message" | "fall_blocks" | "spawn_powerup" | "slide_block" | "gravity_flip";
 
 /** A troll trigger definition */
 export interface TrollTrigger {
@@ -76,6 +87,15 @@ export interface TrollTrigger {
   // fall_blocks
   startX?: number;
   count?: number;
+  // spawn_powerup
+  powerUpType?: PowerUpType;
+  // slide_block
+  slideFromX?: number;
+  slideFromY?: number;
+  slideToX?: number;
+  slideToY?: number;
+  // gravity_flip
+  flipDuration?: number;
 }
 
 /** Player state */
@@ -93,6 +113,39 @@ export interface Player {
   invincible: boolean;
   invTimer: number;
   jumpHeld: boolean;
+  // Power-up state
+  powered: boolean;
+  powerType: PowerUpType | null;
+  powerTimer: number;
+  // Wall jump
+  wallSliding: boolean;
+  wallDir: 1 | -1 | 0;
+  // Dash
+  canDash: boolean;
+  dashing: boolean;
+  dashTimer: number;
+  // Gravity flip
+  gravityFlipped: boolean;
+  gravityFlipTimer: number;
+}
+
+/** Slide block configuration in level data */
+export interface SlideBlockConfig {
+  id: string;
+  fromGx: number;
+  fromGy: number;
+  toGx: number;
+  toGy: number;
+  triggered: boolean;
+}
+
+/** Moving platform configuration */
+export interface MovingPlatformConfig {
+  gx: number;
+  gy: number;
+  axis: "x" | "y";
+  range: number;
+  speed: number;
 }
 
 /** Level configuration as stored/shared (JSON-serializable) */
@@ -107,6 +160,8 @@ export interface LevelData {
   tiles: number[][];
   entities: { type: EntityType; gx: number; gy: number }[];
   trolls: TrollTrigger[];
+  slideBlocks?: SlideBlockConfig[];
+  movingPlatforms?: MovingPlatformConfig[];
   playerStart: { x: number; y: number };
   // Metadata (from database)
   authorId?: string;
@@ -131,6 +186,8 @@ export interface ParsedLevel {
   tiles: number[][];
   entities: GameEntity[];
   trolls: TrollTrigger[];
+  slideBlocks?: SlideBlockConfig[];
+  movingPlatforms?: MovingPlatformConfig[];
   playerStart: { x: number; y: number };
   _checkpointX?: number;
   _checkpointY?: number;
