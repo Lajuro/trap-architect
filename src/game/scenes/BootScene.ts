@@ -41,8 +41,11 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Start MenuScene if available, otherwise EditorScene (editor-only game)
-    if (this.scene.get("MenuScene")) {
+    // If a startScene was set via game.registry (e.g. from React), use it
+    const target = this.registry.get("startScene") as string | undefined;
+    if (target && this.scene.get(target)) {
+      this.scene.start(target);
+    } else if (this.scene.get("MenuScene")) {
       this.scene.start("MenuScene");
     } else {
       this.scene.start("EditorScene");

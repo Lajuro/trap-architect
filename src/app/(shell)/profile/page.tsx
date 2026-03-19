@@ -7,7 +7,6 @@ import RankBadge from "@/components/RankBadge";
 import { RankUpToast, useRankUpToast } from "@/components/RankUpToast";
 import { ACHIEVEMENTS } from "@/game/constants";
 import type { User } from "@supabase/supabase-js";
-import HudBar from "@/components/ui/HudBar";
 import HudPanel from "@/components/ui/HudPanel";
 import HudButton from "@/components/ui/HudButton";
 import { PixelIcon } from "@/components/ui/PixelIcon";
@@ -100,10 +99,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <HudBar />
-
-      <main className="max-w-3xl mx-auto px-4 py-6 w-full">
+    <>
+      <main className="flex-1 max-w-3xl mx-auto px-4 py-6 w-full overflow-y-auto">
         <HudPanel className="mb-6">
           <h1 className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 mb-1">
             <PixelIcon name="profile" size={16} /> Meu Perfil
@@ -232,6 +229,6 @@ export default function ProfilePage() {
       </main>
 
       {rankUp && <RankUpToast rankUp={rankUp} onDismiss={dismiss} />}
-    </div>
+    </>
   );
 }

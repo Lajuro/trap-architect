@@ -432,7 +432,13 @@ export class LevelSelectScene extends Phaser.Scene {
       roundRect(backGfx, 0, 0, 90, 28, 6, 0x161625, 0x333344);
       backText.setColor("#8888a0");
     });
-    backHit.on("pointerdown", () => this.scene.start("MenuScene"));
+    backHit.on("pointerdown", () => {
+      if (this.registry.get("startScene")) {
+        gameEvents.emit(GAME_EVENTS.RETURN_TO_LOBBY);
+      } else {
+        this.scene.start("MenuScene");
+      }
+    });
 
     // ── Hint text (bottom center) ──
     const hintParts = this.maxScroll > 0
@@ -455,7 +461,11 @@ export class LevelSelectScene extends Phaser.Scene {
 
     if (this.input.keyboard) {
       this.input.keyboard.on("keydown-ESC", () => {
-        this.scene.start("MenuScene");
+        if (this.registry.get("startScene")) {
+          gameEvents.emit(GAME_EVENTS.RETURN_TO_LOBBY);
+        } else {
+          this.scene.start("MenuScene");
+        }
       });
     }
   }

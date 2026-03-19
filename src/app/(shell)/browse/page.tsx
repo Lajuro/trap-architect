@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import LevelCard from "@/components/LevelCard";
-import HudBar from "@/components/ui/HudBar";
 import HudPanel from "@/components/ui/HudPanel";
 import HudButton from "@/components/ui/HudButton";
 import { PixelIcon } from "@/components/ui/PixelIcon";
@@ -95,10 +94,7 @@ export default function BrowsePage() {
   const hasMore = levels.length < total;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <HudBar />
-
-      <main className="flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
+    <main className="flex-1 max-w-7xl mx-auto px-4 py-6 w-full overflow-y-auto">
         {/* Navigation tabs */}
         <div className="flex gap-1 mb-4 border-b-2 border-border">
           <span className="px-3 py-2 text-[8px] font-bold uppercase tracking-wider border-b-2 border-primary text-primary -mb-[2px]">
@@ -254,7 +250,6 @@ export default function BrowsePage() {
             )}
           </>
         )}
-      </main>
-    </div>
+    </main>
   );
 }

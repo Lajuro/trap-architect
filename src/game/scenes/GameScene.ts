@@ -128,6 +128,9 @@ interface StateSnapshot {
   coins: number;
   trollTriggered: boolean[];
   slideBlocks: SlideBlockConfig[];
+  keysRed: number;
+  keysBlue: number;
+  keysGreen: number;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -213,6 +216,13 @@ export class GameScene extends Phaser.Scene {
   private keysRed = 0;
   private keysBlue = 0;
   private keysGreen = 0;
+  // Key HUD icons
+  private hudKeyRed!: Phaser.GameObjects.Image;
+  private hudKeyRedText!: Phaser.GameObjects.Text;
+  private hudKeyBlue!: Phaser.GameObjects.Image;
+  private hudKeyBlueText!: Phaser.GameObjects.Text;
+  private hudKeyGreen!: Phaser.GameObjects.Image;
+  private hudKeyGreenText!: Phaser.GameObjects.Text;
   // Cannon system
   private cannonTimer = 0;
   private cannonBullets: { x: number; y: number; vx: number; vy: number; sprite: Phaser.GameObjects.Image }[] = [];
@@ -262,6 +272,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Signal React that gameplay has started (hide lobby nav)
+    gameEvents.emit(GAME_EVENTS.ENTER_GAME_SCENE);
+
     this.coins = 0;
     this.deaths = 0;
     this.crumbling = [];
@@ -425,6 +438,19 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(100)
       .setAlpha(0.7);
+
+    // Key HUD icons (positioned on the left, below time)
+    const keyHudY = 88;
+    const keyHudStyle = { fontFamily: "monospace", fontSize: "12px", color: "#ffffff", stroke: "#000000", strokeThickness: 2 };
+    this.hudKeyRed = this.add.image(24, keyHudY, "tile_key_red").setScrollFactor(0).setDepth(100).setScale(0.6).setAlpha(0);
+    this.hudKeyRed.setData("baseY", keyHudY);
+    this.hudKeyRedText = this.add.text(38, keyHudY - 6, "", keyHudStyle).setScrollFactor(0).setDepth(100).setAlpha(0);
+    this.hudKeyBlue = this.add.image(24, keyHudY + 20, "tile_key_blue").setScrollFactor(0).setDepth(100).setScale(0.6).setAlpha(0);
+    this.hudKeyBlue.setData("baseY", keyHudY + 20);
+    this.hudKeyBlueText = this.add.text(38, keyHudY + 14, "", keyHudStyle).setScrollFactor(0).setDepth(100).setScale(0.6).setAlpha(0);
+    this.hudKeyGreen = this.add.image(24, keyHudY + 40, "tile_key_green").setScrollFactor(0).setDepth(100).setScale(0.6).setAlpha(0);
+    this.hudKeyGreen.setData("baseY", keyHudY + 40);
+    this.hudKeyGreenText = this.add.text(38, keyHudY + 34, "", keyHudStyle).setScrollFactor(0).setDepth(100).setScale(0.6).setAlpha(0);
 
     // Level name overlay
     this.levelNameText = this.add
@@ -606,6 +632,11 @@ export class GameScene extends Phaser.Scene {
 
     // Dash HUD
     this.hudDash.setAlpha(this.canDash ? 0.6 : 0.15);
+
+    // Key HUD — show collected keys with bob animation
+    this.updateKeyHud(this.hudKeyRed, this.hudKeyRedText, this.keysRed);
+    this.updateKeyHud(this.hudKeyBlue, this.hudKeyBlueText, this.keysBlue);
+    this.updateKeyHud(this.hudKeyGreen, this.hudKeyGreenText, this.keysGreen);
   }
 
   // ===========================================================
@@ -723,6 +754,16 @@ export class GameScene extends Phaser.Scene {
         } else if (tile === TileType.CHECKPOINT) {
           // Checkpoint flag wind wave — gentle angular oscillation, pole stays fixed
           sprite.setAngle(Math.sin(f * 0.06 + gx * 0.5) * 3);
+        } else if (tile === TileType.KEY_RED || tile === TileType.KEY_BLUE || tile === TileType.KEY_GREEN) {
+          // Key floating bob animation + subtle glow pulse
+          const bob = Math.sin(f * 0.06 + gx * 0.7 + gy * 0.3) * 3;
+          sprite.y = gy * TILE_SIZE + TILE_SIZE / 2 + bob;
+          const glow = Math.sin(f * 0.08 + gx * 0.5) * 0.15 + 0.85;
+          sprite.setAlpha(glow);
+        } else if (tile === TileType.LOCK_RED || tile === TileType.LOCK_BLUE || tile === TileType.LOCK_GREEN) {
+          // Lock subtle keyhole glow pulse
+          const pulse = Math.sin(f * 0.04 + gx * 0.3 + gy * 0.3) * 0.08 + 0.92;
+          sprite.setAlpha(pulse);
         }
       }
     }
@@ -2448,32 +2489,192 @@ export class GameScene extends Phaser.Scene {
 
   private checkKeyPickup(gx: number, gy: number): void {
     const t = this.getTile(gx, gy);
-    if (t === TileType.KEY_RED) { this.keysRed++; this.removeTile(gx, gy); playKeyPickup(); }
-    else if (t === TileType.KEY_BLUE) { this.keysBlue++; this.removeTile(gx, gy); playKeyPickup(); }
-    else if (t === TileType.KEY_GREEN) { this.keysGreen++; this.removeTile(gx, gy); playKeyPickup(); }
+    let color = "";
+    if (t === TileType.KEY_RED) { this.keysRed++; color = "#FF4444"; }
+    else if (t === TileType.KEY_BLUE) { this.keysBlue++; color = "#4444FF"; }
+    else if (t === TileType.KEY_GREEN) { this.keysGreen++; color = "#44FF44"; }
+    else return;
+
+    // Spawn pickup particles at key position
+    const px = gx * TILE_SIZE + TILE_SIZE / 2;
+    const py = gy * TILE_SIZE + TILE_SIZE / 2;
+    this.spawnKeyPickupEffect(px, py, color);
+
+    // Animate key sprite floating up and fading before removal
+    const sprite = this.tileSprites[gy]?.[gx];
+    if (sprite) {
+      this.tileSprites[gy][gx] = null;
+      this.tweens.add({
+        targets: sprite,
+        y: sprite.y - 24,
+        alpha: 0,
+        scaleX: 1.3,
+        scaleY: 1.3,
+        duration: 300,
+        ease: "Quad.easeOut",
+        onComplete: () => sprite.destroy(),
+      });
+    }
+    this.level.tiles[gy][gx] = TileType.AIR;
+    playKeyPickup();
+
+    // Pulse the matching HUD key icon
+    let hudIcon: Phaser.GameObjects.Image;
+    if (t === TileType.KEY_RED) hudIcon = this.hudKeyRed;
+    else if (t === TileType.KEY_BLUE) hudIcon = this.hudKeyBlue;
+    else hudIcon = this.hudKeyGreen;
+    this.tweens.add({
+      targets: hudIcon,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 150,
+      yoyo: true,
+      ease: "Quad.easeOut",
+      onComplete: () => hudIcon.setScale(0.6),
+    });
+  }
+
+  private spawnKeyPickupEffect(px: number, py: number, color: string): void {
+    const texKey = `particle_key_${color}`;
+    if (!this.textures.exists(texKey)) {
+      const tex = this.textures.createCanvas(texKey, 4, 4);
+      const ctx = tex!.getContext();
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, 4, 4);
+      tex!.refresh();
+    }
+    const emitter = this.add.particles(0, 0, texKey, {
+      speed: { min: 40, max: 100 },
+      angle: { min: 0, max: 360 },
+      lifespan: 500,
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 1, end: 0 },
+      quantity: 10,
+      emitting: false,
+    });
+    emitter.setDepth(60);
+    emitter.emitParticleAt(px, py);
+    this.time.delayedCall(600, () => emitter.destroy());
   }
 
   private checkLockInteraction(gx: number, gy: number): boolean {
     const t = this.getTile(gx, gy);
     if (t === TileType.LOCK_RED && this.keysRed > 0) {
       this.keysRed--;
-      this.removeTile(gx, gy);
-      playLockOpen();
+      this.openConnectedLocks(gx, gy, TileType.LOCK_RED, "#FF4444");
       return true;
     }
     if (t === TileType.LOCK_BLUE && this.keysBlue > 0) {
       this.keysBlue--;
-      this.removeTile(gx, gy);
-      playLockOpen();
+      this.openConnectedLocks(gx, gy, TileType.LOCK_BLUE, "#4444FF");
       return true;
     }
     if (t === TileType.LOCK_GREEN && this.keysGreen > 0) {
       this.keysGreen--;
-      this.removeTile(gx, gy);
-      playLockOpen();
+      this.openConnectedLocks(gx, gy, TileType.LOCK_GREEN, "#44FF44");
       return true;
     }
     return false;
+  }
+
+  /** Flood-fill to find all connected locks of the same color and open them with animation */
+  private openConnectedLocks(startGx: number, startGy: number, lockType: TileType, color: string): void {
+    const visited = new Set<string>();
+    const queue: [number, number][] = [[startGx, startGy]];
+    const locksToOpen: [number, number][] = [];
+
+    // BFS flood fill to find connected locks of same color
+    while (queue.length > 0) {
+      const [gx, gy] = queue.shift()!;
+      const key = `${gx},${gy}`;
+      if (visited.has(key)) continue;
+      if (gx < 0 || gx >= this.level.width || gy < 0 || gy >= this.level.height) continue;
+      if (this.getTile(gx, gy) !== lockType) continue;
+
+      visited.add(key);
+      locksToOpen.push([gx, gy]);
+
+      // Check 4-directional neighbors
+      queue.push([gx + 1, gy], [gx - 1, gy], [gx, gy + 1], [gx, gy - 1]);
+    }
+
+    // Animate each lock with a staggered delay
+    const texKey = `particle_lock_${color}`;
+    if (!this.textures.exists(texKey)) {
+      const tex = this.textures.createCanvas(texKey, 5, 5);
+      const ctx = tex!.getContext();
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, 5, 5);
+      tex!.refresh();
+    }
+
+    for (let i = 0; i < locksToOpen.length; i++) {
+      const [gx, gy] = locksToOpen[i];
+      const delay = i * 50; // Staggered cascade effect
+
+      this.time.delayedCall(delay, () => {
+        const sprite = this.tileSprites[gy]?.[gx];
+        if (sprite) {
+          this.tileSprites[gy][gx] = null;
+
+          // Flash white then shrink and fade
+          sprite.setTint(0xffffff);
+
+          this.tweens.add({
+            targets: sprite,
+            scaleX: 0,
+            scaleY: 0,
+            alpha: 0,
+            angle: Phaser.Math.Between(-45, 45),
+            duration: 350,
+            ease: "Back.easeIn",
+            delay: 80,
+            onComplete: () => sprite.destroy(),
+          });
+
+          // Burst particles at lock position
+          const px = gx * TILE_SIZE + TILE_SIZE / 2;
+          const py = gy * TILE_SIZE + TILE_SIZE / 2;
+          const emitter = this.add.particles(0, 0, texKey, {
+            speed: { min: 50, max: 150 },
+            angle: { min: 0, max: 360 },
+            lifespan: 600,
+            gravityY: 150,
+            scale: { start: 1.5, end: 0 },
+            alpha: { start: 1, end: 0 },
+            quantity: 8,
+            emitting: false,
+          });
+          emitter.setDepth(60);
+          emitter.emitParticleAt(px, py);
+          this.time.delayedCall(700, () => emitter.destroy());
+        }
+
+        // Remove the tile from the grid
+        this.level.tiles[gy][gx] = TileType.AIR;
+      });
+    }
+
+    playLockOpen();
+
+    // Play additional unlock sounds for multiple locks (cascading)
+    for (let i = 1; i < Math.min(locksToOpen.length, 5); i++) {
+      this.time.delayedCall(i * 50, () => playLockOpen());
+    }
+  }
+
+  /** Update a single key HUD icon + text pair */
+  private updateKeyHud(icon: Phaser.GameObjects.Image, text: Phaser.GameObjects.Text, count: number): void {
+    if (count > 0) {
+      icon.setAlpha(1);
+      text.setAlpha(1);
+      text.setText(`x${count}`);
+      // Subtle bob animation on the key icon
+      icon.y = icon.getData("baseY") + Math.sin(this.frame * 0.08) * 1.5;
+    } else {
+      icon.setAlpha(0);
+      text.setAlpha(0);
+    }
   }
 
   private removeTile(gx: number, gy: number): void {
@@ -2598,6 +2799,9 @@ export class GameScene extends Phaser.Scene {
       coins: this.coins,
       trollTriggered: this.level.trolls.map((t) => t.triggered),
       slideBlocks: structuredClone(this.level.slideBlocks ?? []),
+      keysRed: this.keysRed,
+      keysBlue: this.keysBlue,
+      keysGreen: this.keysGreen,
     };
   }
 
@@ -2689,10 +2893,10 @@ export class GameScene extends Phaser.Scene {
     this.timedBlockVisible = true;
     this.wallSliding = false;
 
-    // Reset new mechanic state
-    this.keysRed = 0;
-    this.keysBlue = 0;
-    this.keysGreen = 0;
+    // Restore key counts from snapshot
+    this.keysRed = this.snapshot.keysRed;
+    this.keysBlue = this.snapshot.keysBlue;
+    this.keysGreen = this.snapshot.keysGreen;
     this.cannonTimer = 0;
     this.cannonBullets.forEach(b => b.sprite.destroy());
     this.cannonBullets = [];
@@ -2849,11 +3053,15 @@ export class GameScene extends Phaser.Scene {
         // Campaign complete — show victory screen
         this.showCampaignVictory();
       } else if (this.levelIndex >= 0) {
+        gameEvents.emit(GAME_EVENTS.EXIT_GAME_SCENE);
         this.scene.start("LevelSelectScene");
       } else {
         // Custom/test level — EditorCanvas handles return via LEVEL_COMPLETE event
-        // For standalone play, go to MenuScene if available
-        if (this.scene.get("MenuScene")) {
+        // For standalone play via React page, return to lobby
+        if (this.registry.get("startScene")) {
+          gameEvents.emit(GAME_EVENTS.EXIT_GAME_SCENE);
+          gameEvents.emit(GAME_EVENTS.RETURN_TO_LOBBY);
+        } else if (this.scene.get("MenuScene")) {
           this.scene.start("MenuScene");
         }
       }
@@ -2979,7 +3187,14 @@ export class GameScene extends Phaser.Scene {
 
     menuBtn.on("pointerover", () => menuBtn.setAlpha(0.8));
     menuBtn.on("pointerout", () => menuBtn.setAlpha(1));
-    menuBtn.on("pointerdown", () => this.scene.start("MenuScene"));
+    menuBtn.on("pointerdown", () => {
+      gameEvents.emit(GAME_EVENTS.EXIT_GAME_SCENE);
+      if (this.registry.get("startScene")) {
+        gameEvents.emit(GAME_EVENTS.RETURN_TO_LOBBY);
+      } else {
+        this.scene.start("MenuScene");
+      }
+    });
 
     const selectBtn = this.add
       .text(GAME_WIDTH / 2 + 100, 340, "Fases", {
@@ -2996,7 +3211,10 @@ export class GameScene extends Phaser.Scene {
 
     selectBtn.on("pointerover", () => selectBtn.setAlpha(0.8));
     selectBtn.on("pointerout", () => selectBtn.setAlpha(1));
-    selectBtn.on("pointerdown", () => this.scene.start("LevelSelectScene"));
+    selectBtn.on("pointerdown", () => {
+      gameEvents.emit(GAME_EVENTS.EXIT_GAME_SCENE);
+      this.scene.start("LevelSelectScene");
+    });
   }
 
   private createVictoryParticles(): void {
@@ -3943,7 +4161,13 @@ export class GameScene extends Phaser.Scene {
       this.resumeGame();
       stopBGM();
       if (this.levelIndex >= 0) {
+        // Campaign: return to level select
+        gameEvents.emit(GAME_EVENTS.EXIT_GAME_SCENE);
         this.scene.start("LevelSelectScene");
+      } else if (this.registry.get("startScene")) {
+        // Demo/campaign page: return to lobby
+        gameEvents.emit(GAME_EVENTS.EXIT_GAME_SCENE);
+        gameEvents.emit(GAME_EVENTS.RETURN_TO_LOBBY);
       } else if (this.scene.get("MenuScene")) {
         this.scene.start("MenuScene");
       } else {

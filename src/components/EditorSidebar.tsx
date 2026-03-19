@@ -55,7 +55,7 @@ function CollapsibleSection({
       </button>
       <div
         className="overflow-hidden transition-all duration-300 ease-in-out"
-        style={{ maxHeight: open ? "1000px" : "0px", opacity: open ? 1 : 0 }}
+        style={{ maxHeight: open ? "9999px" : "0px", opacity: open ? 1 : 0 }}
       >
         <div className="px-2 pb-1">{children}</div>
       </div>

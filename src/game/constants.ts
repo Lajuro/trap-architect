@@ -110,6 +110,9 @@ export const EDITOR_MIN_HEIGHT = 10;
 export const EDITOR_MAX_HEIGHT = 30;
 export const EDITOR_MAX_UNDO = 80;
 export const EDITOR_SCROLL_SPEED = 8;
+export const EDITOR_MAX_FILL = 500;
+
+export type EditorTool = "paint" | "fill" | "line" | "rect" | "eyedropper";
 
 // ============================================================
 // Tile Categories
@@ -405,9 +408,9 @@ export const PALETTE_ITEMS: PaletteItem[] = [
   { id: 55, name: "Teleportador A", description: "Portal de entrada — par com Teleportador B", category: "interactive", tileType: TileType.TELEPORTER_A, color: "#4488FF" },
   { id: 56, name: "Teleportador B", description: "Portal de saída — par com Teleportador A", category: "interactive", tileType: TileType.TELEPORTER_B, color: "#FF8844" },
   { id: 57, name: "Bloco Pegajoso", description: "Gruda o jogador — pule para se soltar!", category: "interactive", tileType: TileType.STICKY_BLOCK, color: "#CCAA22" },
-  { id: 58, name: "Chave Vermelha", description: "Abre fechaduras vermelhas", category: "entities", entityType: "coin", tileType: TileType.KEY_RED, color: "#FF4444" },
-  { id: 59, name: "Chave Azul", description: "Abre fechaduras azuis", category: "entities", entityType: "coin", tileType: TileType.KEY_BLUE, color: "#4444FF" },
-  { id: 60, name: "Chave Verde", description: "Abre fechaduras verdes", category: "entities", entityType: "coin", tileType: TileType.KEY_GREEN, color: "#44FF44" },
+  { id: 58, name: "Chave Vermelha", description: "Abre fechaduras vermelhas", category: "interactive", tileType: TileType.KEY_RED, color: "#FF4444" },
+  { id: 59, name: "Chave Azul", description: "Abre fechaduras azuis", category: "interactive", tileType: TileType.KEY_BLUE, color: "#4444FF" },
+  { id: 60, name: "Chave Verde", description: "Abre fechaduras verdes", category: "interactive", tileType: TileType.KEY_GREEN, color: "#44FF44" },
   { id: 61, name: "Fechadura Vermelha", description: "Bloco que abre com chave vermelha", category: "interactive", tileType: TileType.LOCK_RED, color: "#CC3333" },
   { id: 62, name: "Fechadura Azul", description: "Bloco que abre com chave azul", category: "interactive", tileType: TileType.LOCK_BLUE, color: "#3333CC" },
   { id: 63, name: "Fechadura Verde", description: "Bloco que abre com chave verde", category: "interactive", tileType: TileType.LOCK_GREEN, color: "#33CC33" },

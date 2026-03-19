@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { SKINS, TRAILS, DEATH_EFFECTS, FRAMES } from "@/game/constants";
-import HudBar from "@/components/ui/HudBar";
 import HudPanel from "@/components/ui/HudPanel";
 import HudButton from "@/components/ui/HudButton";
 import { PixelIcon, type PixelIconName } from "@/components/ui/PixelIcon";
@@ -147,10 +146,7 @@ export default function ShopPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <HudBar />
-
-      <main className="max-w-5xl mx-auto px-4 py-6 w-full">
+    <main className="flex-1 max-w-5xl mx-auto px-4 py-6 w-full overflow-y-auto">
         <HudPanel variant="gold" className="mb-6">
           <div className="flex items-center justify-between">
             <div>
@@ -272,6 +268,5 @@ export default function ShopPage() {
           </div>
         )}
       </main>
-    </div>
   );
 }

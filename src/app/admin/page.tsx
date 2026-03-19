@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { isAdmin } from "@/lib/ranks";
-import HudBar from "@/components/ui/HudBar";
 import HudPanel from "@/components/ui/HudPanel";
 import HudButton from "@/components/ui/HudButton";
 import { PixelIcon, type PixelIconName } from "@/components/ui/PixelIcon";
@@ -149,10 +148,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <HudBar />
-
-      <main className="max-w-7xl mx-auto px-4 py-6 w-full">
+    <main className="flex-1 max-w-7xl mx-auto px-4 py-6 w-full overflow-y-auto">
         <HudPanel variant="danger" className="mb-6">
           <h1 className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-2">
             <PixelIcon name="crown" size={16} color="#EF4444" /> Curadoria de Niveis
@@ -303,6 +299,5 @@ export default function AdminPage() {
           </div>
         )}
       </main>
-    </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   EDITOR_MAX_HEIGHT,
   EDITOR_MAX_UNDO,
   EDITOR_SCROLL_SPEED,
+  EDITOR_MAX_FILL,
   PALETTE_ITEMS,
   FIXED_STEP,
   MAX_ACCUMULATED,
@@ -17,6 +18,7 @@ import {
   DECORATIVE_TILES,
   THEME_PALETTES,
 } from "../constants";
+import type { EditorTool } from "../constants";
 import { TileType, type EntityType, type LevelData, type TrollTrigger, type LevelTheme } from "../types";
 import { gameEvents } from "../events";
 import { playBGM } from "../audio";
@@ -35,6 +37,7 @@ export const EDITOR_EVENTS = {
 
   // React → EditorScene
   SET_TOOL: "editor:set_tool",
+  SET_BRUSH_SIZE: "editor:set_brush_size",
   SET_PALETTE_ITEM: "editor:set_palette",
   SET_LEVEL_META: "editor:set_meta",
   RESIZE_LEVEL: "editor:resize",
@@ -65,7 +68,7 @@ interface EditorEntity {
 }
 
 interface UndoAction {
-  type: "tile" | "entity_add" | "entity_remove" | "entity_move";
+  type: "tile" | "entity_add" | "entity_remove" | "entity_move" | "batch";
   // tile
   gx?: number;
   gy?: number;
@@ -75,6 +78,8 @@ interface UndoAction {
   entity?: { type: EntityType; gx: number; gy: number };
   oldPos?: { gx: number; gy: number };
   newPos?: { gx: number; gy: number };
+  // batch (for fill/line/rect)
+  actions?: UndoAction[];
 }
 
 // ============================================================
@@ -110,6 +115,12 @@ export class EditorScene extends Phaser.Scene {
   private isDrawing = false;
   private lastDrawGx = -1;
   private lastDrawGy = -1;
+  private currentTool: EditorTool = "paint";
+  private brushSize = 1;
+
+  // Line/Rect tool state
+  private toolStartPoint: { gx: number; gy: number } | null = null;
+  private toolPreviewGraphics!: Phaser.GameObjects.Graphics;
 
   // Undo/Redo
   private undoStack: UndoAction[] = [];
@@ -190,6 +201,9 @@ export class EditorScene extends Phaser.Scene {
 
     // Hover preview
     this.hoverGraphics = this.add.graphics().setDepth(50);
+
+    // Tool preview graphics (for line/rect ghost tiles)
+    this.toolPreviewGraphics = this.add.graphics().setDepth(49);
 
     // Build initial tile sprites
     this.buildAllTileSprites();
@@ -279,6 +293,46 @@ export class EditorScene extends Phaser.Scene {
       tabKey.on("down", () => {
         this.cyclePaletteCategory();
       });
+
+      // F = flood fill tool
+      const fKey = this.input.keyboard.addKey("F");
+      fKey.on("down", () => {
+        if (!this.ctrlKey.isDown) this.setTool("fill");
+      });
+
+      // I = line tool
+      const iKey = this.input.keyboard.addKey("I");
+      iKey.on("down", () => {
+        if (!this.ctrlKey.isDown) this.setTool("line");
+      });
+
+      // R = rectangle tool
+      const rKey = this.input.keyboard.addKey("R");
+      rKey.on("down", () => {
+        if (!this.ctrlKey.isDown) this.setTool("rect");
+      });
+
+      // P = eyedropper (picker) tool
+      const pKey = this.input.keyboard.addKey("P");
+      pKey.on("down", () => {
+        if (!this.ctrlKey.isDown) this.setTool("eyedropper");
+      });
+
+      // B = paint (brush) tool
+      const bKey = this.input.keyboard.addKey("B");
+      bKey.on("down", () => {
+        if (!this.ctrlKey.isDown) this.setTool("paint");
+      });
+
+      // [ ] = brush size
+      const bracketLeft = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.OPEN_BRACKET);
+      bracketLeft.on("down", () => {
+        this.setBrushSize(Math.max(1, this.brushSize - 1));
+      });
+      const bracketRight = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.CLOSED_BRACKET);
+      bracketRight.on("down", () => {
+        this.setBrushSize(Math.min(3, this.brushSize + 1));
+      });
     }
 
     // Reset accumulator
@@ -314,22 +368,58 @@ export class EditorScene extends Phaser.Scene {
       }
 
       if (pointer.rightButtonDown()) {
-        // Right-click = erase
+        // Right-click = erase (always, regardless of tool)
         const { gx, gy } = this.pointerToGrid(pointer);
         this.eraseTile(gx, gy);
         return;
       }
-      this.isDrawing = true;
-      this.handleDraw(pointer);
+
+      const { gx, gy } = this.pointerToGrid(pointer);
+      if (gx < 0 || gx >= this.gridW || gy < 0 || gy >= this.gridH) return;
+
+      switch (this.currentTool) {
+        case "fill":
+          this.handleFloodFill(gx, gy);
+          break;
+        case "eyedropper":
+          this.handleEyedropper(gx, gy);
+          break;
+        case "line":
+        case "rect":
+          this.toolStartPoint = { gx, gy };
+          this.isDrawing = true;
+          break;
+        default: // "paint"
+          this.isDrawing = true;
+          this.handleDraw(pointer);
+          break;
+      }
     });
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
-      if (this.isDrawing && pointer.isDown) {
+      if (!this.isDrawing || !pointer.isDown) return;
+
+      if (this.currentTool === "line" || this.currentTool === "rect") {
+        this.updateToolPreview(pointer);
+      } else {
+        // paint tool — continuous draw
         this.handleDraw(pointer);
       }
     });
 
-    this.input.on("pointerup", () => {
+    this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      if (this.isDrawing && this.toolStartPoint) {
+        const { gx, gy } = this.pointerToGrid(pointer);
+
+        if (this.currentTool === "line") {
+          this.commitLineTool(this.toolStartPoint.gx, this.toolStartPoint.gy, gx, gy);
+        } else if (this.currentTool === "rect") {
+          this.commitRectTool(this.toolStartPoint.gx, this.toolStartPoint.gy, gx, gy);
+        }
+        this.toolStartPoint = null;
+        this.toolPreviewGraphics.clear();
+      }
+
       this.isDrawing = false;
       this.lastDrawGx = -1;
       this.lastDrawGy = -1;
@@ -732,14 +822,14 @@ export class EditorScene extends Phaser.Scene {
 
     // Eraser: remove entity first, then tile
     if (item.tileType === TileType.AIR) {
-      this.eraseTile(gx, gy);
+      this.applyBrush(gx, gy, (tx, ty) => this.eraseTile(tx, ty));
       return;
     }
 
     if (item.entityType) {
       this.placeEntity(item.entityType, gx, gy);
     } else if (item.tileType !== undefined) {
-      this.placeTile(item.tileType, gx, gy);
+      this.applyBrush(gx, gy, (tx, ty) => this.placeTile(item.tileType!, tx, ty));
     }
   }
 
@@ -861,23 +951,29 @@ export class EditorScene extends Phaser.Scene {
 
     if (gx < 0 || gx >= this.gridW || gy < 0 || gy >= this.gridH) return;
 
-    // Cell highlight
-    this.hoverGraphics.lineStyle(2, 0xffff00, 0.6);
-    this.hoverGraphics.strokeRect(
-      gx * TILE_SIZE,
-      gy * TILE_SIZE,
-      TILE_SIZE,
-      TILE_SIZE
-    );
+    // Tool-specific hover colors
+    const hoverColors: Record<EditorTool, number> = {
+      paint: 0xffff00,
+      fill: 0x00aaff,
+      line: 0xff8800,
+      rect: 0x88ff00,
+      eyedropper: 0xff00ff,
+    };
+    const color = hoverColors[this.currentTool];
 
-    // Ghost preview of tile to be placed
-    this.hoverGraphics.fillStyle(0xffff00, 0.2);
-    this.hoverGraphics.fillRect(
-      gx * TILE_SIZE,
-      gy * TILE_SIZE,
-      TILE_SIZE,
-      TILE_SIZE
-    );
+    // Draw brush-sized highlight
+    const half = Math.floor(this.brushSize / 2);
+    for (let dy = -half; dy < this.brushSize - half; dy++) {
+      for (let dx = -half; dx < this.brushSize - half; dx++) {
+        const tx = gx + dx;
+        const ty = gy + dy;
+        if (tx < 0 || tx >= this.gridW || ty < 0 || ty >= this.gridH) continue;
+        this.hoverGraphics.lineStyle(2, color, 0.6);
+        this.hoverGraphics.strokeRect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        this.hoverGraphics.fillStyle(color, 0.15);
+        this.hoverGraphics.fillRect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      }
+    }
   }
 
   // ============================================================
@@ -1098,6 +1194,15 @@ export class EditorScene extends Phaser.Scene {
         }
         break;
       }
+      case "batch": {
+        const items = action.actions ?? [];
+        // Undo in reverse order, redo in original order
+        const ordered = isRedo ? items : [...items].reverse();
+        for (const child of ordered) {
+          this.applyUndoAction(child, isRedo);
+        }
+        break;
+      }
     }
   }
 
@@ -1271,6 +1376,14 @@ export class EditorScene extends Phaser.Scene {
       // Set clipboard to prefab data and trigger paste at camera center
       this.clipboard = { tiles: prefab.tiles, w: prefab.width, h: prefab.height };
       this.pasteClipboard();
+    });
+
+    register(EDITOR_EVENTS.SET_TOOL, (tool: unknown) => {
+      this.setTool(tool as EditorTool);
+    });
+
+    register(EDITOR_EVENTS.SET_BRUSH_SIZE, (size: unknown) => {
+      this.setBrushSize(size as number);
     });
   }
 
@@ -1493,6 +1606,292 @@ export class EditorScene extends Phaser.Scene {
     this.selectionEnd = null;
     this.selectionGraphics.clear();
     this.emitLevelData();
+  }
+
+  // ============================================================
+  // Tool helpers
+  // ============================================================
+  private setTool(tool: EditorTool): void {
+    this.currentTool = tool;
+    this.toolStartPoint = null;
+    this.toolPreviewGraphics.clear();
+    gameEvents.emit(EDITOR_EVENTS.SELECTION_CHANGED, { tool });
+  }
+
+  private setBrushSize(size: number): void {
+    this.brushSize = Phaser.Math.Clamp(size, 1, 3);
+    gameEvents.emit(EDITOR_EVENTS.SELECTION_CHANGED, { brushSize: this.brushSize });
+  }
+
+  /** Apply a callback over the brush footprint centered at (gx,gy) */
+  private applyBrush(gx: number, gy: number, fn: (tx: number, ty: number) => void): void {
+    const half = Math.floor(this.brushSize / 2);
+    for (let dy = -half; dy < this.brushSize - half; dy++) {
+      for (let dx = -half; dx < this.brushSize - half; dx++) {
+        const tx = gx + dx;
+        const ty = gy + dy;
+        if (tx >= 0 && tx < this.gridW && ty >= 0 && ty < this.gridH) {
+          fn(tx, ty);
+        }
+      }
+    }
+  }
+
+  /** Place a tile without emitting data change or pushing undo (for batch ops) */
+  private placeTileRaw(tileType: TileType, gx: number, gy: number): UndoAction | null {
+    const targetTiles = this.activeLayer === "background" ? this.backgroundTiles : this.tiles;
+    const targetSprites = this.activeLayer === "background" ? this.bgTileSprites : this.tileSprites;
+    const oldTile = targetTiles[gy][gx];
+    if (oldTile === tileType) return null;
+
+    targetTiles[gy][gx] = tileType;
+
+    const old = targetSprites[gy]?.[gx];
+    if (old) old.destroy();
+    const depth = this.activeLayer === "background" ? 5 : 10;
+    const alpha = this.activeLayer === "background" ? 0.4 : 1;
+    targetSprites[gy][gx] = this.createTileSpriteAt(gx, gy, tileType, depth, alpha);
+
+    return { type: "tile", gx, gy, oldTile, newTile: tileType };
+  }
+
+  /** Refresh auto-tiles for a set of changed positions */
+  private refreshAutoTilesForBatch(positions: Array<{ gx: number; gy: number }>): void {
+    if (this.activeLayer !== "foreground") return;
+    const refreshed = new Set<string>();
+    for (const { gx, gy } of positions) {
+      const neighbors = [
+        { gx, gy: gy - 1 }, { gx, gy: gy + 1 },
+        { gx: gx - 1, gy }, { gx: gx + 1, gy },
+        { gx, gy }, // self
+      ];
+      for (const n of neighbors) {
+        const key = `${n.gx},${n.gy}`;
+        if (!refreshed.has(key)) {
+          refreshed.add(key);
+          this.refreshAutoTile(n.gx, n.gy);
+        }
+      }
+    }
+  }
+
+  // ============================================================
+  // Flood Fill Tool
+  // ============================================================
+  private handleFloodFill(gx: number, gy: number): void {
+    const item = PALETTE_ITEMS.find((p) => p.id === this.selectedPaletteId);
+    if (!item || item.tileType === undefined || item.entityType) return;
+
+    const targetTiles = this.activeLayer === "background" ? this.backgroundTiles : this.tiles;
+    const targetType = targetTiles[gy][gx];
+
+    // Don't fill if target is same as selected
+    if (targetType === item.tileType) return;
+
+    // BFS flood fill
+    const visited = new Set<string>();
+    const queue: Array<{ gx: number; gy: number }> = [{ gx, gy }];
+    const actions: UndoAction[] = [];
+    const filled: Array<{ gx: number; gy: number }> = [];
+
+    while (queue.length > 0 && filled.length < EDITOR_MAX_FILL) {
+      const pos = queue.shift()!;
+      const key = `${pos.gx},${pos.gy}`;
+      if (visited.has(key)) continue;
+      visited.add(key);
+
+      if (pos.gx < 0 || pos.gx >= this.gridW || pos.gy < 0 || pos.gy >= this.gridH) continue;
+      if (targetTiles[pos.gy][pos.gx] !== targetType) continue;
+
+      const action = this.placeTileRaw(item.tileType!, pos.gx, pos.gy);
+      if (action) {
+        actions.push(action);
+        filled.push({ gx: pos.gx, gy: pos.gy });
+      }
+
+      // Add 4-directional neighbors
+      queue.push({ gx: pos.gx + 1, gy: pos.gy });
+      queue.push({ gx: pos.gx - 1, gy: pos.gy });
+      queue.push({ gx: pos.gx, gy: pos.gy + 1 });
+      queue.push({ gx: pos.gx, gy: pos.gy - 1 });
+    }
+
+    if (actions.length > 0) {
+      this.pushUndo({ type: "batch", actions });
+      this.refreshAutoTilesForBatch(filled);
+      this.emitLevelData();
+    }
+  }
+
+  // ============================================================
+  // Line Draw Tool (Bresenham)
+  // ============================================================
+  private getLinePoints(x0: number, y0: number, x1: number, y1: number): Array<{ gx: number; gy: number }> {
+    const points: Array<{ gx: number; gy: number }> = [];
+    const dx = Math.abs(x1 - x0);
+    const dy = -Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    let cx = x0;
+    let cy = y0;
+
+    for (;;) {
+      points.push({ gx: cx, gy: cy });
+      if (cx === x1 && cy === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) {
+        err += dy;
+        cx += sx;
+      }
+      if (e2 <= dx) {
+        err += dx;
+        cy += sy;
+      }
+    }
+    return points;
+  }
+
+  private commitLineTool(x0: number, y0: number, x1: number, y1: number): void {
+    const item = PALETTE_ITEMS.find((p) => p.id === this.selectedPaletteId);
+    if (!item || item.tileType === undefined || item.entityType) return;
+
+    const points = this.getLinePoints(x0, y0, x1, y1);
+    const actions: UndoAction[] = [];
+    const changed: Array<{ gx: number; gy: number }> = [];
+    const half = Math.floor(this.brushSize / 2);
+
+    for (const p of points) {
+      for (let dy = -half; dy < this.brushSize - half; dy++) {
+        for (let dx = -half; dx < this.brushSize - half; dx++) {
+          const tx = p.gx + dx;
+          const ty = p.gy + dy;
+          if (tx < 0 || tx >= this.gridW || ty < 0 || ty >= this.gridH) continue;
+          const action = this.placeTileRaw(item.tileType!, tx, ty);
+          if (action) {
+            actions.push(action);
+            changed.push({ gx: tx, gy: ty });
+          }
+        }
+      }
+    }
+
+    if (actions.length > 0) {
+      this.pushUndo({ type: "batch", actions });
+      this.refreshAutoTilesForBatch(changed);
+      this.emitLevelData();
+    }
+  }
+
+  // ============================================================
+  // Rectangle Draw Tool
+  // ============================================================
+  private commitRectTool(x0: number, y0: number, x1: number, y1: number): void {
+    const item = PALETTE_ITEMS.find((p) => p.id === this.selectedPaletteId);
+    if (!item || item.tileType === undefined || item.entityType) return;
+
+    const minX = Math.max(0, Math.min(x0, x1));
+    const maxX = Math.min(this.gridW - 1, Math.max(x0, x1));
+    const minY = Math.max(0, Math.min(y0, y1));
+    const maxY = Math.min(this.gridH - 1, Math.max(y0, y1));
+
+    const actions: UndoAction[] = [];
+    const changed: Array<{ gx: number; gy: number }> = [];
+    const outlineOnly = this.shiftKey?.isDown;
+
+    for (let gy = minY; gy <= maxY; gy++) {
+      for (let gx = minX; gx <= maxX; gx++) {
+        // In outline mode, only place border tiles
+        if (outlineOnly && gx > minX && gx < maxX && gy > minY && gy < maxY) continue;
+
+        const action = this.placeTileRaw(item.tileType!, gx, gy);
+        if (action) {
+          actions.push(action);
+          changed.push({ gx, gy });
+        }
+      }
+    }
+
+    if (actions.length > 0) {
+      this.pushUndo({ type: "batch", actions });
+      this.refreshAutoTilesForBatch(changed);
+      this.emitLevelData();
+    }
+  }
+
+  // ============================================================
+  // Eyedropper Tool
+  // ============================================================
+  private handleEyedropper(gx: number, gy: number): void {
+    const targetTiles = this.activeLayer === "background" ? this.backgroundTiles : this.tiles;
+    const tileType = targetTiles[gy][gx];
+
+    // Find matching palette item
+    const item = PALETTE_ITEMS.find((p) => p.tileType === tileType && !p.entityType);
+    if (item) {
+      this.selectedPaletteId = item.id;
+      gameEvents.emit(EDITOR_EVENTS.SELECTION_CHANGED, { paletteId: item.id, pickedTileName: item.name });
+    } else {
+      // Check for entity at this position
+      const ent = this.entities.find((e) => e.gx === gx && e.gy === gy);
+      if (ent) {
+        const entItem = PALETTE_ITEMS.find((p) => p.entityType === ent.type);
+        if (entItem) {
+          this.selectedPaletteId = entItem.id;
+          gameEvents.emit(EDITOR_EVENTS.SELECTION_CHANGED, { paletteId: entItem.id, pickedTileName: entItem.name });
+        }
+      }
+    }
+
+    // Auto-switch back to paint tool
+    this.setTool("paint");
+  }
+
+  // ============================================================
+  // Tool Preview (line/rect ghost while dragging)
+  // ============================================================
+  private updateToolPreview(pointer: Phaser.Input.Pointer): void {
+    this.toolPreviewGraphics.clear();
+    if (!this.toolStartPoint) return;
+
+    const { gx, gy } = this.pointerToGrid(pointer);
+    const color = this.currentTool === "line" ? 0xff8800 : 0x88ff00;
+
+    if (this.currentTool === "line") {
+      const points = this.getLinePoints(this.toolStartPoint.gx, this.toolStartPoint.gy, gx, gy);
+      this.toolPreviewGraphics.fillStyle(color, 0.3);
+      const half = Math.floor(this.brushSize / 2);
+      for (const p of points) {
+        for (let dy = -half; dy < this.brushSize - half; dy++) {
+          for (let dx = -half; dx < this.brushSize - half; dx++) {
+            const tx = p.gx + dx;
+            const ty = p.gy + dy;
+            if (tx < 0 || tx >= this.gridW || ty < 0 || ty >= this.gridH) continue;
+            this.toolPreviewGraphics.fillRect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+          }
+        }
+      }
+    } else if (this.currentTool === "rect") {
+      const minX = Math.max(0, Math.min(this.toolStartPoint.gx, gx));
+      const maxX = Math.min(this.gridW - 1, Math.max(this.toolStartPoint.gx, gx));
+      const minY = Math.max(0, Math.min(this.toolStartPoint.gy, gy));
+      const maxY = Math.min(this.gridH - 1, Math.max(this.toolStartPoint.gy, gy));
+      const outlineOnly = this.shiftKey?.isDown;
+
+      this.toolPreviewGraphics.fillStyle(color, 0.3);
+      for (let py = minY; py <= maxY; py++) {
+        for (let px = minX; px <= maxX; px++) {
+          if (outlineOnly && px > minX && px < maxX && py > minY && py < maxY) continue;
+          this.toolPreviewGraphics.fillRect(px * TILE_SIZE, py * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+      }
+      // Outline border
+      this.toolPreviewGraphics.lineStyle(2, color, 0.8);
+      this.toolPreviewGraphics.strokeRect(
+        minX * TILE_SIZE, minY * TILE_SIZE,
+        (maxX - minX + 1) * TILE_SIZE, (maxY - minY + 1) * TILE_SIZE,
+      );
+    }
   }
 
   // ============================================================

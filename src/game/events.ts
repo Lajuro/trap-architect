@@ -41,9 +41,17 @@ export const GAME_EVENTS = {
   GAME_PAUSED: "game:paused",
   GAME_RESUMED: "game:resumed",
 
+  // Lobby
+  LOBBY_READY: "lobby:ready",
+
+  // Scene lifecycle (Phaser → React)
+  ENTER_GAME_SCENE: "scene:game:enter",
+  EXIT_GAME_SCENE: "scene:game:exit",
+
   // React → Phaser
   LOAD_LEVEL: "level:load",
   RESTART_LEVEL: "level:restart",
   PAUSE_GAME: "game:pause",
   RESUME_GAME: "game:resume",
+  RETURN_TO_LOBBY: "game:returnToLobby",
 } as const;

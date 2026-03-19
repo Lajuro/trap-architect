@@ -49,6 +49,13 @@ export const PALETTE_TEXTURE_KEY: Record<number, string> = {
   51: "tile_sign",
   52: "tile_crystal",
   53: "tile_mushroom",
+  // Keys & Locks
+  58: "tile_key_red",
+  59: "tile_key_blue",
+  60: "tile_key_green",
+  61: "tile_lock_red",
+  62: "tile_lock_blue",
+  63: "tile_lock_green",
   // Entities
   25: "player",
   26: "entity_coin",

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import HudBar from "@/components/ui/HudBar";
 import HudPanel from "@/components/ui/HudPanel";
 import HudButton from "@/components/ui/HudButton";
 import { PixelIcon } from "@/components/ui/PixelIcon";
@@ -71,10 +70,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <HudBar />
-
-      <main className="max-w-3xl mx-auto px-4 py-6 w-full">
+    <main className="flex-1 max-w-3xl mx-auto px-4 py-6 w-full overflow-y-auto">
         <HudPanel className="mb-6">
           <h1 className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-2">
             <PixelIcon name="settings" size={16} /> Configuracoes
@@ -186,6 +182,5 @@ export default function SettingsPage() {
           </HudButton>
         </HudPanel>
       </main>
-    </div>
   );
 }
