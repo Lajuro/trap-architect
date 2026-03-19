@@ -174,6 +174,22 @@ export function playGravityFlip(): void {
   osc.stop(ctx.currentTime + 0.3);
 }
 
+export function playGravityNormalize(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.frequency.setValueAtTime(150, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.25);
+  gain.gain.setValueAtTime(0.1, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.3);
+}
+
 export function playSlideBlock(): void {
   if (!isSoundEnabled()) return;
   const ctx = getCtx();
@@ -204,6 +220,257 @@ export function playFireball(): void {
   gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
   osc.start(ctx.currentTime);
   osc.stop(ctx.currentTime + 0.15);
+}
+
+// ============================================================
+// New Feature SFX
+// ============================================================
+
+export function playTeleport(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.frequency.setValueAtTime(200, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.15);
+  osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.3);
+  gain.gain.setValueAtTime(0.12, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.3);
+}
+
+export function playCannon(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "square";
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.frequency.setValueAtTime(120, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.2);
+  gain.gain.setValueAtTime(0.15, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.2);
+}
+
+export function playKeyPickup(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.frequency.setValueAtTime(523, ctx.currentTime);
+  osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+  osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2);
+  gain.gain.setValueAtTime(0.12, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.3);
+}
+
+export function playLockOpen(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "square";
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.frequency.setValueAtTime(400, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.1, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.2);
+}
+
+export function playIceBreak(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getCtx();
+  const noise = ctx.createOscillator();
+  const gain = ctx.createGain();
+  noise.type = "sawtooth";
+  noise.connect(gain);
+  gain.connect(ctx.destination);
+  noise.frequency.setValueAtTime(2000, ctx.currentTime);
+  noise.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.12, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+  noise.start(ctx.currentTime);
+  noise.stop(ctx.currentTime + 0.2);
+}
+
+export function playSlowMo(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.frequency.setValueAtTime(600, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.4);
+  gain.gain.setValueAtTime(0.1, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.4);
+}
+
+export function playBossHit(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "square";
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.frequency.setValueAtTime(200, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.3);
+  gain.gain.setValueAtTime(0.15, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.3);
+}
+
+// Troll SFX map
+export function playTrollSfx(sfx: string): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getCtx();
+  const t = ctx.currentTime;
+
+  switch (sfx) {
+    case "sfx_laugh": {
+      // Evil laugh — rapid alternating pitches
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(300, t);
+      osc.frequency.setValueAtTime(400, t + 0.1);
+      osc.frequency.setValueAtTime(300, t + 0.2);
+      osc.frequency.setValueAtTime(500, t + 0.3);
+      osc.frequency.setValueAtTime(350, t + 0.4);
+      gain.gain.setValueAtTime(0.1, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+      osc.start(t);
+      osc.stop(t + 0.5);
+      break;
+    }
+    case "sfx_scream": {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(800, t);
+      osc.frequency.exponentialRampToValueAtTime(1600, t + 0.15);
+      osc.frequency.exponentialRampToValueAtTime(400, t + 0.5);
+      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+      osc.start(t);
+      osc.stop(t + 0.5);
+      break;
+    }
+    case "sfx_boom": {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.exponentialRampToValueAtTime(30, t + 0.4);
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+      osc.start(t);
+      osc.stop(t + 0.4);
+      break;
+    }
+    case "sfx_horn": {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(440, t);
+      osc.frequency.setValueAtTime(554, t + 0.15);
+      osc.frequency.setValueAtTime(440, t + 0.3);
+      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+      osc.start(t);
+      osc.stop(t + 0.5);
+      break;
+    }
+    case "sfx_sad": {
+      // Sad trombone — descending
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(400, t);
+      osc.frequency.setValueAtTime(350, t + 0.2);
+      osc.frequency.setValueAtTime(300, t + 0.4);
+      osc.frequency.setValueAtTime(200, t + 0.6);
+      gain.gain.setValueAtTime(0.12, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.8);
+      osc.start(t);
+      osc.stop(t + 0.8);
+      break;
+    }
+    case "sfx_fart": {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(80, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.3);
+      gain.gain.setValueAtTime(0.12, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+      osc.start(t);
+      osc.stop(t + 0.3);
+      break;
+    }
+    case "sfx_drama": {
+      // Dramatic sting
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(200, t);
+      osc.frequency.exponentialRampToValueAtTime(600, t + 0.1);
+      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.setValueAtTime(0.15, t + 0.3);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.6);
+      osc.start(t);
+      osc.stop(t + 0.6);
+      break;
+    }
+    case "sfx_bruh": {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(250, t);
+      osc.frequency.exponentialRampToValueAtTime(100, t + 0.3);
+      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+      osc.start(t);
+      osc.stop(t + 0.4);
+      break;
+    }
+  }
 }
 
 // ============================================================

@@ -4,13 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import { gameEvents } from "@/game/events";
 import { EDITOR_EVENTS } from "@/game/scenes/EditorScene";
 import { PALETTE_ITEMS } from "@/game/constants";
-import { Layers, Skull, Zap, Users, ChevronDown, Loader2 } from "lucide-react";
+import { textureCache, PALETTE_TEXTURE_KEY } from "@/game/texture-cache";
+import { Layers, Skull, Zap, Users, ChevronDown, Loader2, Flower2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 const CATEGORY_META: Record<string, { label: string; Icon: LucideIcon; color: string }> = {
   terrain: { label: "Terreno", Icon: Layers, color: "#4CAF50" },
   danger: { label: "Perigo", Icon: Skull, color: "#F44336" },
   interactive: { label: "Interativo", Icon: Zap, color: "#FF9800" },
+  decoration: { label: "Decoração", Icon: Flower2, color: "#AB47BC" },
   entities: { label: "Entidades", Icon: Users, color: "#2196F3" },
 };
 
@@ -60,7 +62,7 @@ function CollapsibleSection({
   );
 }
 
-/** Mini tile swatch that mimics the actual game appearance */
+/** Mini tile swatch that shows the actual game texture */
 function TileSwatch({
   item,
   selected,
@@ -69,7 +71,8 @@ function TileSwatch({
   selected: boolean;
 }) {
   const c = item.color;
-  const isEntity = !!item.entityType;
+  const texKey = PALETTE_TEXTURE_KEY[item.id];
+  const dataUrl = texKey ? textureCache[texKey] : null;
 
   return (
     <div
@@ -82,50 +85,32 @@ function TileSwatch({
         boxShadow: selected ? `0 0 12px ${c}44` : undefined,
       }}
     >
-      {/* Inner fill — mimics tile texture */}
-      <div
-        className="absolute inset-[3px] rounded-sm"
-        style={{ backgroundColor: c + (isEntity ? "66" : "aa") }}
-      >
-        {/* Ground top: grass stripe */}
-        {item.id === 1 && (
-          <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-sm" style={{ backgroundColor: "#32CD32" }} />
-        )}
-        {/* Brick: grid lines */}
-        {item.id === 3 && (
-          <>
-            <div className="absolute top-1/2 left-0 right-0 h-px" style={{ backgroundColor: "#8B691480" }} />
-            <div className="absolute top-0 bottom-0 left-1/2 w-px" style={{ backgroundColor: "#8B691480" }} />
-          </>
-        )}
-        {/* Question block: ? mark */}
-        {item.id === 16 && (
-          <div className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-white/80">?</div>
-        )}
-        {/* Troll block: ! mark */}
-        {item.id === 17 && (
-          <div className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-white/80">!</div>
-        )}
-        {/* Spike: triangle */}
-        {item.id === 12 && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[8px]" style={{ borderBottomColor: "#CCCCCC" }} />
-          </div>
-        )}
-        {/* Entity: circle indicator */}
-        {isEntity && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c, boxShadow: `0 0 4px ${c}88` }} />
-          </div>
-        )}
-        {/* Eraser: X pattern */}
-        {item.id === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-3 h-px bg-white/50 rotate-45 absolute" />
-            <div className="w-3 h-px bg-white/50 -rotate-45 absolute" />
-          </div>
-        )}
-      </div>
+      {dataUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={dataUrl}
+          alt={item.name}
+          className="absolute inset-0 w-full h-full object-contain"
+          style={{ imageRendering: "pixelated" }}
+          draggable={false}
+        />
+      ) : (
+        /* Fallback for eraser (id 0) and invisible block (id 18) */
+        <div
+          className="absolute inset-[3px] rounded-sm"
+          style={{ backgroundColor: c + "aa" }}
+        >
+          {item.id === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-3 h-px bg-white/50 rotate-45 absolute" />
+              <div className="w-3 h-px bg-white/50 -rotate-45 absolute" />
+            </div>
+          )}
+          {item.id === 18 && (
+            <div className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white/40">?</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

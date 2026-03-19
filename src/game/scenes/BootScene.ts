@@ -1,5 +1,6 @@
 import * as Phaser from "phaser";
 import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from "../constants";
+import { populateTextureCache } from "../texture-cache";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -317,6 +318,25 @@ export class BootScene extends Phaser.Scene {
       refreshTex("tile_lava");
     }
 
+    // Lava Deep — submerged lava (used for stacked lava blocks below the surface)
+    {
+      const ctx = makeCanvas("tile_lava_deep", S, S);
+      // Uniform deep red fill
+      ctx.fillStyle = "#991100";
+      ctx.fillRect(0, 0, S, S);
+      // Subtle darker patches for variation
+      ctx.fillStyle = "#880E00";
+      ctx.fillRect(2, 4, 10, 8);
+      ctx.fillRect(16, 14, 12, 10);
+      ctx.fillRect(6, 20, 8, 6);
+      // Very faint glow spots
+      ctx.fillStyle = "rgba(204,34,0,0.3)";
+      ctx.fillRect(8, 10, 6, 4);
+      ctx.fillRect(20, 4, 8, 6);
+      ctx.fillRect(4, 24, 10, 4);
+      refreshTex("tile_lava_deep");
+    }
+
     // Spring — detailed coiled spring with metallic base
     {
       const ctx = makeCanvas("tile_spring", S, S);
@@ -510,6 +530,556 @@ export class BootScene extends Phaser.Scene {
       refreshTex("tile_castle");
     }
 
+    // Castle Interior — plain stone blocks without battlements (auto-tile: castle above)
+    {
+      const ctx = makeCanvas("tile_castle_interior", S, S);
+      ctx.fillStyle = "#808080";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#909090";
+      ctx.fillRect(1, 1, 14, 14);
+      ctx.fillRect(17, 17, 14, 14);
+      ctx.fillStyle = "#707070";
+      ctx.fillRect(17, 1, 14, 14);
+      ctx.fillRect(1, 17, 14, 14);
+      ctx.fillStyle = "#A0A0A0";
+      ctx.fillRect(1, 1, 14, 1);
+      ctx.fillRect(1, 1, 1, 14);
+      ctx.fillRect(17, 17, 14, 1);
+      ctx.fillRect(17, 17, 1, 14);
+      ctx.fillStyle = "#606060";
+      ctx.fillRect(1, 14, 14, 1);
+      ctx.fillRect(14, 1, 1, 14);
+      ctx.fillRect(17, 30, 14, 1);
+      ctx.fillRect(30, 17, 1, 14);
+      ctx.fillStyle = "#585858";
+      ctx.fillRect(0, 15, S, 2);
+      ctx.fillRect(15, 0, 2, S);
+      refreshTex("tile_castle_interior");
+    }
+
+    // Brick Top — brick with subtle top edge highlight (auto-tile: no brick above)
+    {
+      const ctx = makeCanvas("tile_brick_top", S, S);
+      ctx.fillStyle = "#705A28";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#C8763C";
+      ctx.fillRect(1, 1, 14, 14);
+      ctx.fillRect(17, 1, 14, 14);
+      ctx.fillRect(1, 17, 6, 14);
+      ctx.fillRect(9, 17, 14, 14);
+      ctx.fillRect(25, 17, 6, 14);
+      ctx.fillStyle = "#DDA060";
+      ctx.fillRect(1, 1, 14, 2);
+      ctx.fillRect(1, 1, 2, 14);
+      ctx.fillRect(17, 1, 14, 2);
+      ctx.fillRect(17, 1, 2, 14);
+      ctx.fillRect(1, 17, 6, 2);
+      ctx.fillRect(1, 17, 2, 14);
+      ctx.fillRect(9, 17, 14, 2);
+      ctx.fillRect(9, 17, 2, 14);
+      ctx.fillRect(25, 17, 6, 2);
+      ctx.fillRect(25, 17, 2, 14);
+      ctx.fillStyle = "#8B5520";
+      ctx.fillRect(1, 13, 14, 2);
+      ctx.fillRect(13, 1, 2, 14);
+      ctx.fillRect(17, 13, 14, 2);
+      ctx.fillRect(29, 1, 2, 14);
+      ctx.fillRect(1, 29, 6, 2);
+      ctx.fillRect(5, 17, 2, 14);
+      ctx.fillRect(9, 29, 14, 2);
+      ctx.fillRect(21, 17, 2, 14);
+      ctx.fillRect(25, 29, 6, 2);
+      ctx.fillRect(29, 17, 2, 14);
+      // Top edge cap — bright mortar line
+      ctx.fillStyle = "#E8B870";
+      ctx.fillRect(0, 0, S, 1);
+      refreshTex("tile_brick_top");
+    }
+
+    // Ice Deep — solid interior ice (auto-tile: ice above)
+    {
+      const ctx = makeCanvas("tile_ice_deep", S, S);
+      ctx.fillStyle = "#78B8D8";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#6AAAC8";
+      ctx.fillRect(4, 4, 12, 10);
+      ctx.fillRect(18, 16, 10, 12);
+      ctx.fillStyle = "#88C8E0";
+      ctx.fillRect(12, 14, 8, 8);
+      // Crack lines
+      ctx.fillStyle = "#5898B8";
+      ctx.fillRect(10, 6, 1, 14);
+      ctx.fillRect(22, 4, 1, 18);
+      ctx.fillRect(10, 20, 12, 1);
+      // Faint bubbles
+      ctx.fillStyle = "rgba(255,255,255,0.2)";
+      ctx.fillRect(6, 8, 2, 2);
+      ctx.fillRect(20, 22, 2, 2);
+      refreshTex("tile_ice_deep");
+    }
+
+    // Sand Top — golden surface with light crust
+    {
+      const ctx = makeCanvas("tile_sand_top", S, S);
+      ctx.fillStyle = "#D4A843";
+      ctx.fillRect(0, 0, S, S);
+      // Surface crust
+      ctx.fillStyle = "#E0BE60";
+      ctx.fillRect(0, 0, S, 6);
+      ctx.fillStyle = "#E8CC78";
+      ctx.fillRect(0, 0, S, 2);
+      // Sand ripples
+      ctx.fillStyle = "#C89830";
+      ctx.fillRect(4, 8, 10, 1);
+      ctx.fillRect(18, 12, 8, 1);
+      ctx.fillRect(6, 18, 12, 1);
+      // Grain detail
+      ctx.fillStyle = "#B08828";
+      ctx.fillRect(8, 14, 2, 2);
+      ctx.fillRect(22, 20, 3, 2);
+      ctx.fillRect(3, 24, 2, 2);
+      // Tiny sparkle
+      ctx.fillStyle = "rgba(255,255,220,0.5)";
+      ctx.fillRect(6, 1, 1, 1);
+      ctx.fillRect(20, 2, 1, 1);
+      refreshTex("tile_sand_top");
+    }
+
+    // Sand — deep packed sand
+    {
+      const ctx = makeCanvas("tile_sand", S, S);
+      ctx.fillStyle = "#C09030";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#B08020";
+      ctx.fillRect(2, 4, 12, 10);
+      ctx.fillRect(18, 16, 10, 10);
+      ctx.fillStyle = "#D0A040";
+      ctx.fillRect(14, 6, 8, 6);
+      ctx.fillRect(4, 20, 10, 8);
+      ctx.fillStyle = "#A07018";
+      ctx.fillRect(8, 10, 3, 2);
+      ctx.fillRect(22, 8, 2, 3);
+      ctx.fillRect(12, 24, 3, 2);
+      refreshTex("tile_sand");
+    }
+
+    // Snow Top — fresh snow surface with sparkle
+    {
+      const ctx = makeCanvas("tile_snow_top", S, S);
+      ctx.fillStyle = "#E0E8F0";
+      ctx.fillRect(0, 0, S, S);
+      // Fresh snow surface
+      ctx.fillStyle = "#F0F4FF";
+      ctx.fillRect(0, 0, S, 8);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, S, 3);
+      // Snow drift detail
+      ctx.fillStyle = "#D0D8E8";
+      ctx.fillRect(6, 10, 8, 1);
+      ctx.fillRect(20, 14, 6, 1);
+      // Ice patches
+      ctx.fillStyle = "#C8D8F0";
+      ctx.fillRect(4, 16, 6, 4);
+      ctx.fillRect(20, 20, 8, 4);
+      // Sparkle pixels
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(3, 1, 1, 1);
+      ctx.fillRect(14, 2, 1, 1);
+      ctx.fillRect(26, 0, 1, 1);
+      ctx.fillRect(10, 6, 1, 1);
+      refreshTex("tile_snow_top");
+    }
+
+    // Snow — packed deep snow
+    {
+      const ctx = makeCanvas("tile_snow", S, S);
+      ctx.fillStyle = "#D0D8E8";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#C0C8D8";
+      ctx.fillRect(4, 4, 12, 10);
+      ctx.fillRect(16, 18, 10, 8);
+      ctx.fillStyle = "#D8E0F0";
+      ctx.fillRect(14, 8, 8, 6);
+      ctx.fillRect(2, 20, 10, 6);
+      ctx.fillStyle = "#B8C0D0";
+      ctx.fillRect(10, 12, 3, 2);
+      ctx.fillRect(24, 10, 2, 3);
+      refreshTex("tile_snow");
+    }
+
+    // Wood — brown planks with grain
+    {
+      const ctx = makeCanvas("tile_wood", S, S);
+      ctx.fillStyle = "#8B6340";
+      ctx.fillRect(0, 0, S, S);
+      // Plank divisions
+      ctx.fillStyle = "#6B4320";
+      ctx.fillRect(0, 15, S, 2);
+      // Grain lines
+      ctx.fillStyle = "#7B5330";
+      ctx.fillRect(2, 2, 28, 1);
+      ctx.fillRect(4, 6, 24, 1);
+      ctx.fillRect(6, 10, 20, 1);
+      ctx.fillRect(2, 20, 28, 1);
+      ctx.fillRect(4, 24, 24, 1);
+      ctx.fillRect(6, 28, 20, 1);
+      // Highlight streaks
+      ctx.fillStyle = "#9B7350";
+      ctx.fillRect(8, 4, 10, 1);
+      ctx.fillRect(12, 22, 8, 1);
+      // Knot
+      ctx.fillStyle = "#5B3310";
+      ctx.beginPath();
+      ctx.arc(22, 8, 2, 0, Math.PI * 2);
+      ctx.fill();
+      // Nail details
+      ctx.fillStyle = "#555";
+      ctx.fillRect(3, 3, 2, 2);
+      ctx.fillRect(27, 3, 2, 2);
+      ctx.fillRect(3, 19, 2, 2);
+      ctx.fillRect(27, 19, 2, 2);
+      refreshTex("tile_wood");
+    }
+
+    // Mossy Stone — gray stone with green moss patches
+    {
+      const ctx = makeCanvas("tile_mossy_stone", S, S);
+      ctx.fillStyle = "#707070";
+      ctx.fillRect(0, 0, S, S);
+      // Stone blocks
+      ctx.fillStyle = "#808080";
+      ctx.fillRect(1, 1, 14, 14);
+      ctx.fillRect(17, 17, 14, 14);
+      ctx.fillStyle = "#606060";
+      ctx.fillRect(17, 1, 14, 14);
+      ctx.fillRect(1, 17, 14, 14);
+      // Mortar
+      ctx.fillStyle = "#505050";
+      ctx.fillRect(0, 15, S, 2);
+      ctx.fillRect(15, 0, 2, S);
+      // Moss patches
+      ctx.fillStyle = "#3A6B30";
+      ctx.fillRect(2, 12, 8, 4);
+      ctx.fillRect(20, 2, 6, 6);
+      ctx.fillRect(4, 26, 10, 4);
+      ctx.fillStyle = "#4A8B40";
+      ctx.fillRect(2, 12, 6, 2);
+      ctx.fillRect(20, 2, 4, 3);
+      ctx.fillRect(4, 26, 8, 2);
+      // Moss highlights
+      ctx.fillStyle = "#5AAB50";
+      ctx.fillRect(3, 12, 2, 1);
+      ctx.fillRect(21, 2, 2, 1);
+      refreshTex("tile_mossy_stone");
+    }
+
+    // Fence — wooden fence posts (decorative, non-solid)
+    {
+      const ctx = makeCanvas("tile_fence", S, S);
+      ctx.clearRect(0, 0, S, S);
+      // Vertical posts
+      ctx.fillStyle = "#A08050";
+      ctx.fillRect(4, 0, 4, S);
+      ctx.fillRect(24, 0, 4, S);
+      // Post highlights
+      ctx.fillStyle = "#C0A070";
+      ctx.fillRect(4, 0, 1, S);
+      ctx.fillRect(24, 0, 1, S);
+      // Post shadows
+      ctx.fillStyle = "#806030";
+      ctx.fillRect(7, 0, 1, S);
+      ctx.fillRect(27, 0, 1, S);
+      // Horizontal rail top
+      ctx.fillStyle = "#B09060";
+      ctx.fillRect(0, 6, S, 4);
+      ctx.fillStyle = "#C8A878";
+      ctx.fillRect(0, 6, S, 1);
+      // Horizontal rail bottom
+      ctx.fillStyle = "#B09060";
+      ctx.fillRect(0, 20, S, 4);
+      ctx.fillStyle = "#C8A878";
+      ctx.fillRect(0, 20, S, 1);
+      // Post caps (pointed tops)
+      ctx.fillStyle = "#907040";
+      ctx.fillRect(3, 0, 6, 2);
+      ctx.fillRect(23, 0, 6, 2);
+      ctx.fillStyle = "#C0A070";
+      ctx.fillRect(5, 0, 2, 1);
+      ctx.fillRect(25, 0, 2, 1);
+      refreshTex("tile_fence");
+    }
+
+    // Torch — wooden handle with flame
+    {
+      const ctx = makeCanvas("tile_torch", S, S);
+      ctx.clearRect(0, 0, S, S);
+      // Wooden handle
+      ctx.fillStyle = "#8B6340";
+      ctx.fillRect(13, 14, 6, 18);
+      ctx.fillStyle = "#6B4320";
+      ctx.fillRect(18, 14, 1, 18);
+      ctx.fillStyle = "#A07850";
+      ctx.fillRect(13, 14, 1, 18);
+      // Metal bracket
+      ctx.fillStyle = "#888";
+      ctx.fillRect(11, 13, 10, 2);
+      ctx.fillStyle = "#AAA";
+      ctx.fillRect(11, 13, 10, 1);
+      // Flame base (orange)
+      ctx.fillStyle = "#FF6600";
+      ctx.fillRect(10, 4, 12, 10);
+      // Flame inner (yellow)
+      ctx.fillStyle = "#FFAA00";
+      ctx.fillRect(12, 2, 8, 10);
+      // Flame core (bright yellow)
+      ctx.fillStyle = "#FFD700";
+      ctx.fillRect(13, 4, 6, 6);
+      // Flame tip (white-hot)
+      ctx.fillStyle = "#FFEE88";
+      ctx.fillRect(14, 1, 4, 4);
+      // Glow effect
+      ctx.fillStyle = "rgba(255,200,50,0.3)";
+      ctx.beginPath();
+      ctx.arc(16, 8, 8, 0, Math.PI * 2);
+      ctx.fill();
+      refreshTex("tile_torch");
+    }
+
+    // Chain — metal chain links (decorative)
+    {
+      const ctx = makeCanvas("tile_chain", S, S);
+      ctx.clearRect(0, 0, S, S);
+      // Chain links (vertical pattern)
+      for (let ly = 0; ly < S; ly += 10) {
+        const isEven = (ly / 10) % 2 === 0;
+        const ox = isEven ? 12 : 14;
+        // Link body
+        ctx.fillStyle = "#888";
+        ctx.fillRect(ox, ly, 8, 8);
+        // Link hole
+        ctx.fillStyle = "rgba(0,0,0,0)";
+        ctx.clearRect(ox + 2, ly + 2, 4, 4);
+        // Link highlight
+        ctx.fillStyle = "#AAA";
+        ctx.fillRect(ox, ly, 8, 1);
+        ctx.fillRect(ox, ly, 1, 8);
+        // Link shadow
+        ctx.fillStyle = "#666";
+        ctx.fillRect(ox, ly + 7, 8, 1);
+        ctx.fillRect(ox + 7, ly, 1, 8);
+      }
+      refreshTex("tile_chain");
+    }
+
+    // Sign — wooden sign board (decorative)
+    {
+      const ctx = makeCanvas("tile_sign", S, S);
+      ctx.clearRect(0, 0, S, S);
+      // Post
+      ctx.fillStyle = "#6B4320";
+      ctx.fillRect(14, 20, 4, 12);
+      ctx.fillStyle = "#8B5330";
+      ctx.fillRect(14, 20, 1, 12);
+      // Sign board
+      ctx.fillStyle = "#B08840";
+      ctx.fillRect(2, 4, 28, 16);
+      // Board edges
+      ctx.fillStyle = "#C8A858";
+      ctx.fillRect(2, 4, 28, 2);
+      ctx.fillRect(2, 4, 2, 16);
+      ctx.fillStyle = "#907030";
+      ctx.fillRect(2, 18, 28, 2);
+      ctx.fillRect(28, 4, 2, 16);
+      // Text lines (decorative)
+      ctx.fillStyle = "#5B3310";
+      ctx.fillRect(6, 8, 20, 2);
+      ctx.fillRect(8, 12, 16, 2);
+      refreshTex("tile_sign");
+    }
+
+    // Metal — industrial gray panels with rivets
+    {
+      const ctx = makeCanvas("tile_metal", S, S);
+      ctx.fillStyle = "#708090";
+      ctx.fillRect(0, 0, S, S);
+      // Panel highlights
+      ctx.fillStyle = "#8090A0";
+      ctx.fillRect(0, 0, S, 2);
+      ctx.fillRect(0, 0, 2, S);
+      // Panel shadows
+      ctx.fillStyle = "#506070";
+      ctx.fillRect(0, S - 2, S, 2);
+      ctx.fillRect(S - 2, 0, 2, S);
+      // Panel seam
+      ctx.fillStyle = "#607080";
+      ctx.fillRect(0, 15, S, 2);
+      // Rivets
+      ctx.fillStyle = "#556";
+      ctx.fillRect(4, 4, 3, 3);
+      ctx.fillRect(S - 7, 4, 3, 3);
+      ctx.fillRect(4, S - 7, 3, 3);
+      ctx.fillRect(S - 7, S - 7, 3, 3);
+      // Rivet highlights
+      ctx.fillStyle = "#8899AA";
+      ctx.fillRect(4, 4, 1, 1);
+      ctx.fillRect(S - 7, 4, 1, 1);
+      ctx.fillRect(4, S - 7, 1, 1);
+      ctx.fillRect(S - 7, S - 7, 1, 1);
+      // Scratch marks
+      ctx.fillStyle = "#5A6A7A";
+      ctx.fillRect(10, 8, 8, 1);
+      ctx.fillRect(14, 22, 6, 1);
+      refreshTex("tile_metal");
+    }
+
+    // Grate — metal mesh platform (one-way)
+    {
+      const ctx = makeCanvas("tile_grate", S, S);
+      ctx.clearRect(0, 0, S, S);
+      // Frame
+      ctx.fillStyle = "#607080";
+      ctx.fillRect(0, 0, S, 3);
+      ctx.fillRect(0, S - 3, S, 3);
+      ctx.fillRect(0, 0, 3, S);
+      ctx.fillRect(S - 3, 0, 3, S);
+      // Mesh pattern (grid)
+      ctx.fillStyle = "#556070";
+      for (let mx = 3; mx < S - 3; mx += 4) {
+        ctx.fillRect(mx, 3, 1, S - 6);
+      }
+      for (let my = 3; my < S - 3; my += 4) {
+        ctx.fillRect(3, my, S - 6, 1);
+      }
+      // Frame highlight
+      ctx.fillStyle = "#8090A0";
+      ctx.fillRect(0, 0, S, 1);
+      ctx.fillRect(0, 0, 1, S);
+      refreshTex("tile_grate");
+    }
+
+    // Water — blue surface with wave
+    {
+      const ctx = makeCanvas("tile_water", S, S);
+      ctx.fillStyle = "#1A5588";
+      ctx.fillRect(0, 0, S, S);
+      // Mid layer
+      ctx.fillStyle = "#2266AA";
+      ctx.fillRect(0, 0, S, S * 0.7);
+      // Surface
+      ctx.fillStyle = "#2288CC";
+      ctx.fillRect(0, 0, S, S * 0.4);
+      // Bright surface
+      ctx.fillStyle = "#33AADD";
+      ctx.fillRect(0, 0, S, 6);
+      // Surface foam
+      ctx.fillStyle = "rgba(200,240,255,0.5)";
+      ctx.fillRect(3, 1, 8, 3);
+      ctx.fillRect(20, 2, 6, 2);
+      // Wave highlights
+      ctx.fillStyle = "rgba(255,255,255,0.3)";
+      ctx.fillRect(6, 0, 4, 1);
+      ctx.fillRect(22, 1, 3, 1);
+      refreshTex("tile_water");
+    }
+
+    // Water Deep — submerged deep water
+    {
+      const ctx = makeCanvas("tile_water_deep", S, S);
+      ctx.fillStyle = "#1A5588";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#154A78";
+      ctx.fillRect(4, 6, 10, 8);
+      ctx.fillRect(18, 16, 10, 8);
+      ctx.fillRect(8, 22, 8, 6);
+      // Faint current lines
+      ctx.fillStyle = "rgba(50,120,180,0.3)";
+      ctx.fillRect(6, 10, 12, 1);
+      ctx.fillRect(16, 20, 10, 1);
+      // Faint bubble
+      ctx.fillStyle = "rgba(200,240,255,0.15)";
+      ctx.beginPath();
+      ctx.arc(10, 16, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(24, 8, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      refreshTex("tile_water_deep");
+    }
+
+    // Crystal — purple/blue gemstone with facets
+    {
+      const ctx = makeCanvas("tile_crystal", S, S);
+      ctx.fillStyle = "#6622AA";
+      ctx.fillRect(0, 0, S, S);
+      // Faceted shape
+      ctx.fillStyle = "#7733BB";
+      ctx.fillRect(2, 2, S - 4, S - 4);
+      // Light facet
+      ctx.fillStyle = "#9955DD";
+      ctx.beginPath();
+      ctx.moveTo(2, 2);
+      ctx.lineTo(S / 2, S / 2);
+      ctx.lineTo(S - 2, 2);
+      ctx.closePath();
+      ctx.fill();
+      // Dark facet
+      ctx.fillStyle = "#5511AA";
+      ctx.beginPath();
+      ctx.moveTo(2, S - 2);
+      ctx.lineTo(S / 2, S / 2);
+      ctx.lineTo(S - 2, S - 2);
+      ctx.closePath();
+      ctx.fill();
+      // Shine
+      ctx.fillStyle = "rgba(255,255,255,0.4)";
+      ctx.fillRect(4, 4, 6, 6);
+      ctx.fillStyle = "rgba(255,255,255,0.2)";
+      ctx.fillRect(8, 8, 4, 4);
+      // Sparkle
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(6, 5, 2, 2);
+      ctx.fillRect(10, 3, 1, 1);
+      refreshTex("tile_crystal");
+    }
+
+    // Mushroom Block — red cap with white spots
+    {
+      const ctx = makeCanvas("tile_mushroom", S, S);
+      // Red cap base
+      ctx.fillStyle = "#CC2222";
+      ctx.fillRect(0, 0, S, S);
+      // Cap gradient
+      ctx.fillStyle = "#DD3333";
+      ctx.fillRect(0, 0, S, S * 0.6);
+      ctx.fillStyle = "#EE4444";
+      ctx.fillRect(0, 0, S, S * 0.3);
+      // White spots
+      ctx.fillStyle = "#FFFFFF";
+      ctx.beginPath();
+      ctx.arc(8, 10, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(22, 8, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(14, 22, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(26, 24, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Spot shadows
+      ctx.fillStyle = "rgba(0,0,0,0.1)";
+      ctx.beginPath();
+      ctx.arc(9, 11, 4, 0, Math.PI * 2);
+      ctx.fill();
+      // Dark edge
+      ctx.fillStyle = "#AA1111";
+      ctx.fillRect(0, S - 2, S, 2);
+      ctx.fillRect(0, 0, 2, S);
+      ctx.fillRect(S - 2, 0, 2, S);
+      refreshTex("tile_mushroom");
+    }
+
     // Pipe helper: draw 3D cylindrical body
     const drawPipeBody = (ctx: CanvasRenderingContext2D) => {
       ctx.fillStyle = "#00AA00";
@@ -625,33 +1195,46 @@ export class BootScene extends Phaser.Scene {
       refreshTex("tile_cloud");
     }
 
-    // Conveyor — industrial belt with directional arrows and rollers
-    {
-      const ctx = makeCanvas("tile_conveyor", S, S);
-      // Frame
-      ctx.fillStyle = "#444";
+    // Conveyor — industrial belt with directional arrows, rollers, and animation frames
+    for (let frame = 0; frame < 4; frame++) {
+      const texKey = frame === 0 ? "tile_conveyor" : `tile_conveyor_f${frame}`;
+      const ctx = makeCanvas(texKey, S, S);
+      // Side rails (dark metallic)
+      ctx.fillStyle = "#3a3a3a";
       ctx.fillRect(0, 0, S, S);
-      // Belt surface
-      ctx.fillStyle = "#666";
+      // Belt surface with segments that shift per frame
+      const segOffset = frame * 4; // 4px shift per frame
+      ctx.fillStyle = "#606060";
       ctx.fillRect(1, 3, 30, 26);
-      ctx.fillStyle = "#777";
-      ctx.fillRect(2, 4, 28, 12);
-      ctx.fillStyle = "#666";
-      ctx.fillRect(2, 16, 28, 12);
-      // Rollers (top/bottom)
-      ctx.fillStyle = "#555";
-      ctx.fillRect(0, 0, S, 3);
-      ctx.fillRect(0, 29, S, 3);
+      // Roller segment lines (horizontal grooves that scroll)
+      for (let sy = 0; sy < 7; sy++) {
+        const baseY = 4 + sy * 4;
+        const y = 3 + ((baseY - 3 + segOffset) % 26);
+        if (y >= 3 && y < 28) {
+          ctx.fillStyle = sy % 2 === 0 ? "#707070" : "#585858";
+          ctx.fillRect(2, y, 28, 2);
+          // Highlight line on top of each segment
+          ctx.fillStyle = sy % 2 === 0 ? "#7a7a7a" : "#505050";
+          ctx.fillRect(2, y, 28, 1);
+        }
+      }
+      // Top and bottom rollers (cylindrical look)
+      ctx.fillStyle = "#4a4a4a";
+      ctx.fillRect(0, 0, S, 4);
+      ctx.fillRect(0, 28, S, 4);
       ctx.fillStyle = "#888";
       ctx.fillRect(0, 0, S, 1);
-      ctx.fillRect(0, 29, S, 1);
-      // Arrows (golden, pointing right by default — left variant flips)
+      ctx.fillRect(0, 28, S, 1);
+      ctx.fillStyle = "#333";
+      ctx.fillRect(0, 3, S, 1);
+      ctx.fillRect(0, 31, S, 1);
+      // Arrows (golden, pointing right — left variant uses flipX)
       ctx.fillStyle = "#FFD700";
       for (let i = 0; i < 2; i++) {
-        const ax = 5 + i * 14;
+        const ax = 4 + i * 14;
         ctx.beginPath();
         ctx.moveTo(ax, 11);
-        ctx.lineTo(ax + 8, 16);
+        ctx.lineTo(ax + 9, 16);
         ctx.lineTo(ax, 21);
         ctx.closePath();
         ctx.fill();
@@ -659,17 +1242,28 @@ export class BootScene extends Phaser.Scene {
         ctx.fillStyle = "#FFE860";
         ctx.beginPath();
         ctx.moveTo(ax, 11);
-        ctx.lineTo(ax + 8, 16);
+        ctx.lineTo(ax + 9, 16);
         ctx.lineTo(ax, 16);
         ctx.closePath();
         ctx.fill();
         ctx.fillStyle = "#FFD700";
       }
       // Side bolts
-      ctx.fillStyle = "#888";
-      ctx.fillRect(1, 14, 2, 4);
-      ctx.fillRect(29, 14, 2, 4);
-      refreshTex("tile_conveyor");
+      ctx.fillStyle = "#999";
+      ctx.beginPath();
+      ctx.arc(3, 16, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(29, 16, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#666";
+      ctx.beginPath();
+      ctx.arc(3, 16, 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(29, 16, 1, 0, Math.PI * 2);
+      ctx.fill();
+      refreshTex(texKey);
     }
 
     // Trampoline — bouncy purple pad with springs
@@ -981,6 +1575,38 @@ export class BootScene extends Phaser.Scene {
         ctx.fillRect(13, 22, 5, 4);
         drawShoes(ctx, 4, 26, 13, 26);
         refreshTex("player_idle");
+      }
+
+      // Idle blink frame — eyes closed as thin lines
+      {
+        const ctx = makeCanvas("player_idle_blink", 22, 28);
+        drawCatBody(ctx, true);
+        ctx.fillStyle = "#FF8C00";
+        ctx.fillRect(4, 22, 5, 4);
+        ctx.fillRect(13, 22, 5, 4);
+        drawShoes(ctx, 4, 26, 13, 26);
+        refreshTex("player_idle_blink");
+      }
+
+      // Idle yawn frame — mouth open wide
+      {
+        const ctx = makeCanvas("player_idle_yawn", 22, 28);
+        drawCatBody(ctx);
+        // Draw open mouth over existing mouth area
+        ctx.fillStyle = "#FF8C00";
+        ctx.fillRect(8, 8, 6, 1); // cover original mouth
+        ctx.fillStyle = "#880000";
+        ctx.fillRect(8, 7, 6, 4); // wide open mouth oval
+        ctx.fillStyle = "#CC2222";
+        ctx.fillRect(9, 8, 4, 2); // inner mouth
+        ctx.fillStyle = "#FFB6C1";
+        ctx.fillRect(10, 9, 2, 1); // tongue hint
+        // Legs
+        ctx.fillStyle = "#FF8C00";
+        ctx.fillRect(4, 22, 5, 4);
+        ctx.fillRect(13, 22, 5, 4);
+        drawShoes(ctx, 4, 26, 13, 26);
+        refreshTex("player_idle_yawn");
       }
 
       // Jump frame — legs stretched down
@@ -2150,27 +2776,70 @@ export class BootScene extends Phaser.Scene {
       refreshTex("tile_timed_block");
     }
 
-    // Gravity Zone — purple field with arrows pointing up
+    // Gravity Zone — pink recessed floor panel (particles show upward direction)
     {
       const ctx = makeCanvas("tile_gravity_zone", S, S);
-      ctx.fillStyle = "rgba(140,50,220,0.5)";
-      ctx.fillRect(0, 0, S, S);
-      // Up arrows
-      ctx.fillStyle = "rgba(200,120,255,0.8)";
-      for (let i = 0; i < 3; i++) {
-        const ax = 4 + i * 10;
-        ctx.beginPath();
-        ctx.moveTo(ax, 22);
-        ctx.lineTo(ax + 5, 6);
-        ctx.lineTo(ax + 10, 22);
-        ctx.closePath();
-        ctx.fill();
-      }
-      // Border
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "rgba(180,80,255,0.6)";
-      ctx.strokeRect(1, 1, S - 2, S - 2);
+      const pw = Math.floor(S * 0.75); // 24px
+      const ph = Math.floor(S * 0.25); // 8px
+      const px = Math.floor((S - pw) / 2); // 4px from each side
+      const py = S - ph; // sits at bottom of tile
+      // Recess shadow
+      ctx.fillStyle = "rgba(60,0,30,0.5)";
+      ctx.fillRect(px - 1, py - 1, pw + 2, ph + 2);
+      // Main panel — magenta/pink
+      ctx.fillStyle = "#CC3388";
+      ctx.fillRect(px, py, pw, ph);
+      // Top highlight
+      ctx.fillStyle = "#FF66AA";
+      ctx.fillRect(px + 1, py, pw - 2, 2);
+      // Bottom shadow
+      ctx.fillStyle = "#881155";
+      ctx.fillRect(px + 1, py + ph - 2, pw - 2, 2);
+      // Side bevels
+      ctx.fillStyle = "#AA2266";
+      ctx.fillRect(px, py + 1, 1, ph - 2);
+      ctx.fillRect(px + pw - 1, py + 1, 1, ph - 2);
+      // Inner glow strip
+      ctx.fillStyle = "rgba(255,150,220,0.5)";
+      ctx.fillRect(px + 3, py + 3, pw - 6, 1);
+      // Small energy dots
+      ctx.fillStyle = "rgba(255,180,230,0.7)";
+      ctx.fillRect(px + 5, py + 3, 2, 2);
+      ctx.fillRect(px + pw - 7, py + 3, 2, 2);
       refreshTex("tile_gravity_zone");
+    }
+
+    // Gravity Normal — pink recessed ceiling panel (stuck to block above)
+    {
+      const ctx = makeCanvas("tile_gravity_normal", S, S);
+      const pw = Math.floor(S * 0.75);
+      const ph = Math.floor(S * 0.25);
+      const px = Math.floor((S - pw) / 2);
+      const py = 0; // top of tile — flush with ceiling
+      // Recess shadow
+      ctx.fillStyle = "rgba(30,0,60,0.5)";
+      ctx.fillRect(px - 1, py - 1, pw + 2, ph + 2);
+      // Main panel — slightly cooler pink
+      ctx.fillStyle = "#BB2288";
+      ctx.fillRect(px, py, pw, ph);
+      // Top highlight
+      ctx.fillStyle = "#771155";
+      ctx.fillRect(px + 1, py, pw - 2, 2);
+      // Bottom highlight (light comes from below when on ceiling)
+      ctx.fillStyle = "#EE55AA";
+      ctx.fillRect(px + 1, py + ph - 2, pw - 2, 2);
+      // Side bevels
+      ctx.fillStyle = "#992266";
+      ctx.fillRect(px, py + 1, 1, ph - 2);
+      ctx.fillRect(px + pw - 1, py + 1, 1, ph - 2);
+      // Inner glow strip
+      ctx.fillStyle = "rgba(240,130,210,0.5)";
+      ctx.fillRect(px + 3, py + ph - 4, pw - 6, 1);
+      // Small energy dots
+      ctx.fillStyle = "rgba(240,160,220,0.7)";
+      ctx.fillRect(px + 5, py + ph - 5, 2, 2);
+      ctx.fillRect(px + pw - 7, py + ph - 5, 2, 2);
+      refreshTex("tile_gravity_normal");
     }
 
     // Moving Platform — metallic platform with gears
@@ -2213,6 +2882,544 @@ export class BootScene extends Phaser.Scene {
       ctx.arc(3, 3, 1.5, 0, Math.PI * 2);
       ctx.fill();
       refreshTex("entity_fireball");
+    }
+
+    // ============================================================
+    // NEW FEATURE TILES & ENTITIES
+    // ============================================================
+
+    // Teleporter A — blue swirling portal
+    {
+      const ctx = makeCanvas("tile_teleporter_a", S, S);
+      ctx.fillStyle = "#111133";
+      ctx.fillRect(0, 0, S, S);
+      ctx.strokeStyle = "#4488FF";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, 12, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = "#88BBFF";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, 8, 0, Math.PI * 1.5);
+      ctx.stroke();
+      ctx.fillStyle = "#4488FF";
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+      refreshTex("tile_teleporter_a");
+    }
+
+    // Teleporter B — orange swirling portal
+    {
+      const ctx = makeCanvas("tile_teleporter_b", S, S);
+      ctx.fillStyle = "#331111";
+      ctx.fillRect(0, 0, S, S);
+      ctx.strokeStyle = "#FF8844";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, 12, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = "#FFBB88";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, 8, 0, Math.PI * 1.5);
+      ctx.stroke();
+      ctx.fillStyle = "#FF8844";
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+      refreshTex("tile_teleporter_b");
+    }
+
+    // Cannon Left
+    {
+      const ctx = makeCanvas("tile_cannon_left", S, S);
+      ctx.fillStyle = "#333333";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#555555";
+      ctx.fillRect(2, 2, S - 4, S - 4);
+      // Barrel pointing left
+      ctx.fillStyle = "#222222";
+      ctx.fillRect(0, 10, 16, 12);
+      ctx.fillStyle = "#444444";
+      ctx.fillRect(0, 12, 14, 8);
+      // Muzzle
+      ctx.fillStyle = "#111111";
+      ctx.fillRect(0, 11, 4, 10);
+      refreshTex("tile_cannon_left");
+    }
+
+    // Cannon Right
+    {
+      const ctx = makeCanvas("tile_cannon_right", S, S);
+      ctx.fillStyle = "#333333";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#555555";
+      ctx.fillRect(2, 2, S - 4, S - 4);
+      ctx.fillStyle = "#222222";
+      ctx.fillRect(16, 10, 16, 12);
+      ctx.fillStyle = "#444444";
+      ctx.fillRect(18, 12, 14, 8);
+      ctx.fillStyle = "#111111";
+      ctx.fillRect(28, 11, 4, 10);
+      refreshTex("tile_cannon_right");
+    }
+
+    // Cannon Up
+    {
+      const ctx = makeCanvas("tile_cannon_up", S, S);
+      ctx.fillStyle = "#333333";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#555555";
+      ctx.fillRect(2, 2, S - 4, S - 4);
+      ctx.fillStyle = "#222222";
+      ctx.fillRect(10, 0, 12, 16);
+      ctx.fillStyle = "#444444";
+      ctx.fillRect(12, 0, 8, 14);
+      ctx.fillStyle = "#111111";
+      ctx.fillRect(11, 0, 10, 4);
+      refreshTex("tile_cannon_up");
+    }
+
+    // Cannon Down
+    {
+      const ctx = makeCanvas("tile_cannon_down", S, S);
+      ctx.fillStyle = "#333333";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#555555";
+      ctx.fillRect(2, 2, S - 4, S - 4);
+      ctx.fillStyle = "#222222";
+      ctx.fillRect(10, 16, 12, 16);
+      ctx.fillStyle = "#444444";
+      ctx.fillRect(12, 18, 8, 14);
+      ctx.fillStyle = "#111111";
+      ctx.fillRect(11, 28, 10, 4);
+      refreshTex("tile_cannon_down");
+    }
+
+    // Sticky Block — honey/amber gooey surface
+    {
+      const ctx = makeCanvas("tile_sticky_block", S, S);
+      ctx.fillStyle = "#AA8822";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#CCAA33";
+      ctx.fillRect(2, 2, S - 4, S - 4);
+      // Drip effect
+      ctx.fillStyle = "#DDBB44";
+      ctx.fillRect(8, S - 6, 4, 6);
+      ctx.fillRect(20, S - 4, 3, 4);
+      // Gooey highlights
+      ctx.fillStyle = "#EEDD66";
+      ctx.fillRect(4, 4, 6, 3);
+      ctx.fillRect(18, 8, 8, 3);
+      refreshTex("tile_sticky_block");
+    }
+
+    // Key Red
+    {
+      const ctx = makeCanvas("tile_key_red", S, S);
+      ctx.fillStyle = "#FF4444";
+      ctx.beginPath();
+      ctx.arc(S / 2, 10, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(S / 2 - 2, 14, 4, 14);
+      ctx.fillRect(S / 2, 24, 6, 3);
+      ctx.fillRect(S / 2, 20, 4, 3);
+      refreshTex("tile_key_red");
+    }
+
+    // Key Blue
+    {
+      const ctx = makeCanvas("tile_key_blue", S, S);
+      ctx.fillStyle = "#4444FF";
+      ctx.beginPath();
+      ctx.arc(S / 2, 10, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(S / 2 - 2, 14, 4, 14);
+      ctx.fillRect(S / 2, 24, 6, 3);
+      ctx.fillRect(S / 2, 20, 4, 3);
+      refreshTex("tile_key_blue");
+    }
+
+    // Key Green
+    {
+      const ctx = makeCanvas("tile_key_green", S, S);
+      ctx.fillStyle = "#44FF44";
+      ctx.beginPath();
+      ctx.arc(S / 2, 10, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(S / 2 - 2, 14, 4, 14);
+      ctx.fillRect(S / 2, 24, 6, 3);
+      ctx.fillRect(S / 2, 20, 4, 3);
+      refreshTex("tile_key_green");
+    }
+
+    // Lock Red
+    {
+      const ctx = makeCanvas("tile_lock_red", S, S);
+      ctx.fillStyle = "#CC3333";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#AA2222";
+      ctx.fillRect(2, 2, S - 4, S - 4);
+      // Keyhole
+      ctx.fillStyle = "#FFD700";
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2 - 3, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(S / 2 - 2, S / 2, 4, 8);
+      refreshTex("tile_lock_red");
+    }
+
+    // Lock Blue
+    {
+      const ctx = makeCanvas("tile_lock_blue", S, S);
+      ctx.fillStyle = "#3333CC";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#2222AA";
+      ctx.fillRect(2, 2, S - 4, S - 4);
+      ctx.fillStyle = "#FFD700";
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2 - 3, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(S / 2 - 2, S / 2, 4, 8);
+      refreshTex("tile_lock_blue");
+    }
+
+    // Lock Green
+    {
+      const ctx = makeCanvas("tile_lock_green", S, S);
+      ctx.fillStyle = "#33CC33";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#22AA22";
+      ctx.fillRect(2, 2, S - 4, S - 4);
+      ctx.fillStyle = "#FFD700";
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2 - 3, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(S / 2 - 2, S / 2, 4, 8);
+      refreshTex("tile_lock_green");
+    }
+
+    // Ice Breakable — cracked ice block
+    {
+      const ctx = makeCanvas("tile_ice_breakable", S, S);
+      ctx.fillStyle = "#88DDFF";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#AAEEFF";
+      ctx.fillRect(2, 2, S - 4, S - 4);
+      // Cracks
+      ctx.strokeStyle = "#4488AA";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(8, 0); ctx.lineTo(16, 16); ctx.lineTo(24, 4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(4, 20); ctx.lineTo(16, 16); ctx.lineTo(28, 28);
+      ctx.stroke();
+      // Highlight
+      ctx.fillStyle = "#CCFFFF";
+      ctx.fillRect(4, 4, 8, 3);
+      refreshTex("tile_ice_breakable");
+    }
+
+    // Wind Up
+    {
+      const ctx = makeCanvas("tile_wind_up", S, S);
+      ctx.fillStyle = "rgba(170,238,255,0.2)";
+      ctx.fillRect(0, 0, S, S);
+      // Upward arrows
+      ctx.strokeStyle = "rgba(170,238,255,0.6)";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        const x = 8 + i * 8;
+        ctx.beginPath();
+        ctx.moveTo(x, 24); ctx.lineTo(x, 8);
+        ctx.moveTo(x - 3, 12); ctx.lineTo(x, 8); ctx.lineTo(x + 3, 12);
+        ctx.stroke();
+      }
+      refreshTex("tile_wind_up");
+    }
+
+    // Wind Down
+    {
+      const ctx = makeCanvas("tile_wind_down", S, S);
+      ctx.fillStyle = "rgba(170,238,255,0.2)";
+      ctx.fillRect(0, 0, S, S);
+      ctx.strokeStyle = "rgba(170,238,255,0.6)";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        const x = 8 + i * 8;
+        ctx.beginPath();
+        ctx.moveTo(x, 8); ctx.lineTo(x, 24);
+        ctx.moveTo(x - 3, 20); ctx.lineTo(x, 24); ctx.lineTo(x + 3, 20);
+        ctx.stroke();
+      }
+      refreshTex("tile_wind_down");
+    }
+
+    // Wind Left
+    {
+      const ctx = makeCanvas("tile_wind_left", S, S);
+      ctx.fillStyle = "rgba(170,238,255,0.2)";
+      ctx.fillRect(0, 0, S, S);
+      ctx.strokeStyle = "rgba(170,238,255,0.6)";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        const y = 8 + i * 8;
+        ctx.beginPath();
+        ctx.moveTo(24, y); ctx.lineTo(8, y);
+        ctx.moveTo(12, y - 3); ctx.lineTo(8, y); ctx.lineTo(12, y + 3);
+        ctx.stroke();
+      }
+      refreshTex("tile_wind_left");
+    }
+
+    // Wind Right
+    {
+      const ctx = makeCanvas("tile_wind_right", S, S);
+      ctx.fillStyle = "rgba(170,238,255,0.2)";
+      ctx.fillRect(0, 0, S, S);
+      ctx.strokeStyle = "rgba(170,238,255,0.6)";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        const y = 8 + i * 8;
+        ctx.beginPath();
+        ctx.moveTo(8, y); ctx.lineTo(24, y);
+        ctx.moveTo(20, y - 3); ctx.lineTo(24, y); ctx.lineTo(20, y + 3);
+        ctx.stroke();
+      }
+      refreshTex("tile_wind_right");
+    }
+
+    // Mirror block — reflective metallic surface
+    {
+      const ctx = makeCanvas("tile_mirror", S, S);
+      ctx.fillStyle = "#A0A0A0";
+      ctx.fillRect(0, 0, S, S);
+      ctx.fillStyle = "#C0C0C0";
+      ctx.fillRect(2, 2, S - 4, S - 4);
+      // Specular highlight diagonal
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(4, 4, 3, 3);
+      ctx.fillRect(8, 8, 3, 3);
+      ctx.fillRect(12, 12, 3, 3);
+      ctx.fillStyle = "#E0E0E0";
+      ctx.fillRect(20, 4, 6, 2);
+      ctx.fillRect(4, 22, 8, 2);
+      // Border bevel
+      ctx.fillStyle = "#888888";
+      ctx.fillRect(0, 0, S, 2);
+      ctx.fillRect(0, 0, 2, S);
+      ctx.fillStyle = "#666666";
+      ctx.fillRect(0, S - 2, S, 2);
+      ctx.fillRect(S - 2, 0, 2, S);
+      refreshTex("tile_mirror");
+    }
+
+    // Sign Custom — wooden sign with quill mark
+    {
+      const ctx = makeCanvas("tile_sign_custom", S, S);
+      // Post
+      ctx.fillStyle = "#6B4226";
+      ctx.fillRect(14, 20, 4, 12);
+      // Board
+      ctx.fillStyle = "#C09840";
+      ctx.fillRect(4, 4, 24, 18);
+      ctx.fillStyle = "#D4A84A";
+      ctx.fillRect(6, 6, 20, 14);
+      // Text lines
+      ctx.fillStyle = "#333333";
+      ctx.fillRect(8, 8, 16, 2);
+      ctx.fillRect(8, 12, 12, 2);
+      ctx.fillRect(8, 16, 14, 2);
+      refreshTex("tile_sign_custom");
+    }
+
+    // Ghost enemy — spooky translucent entity
+    {
+      const ctx = makeCanvas("entity_ghost", 24, 28);
+      ctx.globalAlpha = 0.7;
+      // Body
+      ctx.fillStyle = "#AACCFF";
+      ctx.fillRect(4, 4, 16, 16);
+      ctx.fillRect(2, 8, 20, 10);
+      // Head
+      ctx.fillRect(6, 0, 12, 8);
+      // Wavy bottom
+      ctx.fillRect(2, 18, 4, 6);
+      ctx.fillRect(10, 18, 4, 8);
+      ctx.fillRect(18, 18, 4, 6);
+      // Eyes
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(6, 6, 4, 5);
+      ctx.fillRect(14, 6, 4, 5);
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(8, 8, 2, 3);
+      ctx.fillRect(16, 8, 2, 3);
+      refreshTex("entity_ghost");
+    }
+
+    // Shooter enemy — turtle-like with cannon on back
+    {
+      const ctx = makeCanvas("entity_shooter", 24, 28);
+      // Body
+      ctx.fillStyle = "#558855";
+      ctx.fillRect(4, 12, 16, 12);
+      // Shell with cannon
+      ctx.fillStyle = "#446644";
+      ctx.fillRect(2, 6, 20, 10);
+      // Cannon barrel
+      ctx.fillStyle = "#333333";
+      ctx.fillRect(18, 4, 8, 6);
+      ctx.fillStyle = "#444444";
+      ctx.fillRect(20, 5, 6, 4);
+      // Head
+      ctx.fillStyle = "#66AA66";
+      ctx.fillRect(2, 8, 8, 8);
+      // Eye
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(4, 10, 3, 3);
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(5, 11, 2, 2);
+      // Feet
+      ctx.fillStyle = "#558855";
+      ctx.fillRect(4, 24, 5, 4);
+      ctx.fillRect(15, 24, 5, 4);
+      refreshTex("entity_shooter");
+    }
+
+    // Giant Goomba — oversized angry goomba
+    {
+      const ctx = makeCanvas("entity_giant_goomba", 66, 84);
+      // Body
+      ctx.fillStyle = "#8B4513";
+      ctx.fillRect(10, 20, 46, 44);
+      // Head dome
+      ctx.fillStyle = "#A0522D";
+      ctx.beginPath();
+      ctx.arc(33, 24, 28, Math.PI, 0);
+      ctx.fill();
+      // Angry eyes
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(14, 28, 14, 12);
+      ctx.fillRect(38, 28, 14, 12);
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(20, 30, 8, 8);
+      ctx.fillRect(42, 30, 8, 8);
+      // Angry eyebrows
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(14, 24, 14, 3);
+      ctx.fillRect(38, 24, 14, 3);
+      // Mouth (frowning)
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(20, 48, 26, 4);
+      // Teeth
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(24, 44, 6, 4);
+      ctx.fillRect(36, 44, 6, 4);
+      // Feet
+      ctx.fillStyle = "#4A3010";
+      ctx.fillRect(10, 64, 18, 20);
+      ctx.fillRect(38, 64, 18, 20);
+      // Sole
+      ctx.fillStyle = "#5A4020";
+      ctx.fillRect(10, 76, 18, 8);
+      ctx.fillRect(38, 76, 18, 8);
+      refreshTex("entity_giant_goomba");
+    }
+
+    // Saw Blade — spinning metal disc
+    {
+      const ctx = makeCanvas("entity_saw_blade", S, S);
+      ctx.fillStyle = "#888888";
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, 14, 0, Math.PI * 2);
+      ctx.fill();
+      // Inner circle
+      ctx.fillStyle = "#666666";
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, 8, 0, Math.PI * 2);
+      ctx.fill();
+      // Center hole
+      ctx.fillStyle = "#444444";
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, 3, 0, Math.PI * 2);
+      ctx.fill();
+      // Teeth (8 around the edge)
+      ctx.fillStyle = "#AAAAAA";
+      for (let a = 0; a < 8; a++) {
+        const angle = (a / 8) * Math.PI * 2;
+        const tx = S / 2 + Math.cos(angle) * 13;
+        const ty = S / 2 + Math.sin(angle) * 13;
+        ctx.fillRect(tx - 2, ty - 2, 4, 4);
+      }
+      refreshTex("entity_saw_blade");
+    }
+
+    // Slow Motion power-up — blue clock
+    {
+      const ctx = makeCanvas("entity_slowmo", 20, 20);
+      ctx.fillStyle = "#4488FF";
+      ctx.beginPath();
+      ctx.arc(10, 10, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#88BBFF";
+      ctx.beginPath();
+      ctx.arc(10, 10, 7, 0, Math.PI * 2);
+      ctx.fill();
+      // Clock hands
+      ctx.strokeStyle = "#222244";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(10, 10); ctx.lineTo(10, 4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(10, 10); ctx.lineTo(14, 10);
+      ctx.stroke();
+      // Center dot
+      ctx.fillStyle = "#222244";
+      ctx.beginPath();
+      ctx.arc(10, 10, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      refreshTex("entity_slowmo");
+    }
+
+    // Cannon Bullet — small dark sphere
+    {
+      const ctx = makeCanvas("entity_cannon_bullet", 10, 10);
+      ctx.fillStyle = "#222222";
+      ctx.beginPath();
+      ctx.arc(5, 5, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#444444";
+      ctx.beginPath();
+      ctx.arc(4, 4, 2, 0, Math.PI * 2);
+      ctx.fill();
+      refreshTex("entity_cannon_bullet");
+    }
+
+    // Shooter Bullet — small green energy ball
+    {
+      const ctx = makeCanvas("entity_shooter_bullet", 8, 8);
+      ctx.fillStyle = "#44FF44";
+      ctx.beginPath();
+      ctx.arc(4, 4, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#88FF88";
+      ctx.beginPath();
+      ctx.arc(3, 3, 2, 0, Math.PI * 2);
+      ctx.fill();
+      refreshTex("entity_shooter_bullet");
+    }
+
+    // Wind particle (small arrow-like)
+    {
+      const ctx = makeCanvas("particle_wind", 4, 4);
+      ctx.fillStyle = "rgba(170,238,255,0.5)";
+      ctx.fillRect(0, 1, 4, 2);
+      refreshTex("particle_wind");
     }
 
     // ============================================================
@@ -2269,5 +3476,8 @@ export class BootScene extends Phaser.Scene {
       ctx.fill();
       refreshTex("particle_shard");
     }
+
+    // Extract palette textures as data URLs for React UI
+    populateTextureCache(this.textures);
   }
 }

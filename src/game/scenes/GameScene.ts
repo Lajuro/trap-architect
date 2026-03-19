@@ -33,18 +33,34 @@ import {
   WALL_SLIDE_SPEED,
   DASH_SPEED,
   DASH_DURATION,
-  GRAVITY_FLIP_DEFAULT_DURATION,
   TIMED_BLOCK_ON,
   TIMED_BLOCK_OFF,
   SLIDE_BLOCK_SPEED,
   MOVING_PLATFORM_DEFAULT_SPEED,
   MOVING_PLATFORM_DEFAULT_RANGE,
+  resolveAutoTileTexture,
+  WATER_TILES,
+  WATER_SPEED_FACTOR,
+  DECORATIVE_TILES,
+  WIND_FORCE,
+  CANNON_FIRE_RATE,
+  CANNON_BULLET_SPEED,
+  TELEPORTER_COOLDOWN,
+  GHOST_SPEED,
+  SHOOTER_FIRE_RATE,
+  SHOOTER_BULLET_SPEED,
+  GIANT_GOOMBA_SPEED,
+  GIANT_GOOMBA_HP,
+  GIANT_GOOMBA_INV_FRAMES,
+  SAW_BLADE_SPEED,
+  SLOWMO_DURATION,
+  SLOWMO_FACTOR,
 } from "../constants";
 import { TileType, type ParsedLevel, type GameEntity, type SlideBlockConfig, type MovingPlatformConfig, type PowerUpType } from "../types";
 import { gameEvents, GAME_EVENTS } from "../events";
 import { DEMO_LEVEL } from "../levels/demo";
 import { getCampaignLevel, CAMPAIGN_LEVELS } from "../levels/campaign";
-import { playJump, playDeath, playCoin, playComplete, playSpring, playStomp, playBGM, isSoundEnabled, isMusicEnabled, setMusicEnabled, setSoundEnabled, stopBGM, playPowerUp, playWallJump, playDash, playGravityFlip, playSlideBlock, playFireball } from "../audio";
+import { playJump, playDeath, playCoin, playComplete, playSpring, playStomp, playBGM, isSoundEnabled, isMusicEnabled, setMusicEnabled, setSoundEnabled, stopBGM, playPowerUp, playWallJump, playDash, playGravityFlip, playGravityNormalize, playSlideBlock, playFireball, playTeleport, playCannon, playKeyPickup, playLockOpen, playIceBreak, playSlowMo, playBossHit, playTrollSfx } from "../audio";
 
 interface PlayerSprite extends Phaser.GameObjects.Image {
   vx: number;
@@ -98,6 +114,13 @@ interface Fireball {
   alive: boolean;
 }
 
+interface FallingBlock {
+  x: number;
+  y: number;
+  vy: number;
+  sprite: Phaser.GameObjects.Image;
+}
+
 interface StateSnapshot {
   tiles: number[][];
   entities: GameEntity[];
@@ -132,6 +155,8 @@ export class GameScene extends Phaser.Scene {
   private jumpEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private coinEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private trailEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private gravityUpEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private gravityDownEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   // Pause
   private paused = false;
   private pauseOverlay: Phaser.GameObjects.GameObject[] = [];
@@ -163,7 +188,6 @@ export class GameScene extends Phaser.Scene {
   private dashTimer = 0;
   // Gravity flip state
   private gravityFlipped = false;
-  private gravityFlipTimer = 0;
   // Slide blocks
   private slideBlockAnims: SlideBlockAnim[] = [];
   // Moving platforms
@@ -173,10 +197,40 @@ export class GameScene extends Phaser.Scene {
   private timedBlockVisible = true;
   // Fireballs
   private fireballs: Fireball[] = [];
+  // Falling blocks (troll action)
+  private fallingBlocks: FallingBlock[] = [];
   // Power-up indicator HUD
   private hudPower!: Phaser.GameObjects.Text;
   // Dash indicator
   private hudDash!: Phaser.GameObjects.Text;
+  // Idle animation state machine
+  private idleTimer = 0;
+  private idleState: "normal" | "blink" | "yawn" = "normal";
+  private idleStateTimer = 0;
+  // === New feature state ===
+  // Keys collected
+  private keysRed = 0;
+  private keysBlue = 0;
+  private keysGreen = 0;
+  // Cannon system
+  private cannonTimer = 0;
+  private cannonBullets: { x: number; y: number; vx: number; vy: number; sprite: Phaser.GameObjects.Image }[] = [];
+  // Teleporter cooldown
+  private teleporterCooldown = 0;
+  // Sticky block state
+  private stuckToSticky = false;
+  private stickyDir: "floor" | "ceiling" | "wall" = "floor";
+  // Ice breakable hit counters keyed by "gx,gy"
+  private iceHitCounts: Record<string, number> = {};
+  // Slow motion timer
+  private slowMoTimer = 0;
+  // Community death counter HUD
+  private hudCommunityDeaths!: Phaser.GameObjects.Text;
+  // Sign text bubble
+  private activeSignBubble: Phaser.GameObjects.Text | null = null;
+  private activeSignKey: string | null = null;
+  // Shooter bullets (shared with cannon bullets interface)
+  private shooterBullets: { x: number; y: number; vx: number; vy: number; sprite: Phaser.GameObjects.Image }[] = [];
 
   constructor() {
     super({ key: "GameScene" });
@@ -216,12 +270,27 @@ export class GameScene extends Phaser.Scene {
     this.dashing = false;
     this.dashTimer = 0;
     this.gravityFlipped = false;
-    this.gravityFlipTimer = 0;
     this.slideBlockAnims = [];
     this.timedBlockTimer = 0;
     this.timedBlockVisible = true;
     this.fireballs.forEach(f => f.sprite.destroy());
     this.fireballs = [];
+    // Reset new feature state
+    this.keysRed = 0;
+    this.keysBlue = 0;
+    this.keysGreen = 0;
+    this.cannonTimer = 0;
+    this.cannonBullets.forEach(b => b.sprite.destroy());
+    this.cannonBullets = [];
+    this.shooterBullets.forEach(b => b.sprite.destroy());
+    this.shooterBullets = [];
+    this.teleporterCooldown = 0;
+    this.stuckToSticky = false;
+    this.iceHitCounts = {};
+    this.slowMoTimer = 0;
+    this.activeSignBubble?.destroy();
+    this.activeSignBubble = null;
+    this.activeSignKey = null;
 
     this.cameras.main.setBackgroundColor(this.level.bgColor);
 
@@ -315,6 +384,19 @@ export class GameScene extends Phaser.Scene {
       .setDepth(100)
       .setAlpha(0.6);
 
+    // Community death counter (shown for community levels)
+    const communityDeaths = this.level.communityDeaths ?? 0;
+    this.hudCommunityDeaths = this.add
+      .text(GAME_WIDTH / 2, 16, communityDeaths > 0 ? `\u{1F480} ${communityDeaths.toLocaleString()}` : "", {
+        fontFamily: "monospace",
+        fontSize: "12px",
+        color: "#ff8888",
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(100)
+      .setAlpha(0.7);
+
     // Level name overlay
     this.levelNameText = this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, this.level.name, {
@@ -367,7 +449,8 @@ export class GameScene extends Phaser.Scene {
     if (!this.player.alive) return;
 
     // Fixed timestep accumulator — ensures consistent physics on any refresh rate
-    this.accumulator += Math.min(delta, MAX_ACCUMULATED);
+    const timeFactor = this.slowMoTimer > 0 ? SLOWMO_FACTOR : 1;
+    this.accumulator += Math.min(delta, MAX_ACCUMULATED) * timeFactor;
 
     while (this.accumulator >= FIXED_STEP) {
       this.accumulator -= FIXED_STEP;
@@ -400,6 +483,9 @@ export class GameScene extends Phaser.Scene {
 
       // Entity updates
       this.updateEntities();
+
+      // Falling blocks (troll)
+      this.updateFallingBlocks();
 
       // Check death by falling
       if (this.player.y > this.level.height * TILE_SIZE + 64) {
@@ -436,6 +522,21 @@ export class GameScene extends Phaser.Scene {
 
       // Fireballs
       this.updateFireballs();
+
+      // Cannon system
+      this.updateCannons();
+
+      // Shooter bullets
+      this.updateShooterBullets();
+
+      // Teleporter cooldown
+      if (this.teleporterCooldown > 0) this.teleporterCooldown--;
+
+      // Slow motion timer
+      if (this.slowMoTimer > 0) this.slowMoTimer--;
+
+      // Sign text bubble check
+      this.updateSignBubbles();
     }
 
     // Per-render updates (visual only, not physics)
@@ -455,8 +556,14 @@ export class GameScene extends Phaser.Scene {
       const secs = Math.ceil(this.powerTimer / 60);
       this.hudPower.setText(`${names[this.powerType] ?? ""} ${secs}s`);
       this.hudPower.setAlpha(this.powerTimer < 120 ? (Math.sin(this.frame * 0.3) * 0.5 + 0.5) : 1);
+    } else if (this.slowMoTimer > 0) {
+      const secs = Math.ceil(this.slowMoTimer / 60);
+      this.hudPower.setText(`SlowMo ${secs}s`);
+      this.hudPower.setColor("#4488FF");
+      this.hudPower.setAlpha(this.slowMoTimer < 60 ? (Math.sin(this.frame * 0.3) * 0.5 + 0.5) : 1);
     } else {
       this.hudPower.setText("");
+      this.hudPower.setColor("#ff88ff");
     }
 
     // Dash HUD
@@ -513,26 +620,71 @@ export class GameScene extends Phaser.Scene {
           );
           sprite.setTint(tint);
         } else if (tile === TileType.LAVA) {
-          // Lava ripple — slight y bob
-          sprite.y = gy * TILE_SIZE + TILE_SIZE / 2 + Math.sin(f * 0.15 + gx * 0.4) * 1.5;
+          // Only animate top lava blocks (those without lava above)
+          const hasLavaAbove = (this.level.tiles[gy - 1]?.[gx] ?? 0) === TileType.LAVA;
+          if (!hasLavaAbove) {
+            const rise = 1.0 + Math.sin(f * 0.12 + gx * 0.4) * 0.06;
+            sprite.setScale(1.0, rise);
+          }
+        } else if (tile === TileType.WATER) {
+          // Only animate surface water (those without water above)
+          const hasWaterAbove = (this.level.tiles[gy - 1]?.[gx] ?? 0) === TileType.WATER;
+          if (!hasWaterAbove) {
+            const wave = 1.0 + Math.sin(f * 0.08 + gx * 0.5) * 0.04;
+            sprite.setScale(1.0, wave);
+          }
+        } else if (tile === TileType.TORCH) {
+          // Flame flicker animation
+          const flicker = 1.0 + Math.sin(f * 0.2 + gx * 1.3) * 0.08;
+          const flickerX = 1.0 + Math.sin(f * 0.15 + gx * 0.7) * 0.04;
+          sprite.setScale(flickerX, flicker);
+          const brightness = Math.sin(f * 0.18 + gx) * 0.15 + 0.85;
+          sprite.setTint(Phaser.Display.Color.GetColor(255, Math.floor(180 * brightness), Math.floor(50 * brightness)));
+        } else if (tile === TileType.CRYSTAL) {
+          // Crystal shimmer animation
+          const shimmer = Math.sin(f * 0.06 + gx * 0.8 + gy * 0.5) * 0.2 + 0.8;
+          sprite.setTint(Phaser.Display.Color.GetColor(
+            Math.floor(180 * shimmer + 75),
+            Math.floor(100 * shimmer + 50),
+            Math.floor(255 * shimmer)
+          ));
         } else if (tile === TileType.CONVEYOR_L || tile === TileType.CONVEYOR_R) {
-          // Conveyor subtle brightness pulse
-          const cPulse = Math.sin(f * 0.1 + gx * 0.3) * 0.1 + 0.9;
-          const cTint = Phaser.Display.Color.GetColor(
-            Math.floor(119 * cPulse),
-            Math.floor(119 * cPulse),
-            Math.floor(119 * cPulse)
-          );
-          sprite.setTint(cTint);
+          // Conveyor belt scrolling animation — cycle through 4 texture frames
+          const speed = 0.06;
+          const frameIndex = Math.floor(f * speed + gx * 0.5) % 4;
+          const frameKeys = ["tile_conveyor", "tile_conveyor_f1", "tile_conveyor_f2", "tile_conveyor_f3"];
+          // Reverse frame order for left conveyor to simulate opposite scroll
+          const actualFrame = tile === TileType.CONVEYOR_L ? (3 - frameIndex) : frameIndex;
+          sprite.setTexture(frameKeys[actualFrame]);
+        } else if (tile === TileType.GRAVITY_ZONE) {
+          // Gravity activator — subtle panel pulse + upward particles
+          const pulse = Math.sin(f * 0.06 + gx * 0.5) * 0.12 + 0.88;
+          sprite.setAlpha(pulse);
+          if (f % 6 === ((gx + gy * 7) % 6)) {
+            const px = gx * TILE_SIZE + TILE_SIZE / 2;
+            const py = (gy + 1) * TILE_SIZE - 4;
+            this.gravityUpEmitter.emitParticleAt(px + (Math.random() - 0.5) * 16, py, 1);
+          }
+        } else if (tile === TileType.GRAVITY_NORMAL) {
+          // Gravity deactivator — subtle panel pulse + downward particles
+          const pulse = Math.sin(f * 0.06 + gx * 0.5) * 0.12 + 0.88;
+          sprite.setAlpha(pulse);
+          if (f % 6 === ((gx + gy * 7) % 6)) {
+            const px = gx * TILE_SIZE + TILE_SIZE / 2;
+            const py = gy * TILE_SIZE + 4; // emit from top (panel is at ceiling)
+            this.gravityDownEmitter.emitParticleAt(px + (Math.random() - 0.5) * 16, py, 1);
+          }
         } else if (tile === TileType.SPRING) {
-          // Spring bounce idle
-          sprite.y = gy * TILE_SIZE + TILE_SIZE / 2 + Math.sin(f * 0.12) * 1.5;
+          // Spring subtle squash/stretch breathing anchored at base
+          const squash = 1.0 + Math.sin(f * 0.06) * 0.04;
+          sprite.setScale(1.0 / squash, squash);
         } else if (tile === TileType.TRAMPOLINE) {
-          // Trampoline bob
-          sprite.y = gy * TILE_SIZE + TILE_SIZE / 2 + Math.sin(f * 0.12) * 2;
+          // Trampoline subtle squash/stretch breathing anchored at base
+          const squash = 1.0 + Math.sin(f * 0.07) * 0.03;
+          sprite.setScale(1.0 / squash, squash);
         } else if (tile === TileType.CHECKPOINT) {
-          // Checkpoint flag anchored to bottom of tile, gentle bob
-          sprite.y = (gy + 1) * TILE_SIZE - TILE_SIZE / 2 + Math.sin(f * 0.08) * 2;
+          // Checkpoint flag wind wave — gentle angular oscillation, pole stays fixed
+          sprite.setAngle(Math.sin(f * 0.06 + gx * 0.5) * 3);
         }
       }
     }
@@ -544,11 +696,16 @@ export class GameScene extends Phaser.Scene {
       if (!ent.alive || !sprite) continue;
 
       if (ent.type === "coin") {
-        // Floating bob
-        sprite.y = ent.y + Math.sin(f * 0.08 + ent.x * 0.1) * 4;
-        // Horizontal stretch
-        const stretch = 0.7 + Math.abs(Math.sin(f * 0.1)) * 0.3;
-        sprite.setScale(stretch, 1.0 / stretch);
+        // Smooth 3D Y-axis rotation simulation
+        const spin = Math.cos(f * 0.05 + ent.x * 0.1);
+        const scaleX = Math.abs(spin) * 0.8 + 0.2;
+        sprite.setScale(scaleX, 1.0);
+        // Subtle shine at thinnest point
+        if (Math.abs(spin) < 0.3) {
+          sprite.setTint(0xffffaa);
+        } else {
+          sprite.clearTint();
+        }
       }
     }
   }
@@ -583,11 +740,15 @@ export class GameScene extends Phaser.Scene {
       if (this.textures.exists("player_jump")) {
         this.player.setTexture("player_jump");
       }
+      this.idleTimer = 0;
+      this.idleState = "normal";
     } else if (!grounded && this.player.vy > 1) {
       // Falling
       if (this.textures.exists("player_fall")) {
         this.player.setTexture("player_fall");
       }
+      this.idleTimer = 0;
+      this.idleState = "normal";
     } else if (moving) {
       // Walk cycle (4 frames)
       const walkFrame = Math.floor(f / 5) % 4;
@@ -597,16 +758,57 @@ export class GameScene extends Phaser.Scene {
       }
       // Body bob while walking
       this.player.y += (f % 2 === 0 ? 0.5 : -0.5) * 0.3;
+      this.idleTimer = 0;
+      this.idleState = "normal";
     } else {
-      // Idle — breathing animation
-      if (this.textures.exists("player_idle")) {
-        this.player.setTexture("player_idle");
-      } else {
-        this.player.setTexture("player");
+      // Idle state machine — blink, yawn, tail wag
+      this.idleTimer++;
+
+      if (this.idleState === "normal") {
+        // Show normal idle texture
+        if (this.textures.exists("player_idle")) {
+          this.player.setTexture("player_idle");
+        } else {
+          this.player.setTexture("player");
+        }
+        // Random blink every ~120 frames (2s at 60fps)
+        if (this.idleTimer % 120 === 0 && Math.random() < 0.7) {
+          this.idleState = "blink";
+          this.idleStateTimer = 7;
+        }
+        // Yawn after ~300 frames (5s) of idle
+        if (this.idleTimer > 300 && this.idleTimer % 300 === 0) {
+          this.idleState = "yawn";
+          this.idleStateTimer = 45;
+        }
+      } else if (this.idleState === "blink") {
+        if (this.textures.exists("player_idle_blink")) {
+          this.player.setTexture("player_idle_blink");
+        }
+        this.idleStateTimer--;
+        if (this.idleStateTimer <= 0) {
+          this.idleState = "normal";
+        }
+      } else if (this.idleState === "yawn") {
+        if (this.textures.exists("player_idle_yawn")) {
+          this.player.setTexture("player_idle_yawn");
+        }
+        this.idleStateTimer--;
+        if (this.idleStateTimer <= 0) {
+          this.idleState = "normal";
+        }
       }
-      // Subtle idle breathing
-      const breathe = Math.sin(f * 0.06) * 0.5;
-      this.player.y += breathe * 0.1;
+
+      // Subtle tail wag via scaleX oscillation
+      const tailWag = 1.0 + Math.sin(f * 0.15) * 0.02;
+      // Subtle breathing via scaleY
+      const breathe = 1.0 + Math.sin(f * 0.04) * 0.015;
+      this.player.setScale(tailWag, breathe);
+    }
+
+    // Reset scale when not idle to avoid leftover transform
+    if (moving || !grounded) {
+      this.player.setScale(1, 1);
     }
 
     // Flip sprite based on direction
@@ -656,22 +858,85 @@ export class GameScene extends Phaser.Scene {
       [TileType.SLIDE_BLOCK]: "tile_slide_block",
       [TileType.TIMED_BLOCK]: "tile_timed_block",
       [TileType.GRAVITY_ZONE]: "tile_gravity_zone",
+      [TileType.GRAVITY_NORMAL]: "tile_gravity_normal",
       [TileType.MOVING_PLATFORM]: "tile_moving_platform",
+      [TileType.SAND]: "tile_sand",
+      [TileType.SNOW]: "tile_snow",
+      [TileType.WOOD]: "tile_wood",
+      [TileType.MOSSY_STONE]: "tile_mossy_stone",
+      [TileType.FENCE]: "tile_fence",
+      [TileType.TORCH]: "tile_torch",
+      [TileType.CHAIN]: "tile_chain",
+      [TileType.SIGN]: "tile_sign",
+      [TileType.METAL]: "tile_metal",
+      [TileType.GRATE]: "tile_grate",
+      [TileType.WATER]: "tile_water",
+      [TileType.CRYSTAL]: "tile_crystal",
+      [TileType.MUSHROOM_BLOCK]: "tile_mushroom",
+      [TileType.TELEPORTER_A]: "tile_teleporter_a",
+      [TileType.TELEPORTER_B]: "tile_teleporter_b",
+      [TileType.CANNON_LEFT]: "tile_cannon_left",
+      [TileType.CANNON_RIGHT]: "tile_cannon_right",
+      [TileType.CANNON_UP]: "tile_cannon_up",
+      [TileType.CANNON_DOWN]: "tile_cannon_down",
+      [TileType.STICKY_BLOCK]: "tile_sticky_block",
+      [TileType.KEY_RED]: "tile_key_red",
+      [TileType.KEY_BLUE]: "tile_key_blue",
+      [TileType.KEY_GREEN]: "tile_key_green",
+      [TileType.LOCK_RED]: "tile_lock_red",
+      [TileType.LOCK_BLUE]: "tile_lock_blue",
+      [TileType.LOCK_GREEN]: "tile_lock_green",
+      [TileType.ICE_BREAKABLE]: "tile_ice_breakable",
+      [TileType.WIND_UP]: "tile_wind_up",
+      [TileType.WIND_DOWN]: "tile_wind_down",
+      [TileType.WIND_LEFT]: "tile_wind_left",
+      [TileType.WIND_RIGHT]: "tile_wind_right",
+      [TileType.MIRROR]: "tile_mirror",
+      [TileType.SIGN_CUSTOM]: "tile_sign_custom",
     };
 
-    const key = textureMap[tile];
+    // Use auto-tile resolution for smart texture selection
+    const getTileFn = (tx: number, ty: number): TileType => {
+      if (ty < 0 || ty >= this.level.height || tx < 0 || tx >= this.level.width) return TileType.AIR;
+      return (this.level.tiles[ty]?.[tx] ?? TileType.AIR) as TileType;
+    };
+    const key = resolveAutoTileTexture(tile, gx, gy, getTileFn) ?? textureMap[tile];
     if (!key) return null;
 
-    const sprite = this.add.image(gx * TILE_SIZE + TILE_SIZE / 2, gy * TILE_SIZE + TILE_SIZE / 2, key);
+    // Determine auto-tile state for lava-surface detection
+    const isDeepLava = tile === TileType.LAVA && key === "tile_lava_deep";
+    const isWaterSurface = tile === TileType.WATER && key === "tile_water";
+
+    // Anchor surface lava, water, spring, trampoline, checkpoint at bottom for proper animations
+    const bottomAnchored = (tile === TileType.LAVA && !isDeepLava) || isWaterSurface ||
+      tile === TileType.SPRING || tile === TileType.TRAMPOLINE || tile === TileType.CHECKPOINT;
+    const sprite = this.add.image(
+      gx * TILE_SIZE + TILE_SIZE / 2,
+      bottomAnchored ? (gy + 1) * TILE_SIZE : gy * TILE_SIZE + TILE_SIZE / 2,
+      key
+    );
+    if (bottomAnchored) {
+      sprite.setOrigin(0.5, 1.0);
+    }
 
     // Invisible tiles start hidden
     if (tile === TileType.INVISIBLE) {
       sprite.setAlpha(0);
     }
 
-    // Gravity zone is semi-transparent
-    if (tile === TileType.GRAVITY_ZONE) {
-      sprite.setAlpha(0.6);
+    // Conveyor left uses flipped texture
+    if (tile === TileType.CONVEYOR_L) {
+      sprite.setFlipX(true);
+    }
+
+    // Decorative non-solid tiles
+    if (DECORATIVE_TILES.has(tile)) {
+      sprite.setDepth(5); // behind player
+    }
+
+    // Water semi-transparent
+    if (WATER_TILES.has(tile)) {
+      sprite.setAlpha(0.75);
     }
 
     return sprite;
@@ -694,6 +959,11 @@ export class GameScene extends Phaser.Scene {
         mushroom: "entity_mushroom",
         star: "entity_star",
         fire_flower: "entity_fire_flower",
+        ghost: "entity_ghost",
+        shooter: "entity_shooter",
+        giant_goomba: "entity_giant_goomba",
+        saw_blade: "entity_saw_blade",
+        slowmo: "entity_slowmo",
       };
 
       const key = textureMap[ent.type];
@@ -701,13 +971,17 @@ export class GameScene extends Phaser.Scene {
 
       const sprite = this.add.image(ent.x, ent.y, key);
       ent.alive = true;
-      ent.vx = ent.vx ?? (ent.type === "coin" || ent.type === "flag" || ent.type === "fake_flag" || ent.type === "mushroom" || ent.type === "star" || ent.type === "fire_flower" ? 0 : -1.5);
+      ent.vx = ent.vx ?? (ent.type === "coin" || ent.type === "flag" || ent.type === "fake_flag" || ent.type === "mushroom" || ent.type === "star" || ent.type === "fire_flower" || ent.type === "shooter" || ent.type === "slowmo" ? 0 : -1.5);
       ent.vy = ent.vy ?? 0;
       ent.dir = ent.dir ?? -1;
 
       if (ent.type === "flying") {
         ent.baseY = ent.y;
         ent.frame = 0;
+      }
+      if (ent.type === "giant_goomba") {
+        ent.hp = GIANT_GOOMBA_HP;
+        ent.invFrames = 0;
       }
 
       this.entitySprites.push(sprite);
@@ -771,7 +1045,8 @@ export class GameScene extends Phaser.Scene {
     // Wall slide detection
     this.wallSliding = false;
     this.wallDir = 0;
-    if (!this.player.grounded && this.player.vy > 0) {
+    const isFalling = this.gravityFlipped ? this.player.vy < 0 : this.player.vy > 0;
+    if (!this.player.grounded && isFalling) {
       const halfW = PLAYER_W / 2;
       const midY = Math.floor(this.player.y / TILE_SIZE);
       const gxRight = Math.floor((this.player.x + halfW + 1) / TILE_SIZE);
@@ -779,11 +1054,19 @@ export class GameScene extends Phaser.Scene {
       if (rightDown && this.isSolid(gxRight, midY)) {
         this.wallSliding = true;
         this.wallDir = 1;
-        this.player.vy = Math.min(this.player.vy, WALL_SLIDE_SPEED);
+        if (this.gravityFlipped) {
+          this.player.vy = Math.max(this.player.vy, -WALL_SLIDE_SPEED);
+        } else {
+          this.player.vy = Math.min(this.player.vy, WALL_SLIDE_SPEED);
+        }
       } else if (leftDown && this.isSolid(gxLeft, midY)) {
         this.wallSliding = true;
         this.wallDir = -1;
-        this.player.vy = Math.min(this.player.vy, WALL_SLIDE_SPEED);
+        if (this.gravityFlipped) {
+          this.player.vy = Math.max(this.player.vy, -WALL_SLIDE_SPEED);
+        } else {
+          this.player.vy = Math.min(this.player.vy, WALL_SLIDE_SPEED);
+        }
       }
     }
 
@@ -860,18 +1143,45 @@ export class GameScene extends Phaser.Scene {
     if (this.isOnTile(TileType.CONVEYOR_L)) this.player.vx -= CONVEYOR_SPEED;
     if (this.isOnTile(TileType.CONVEYOR_R)) this.player.vx += CONVEYOR_SPEED;
 
-    // Fake ground crumble when walking on top
+    // Water slowdown — reduce speed when player center is inside a water tile
+    const pgx = Math.floor(this.player.x / TILE_SIZE);
+    const pgy = Math.floor(this.player.y / TILE_SIZE);
+    if (WATER_TILES.has(this.getTile(pgx, pgy))) {
+      this.player.vx *= WATER_SPEED_FACTOR;
+      if (this.player.vy > MAX_FALL * WATER_SPEED_FACTOR) {
+        this.player.vy = MAX_FALL * WATER_SPEED_FACTOR;
+      }
+    }
+
+    // Wind zone forces
+    {
+      const t = this.getTile(pgx, pgy);
+      if (t === TileType.WIND_UP) this.player.vy -= WIND_FORCE;
+      if (t === TileType.WIND_DOWN) this.player.vy += WIND_FORCE;
+      if (t === TileType.WIND_LEFT) this.player.vx -= WIND_FORCE;
+      if (t === TileType.WIND_RIGHT) this.player.vx += WIND_FORCE;
+    }
+
+    // Teleporter check
+    this.checkTeleporters();
+
+    // Sticky block check
+    this.checkStickyBlocks();
+
+    // Fake ground crumble when walking on surface
     if (this.player.grounded) {
       const halfW = PLAYER_W / 2;
-      const gyBelow = Math.floor((this.player.y + PLAYER_H / 2 + 1) / TILE_SIZE);
+      const gyCheck = this.gravityFlipped
+        ? Math.floor((this.player.y - PLAYER_H / 2 - 1) / TILE_SIZE)
+        : Math.floor((this.player.y + PLAYER_H / 2 + 1) / TILE_SIZE);
       const gxL = Math.floor((this.player.x - halfW + 2) / TILE_SIZE);
       const gxR = Math.floor((this.player.x + halfW - 2) / TILE_SIZE);
       for (let gx = gxL; gx <= gxR; gx++) {
-        if (this.getTile(gx, gyBelow) === TileType.FAKE_GROUND) {
-          this.startCrumbling(gx, gyBelow);
+        if (this.getTile(gx, gyCheck) === TileType.FAKE_GROUND) {
+          this.startCrumbling(gx, gyCheck);
         }
-        if (this.getTile(gx, gyBelow) === TileType.HIDDEN_SPIKE) {
-          this.triggerHiddenSpike(gx, gyBelow);
+        if (this.getTile(gx, gyCheck) === TileType.HIDDEN_SPIKE) {
+          this.triggerHiddenSpike(gx, gyCheck);
         }
       }
     }
@@ -886,6 +1196,9 @@ export class GameScene extends Phaser.Scene {
     // Move Y
     this.player.y += this.player.vy;
     this.resolveCollisionY();
+
+    // Key pickup check (scan tiles near player)
+    this.checkNearbyKeys();
   }
 
   private getTile(gx: number, gy: number): TileType {
@@ -917,12 +1230,14 @@ export class GameScene extends Phaser.Scene {
     for (let gy = gyTop; gy <= gyBottom; gy++) {
       // Moving right
       if (this.player.vx > 0 && this.isSolid(gxRight, gy)) {
+        if (this.checkLockInteraction(gxRight, gy)) continue;
         this.player.x = gxRight * TILE_SIZE - halfW;
         this.player.vx = 0;
         break;
       }
       // Moving left
       if (this.player.vx < 0 && this.isSolid(gxLeft, gy)) {
+        if (this.checkLockInteraction(gxLeft, gy)) continue;
         this.player.x = (gxLeft + 1) * TILE_SIZE + halfW;
         this.player.vx = 0;
         break;
@@ -948,62 +1263,117 @@ export class GameScene extends Phaser.Scene {
 
     this.player.grounded = false;
 
-    for (let gx = gxLeft; gx <= gxRight; gx++) {
-      // Falling down
-      if (this.player.vy > 0) {
-        const tile = this.getTile(gx, gyBottom);
-        const isSolid = SOLID_TILES.has(tile);
-        const isOneway = ONEWAY_TILES.has(tile);
-
-        if (isSolid || isOneway) {
-          if (isOneway) {
-            // One-way: only collide if feet were at or above the tile top (2px tolerance for float precision)
-            const prevBottom = this.player.y + halfH - this.player.vy;
-            if (prevBottom > gyBottom * TILE_SIZE + 2) continue;
-          }
-
-          this.player.y = gyBottom * TILE_SIZE - halfH;
+    if (this.gravityFlipped) {
+      // === INVERTED GRAVITY ===
+      for (let gx = gxLeft; gx <= gxRight; gx++) {
+        // Falling UP (vy < 0) — ceiling becomes floor
+        if (this.player.vy < 0 && this.isSolid(gx, gyTop)) {
+          this.player.y = (gyTop + 1) * TILE_SIZE + halfH;
           this.player.vy = 0;
           this.player.grounded = true;
 
-          // Special landing effects
+          const tile = this.getTile(gx, gyTop);
           if (tile === TileType.SPRING) {
-            this.player.vy = JUMP_FORCE * SPRING_MULTIPLIER;
+            this.player.vy = -(JUMP_FORCE * SPRING_MULTIPLIER);
             this.player.grounded = false;
             playSpring();
-            this.emitSpringParticles(this.player.x, this.player.y + PLAYER_H / 2);
+            this.emitSpringParticles(this.player.x, this.player.y - PLAYER_H / 2);
           } else if (tile === TileType.TRAMPOLINE) {
-            this.player.vy = JUMP_FORCE * TRAMPOLINE_MULTIPLIER;
+            this.player.vy = -(JUMP_FORCE * TRAMPOLINE_MULTIPLIER);
             this.player.grounded = false;
             playSpring();
-            this.emitSpringParticles(this.player.x, this.player.y + PLAYER_H / 2);
+            this.emitSpringParticles(this.player.x, this.player.y - PLAYER_H / 2);
           } else if (tile === TileType.FAKE_GROUND) {
-            this.startCrumbling(gx, gyBottom);
+            this.startCrumbling(gx, gyTop);
           } else if (tile === TileType.HIDDEN_SPIKE) {
-            this.triggerHiddenSpike(gx, gyBottom);
+            this.triggerHiddenSpike(gx, gyTop);
+          } else if (tile === TileType.QUESTION) {
+            this.hitQuestionBlock(gx, gyTop);
+          } else if (tile === TileType.BRICK) {
+            this.breakBrick(gx, gyTop);
+          } else if (tile === TileType.TROLL_Q) {
+            this.hitTrollBlock(gx, gyTop);
+          } else if (tile === TileType.INVISIBLE) {
+            this.revealInvisible(gx, gyTop);
+          } else if (tile === TileType.POWERUP_BLOCK) {
+            this.hitPowerUpBlock(gx, gyTop);
           }
           break;
         }
-      }
-      // Moving up
-      if (this.player.vy < 0 && this.isSolid(gx, gyTop)) {
-        this.player.y = (gyTop + 1) * TILE_SIZE + halfH;
-        this.player.vy = 0;
-
-        // Hit ? block from below
-        const tile = this.getTile(gx, gyTop);
-        if (tile === TileType.QUESTION) {
-          this.hitQuestionBlock(gx, gyTop);
-        } else if (tile === TileType.BRICK) {
-          this.breakBrick(gx, gyTop);
-        } else if (tile === TileType.TROLL_Q) {
-          this.hitTrollBlock(gx, gyTop);
-        } else if (tile === TileType.INVISIBLE) {
-          this.revealInvisible(gx, gyTop);
-        } else if (tile === TileType.POWERUP_BLOCK) {
-          this.hitPowerUpBlock(gx, gyTop);
+        // Moving DOWN while flipped (vy > 0) — floor becomes ceiling
+        if (this.player.vy > 0 && this.isSolid(gx, gyBottom)) {
+          this.player.y = gyBottom * TILE_SIZE - halfH;
+          this.player.vy = 0;
+          break;
         }
-        break;
+      }
+    } else {
+      // === NORMAL GRAVITY ===
+      for (let gx = gxLeft; gx <= gxRight; gx++) {
+        // Falling down
+        if (this.player.vy > 0) {
+          const tile = this.getTile(gx, gyBottom);
+          const isSolid = SOLID_TILES.has(tile);
+          const isOneway = ONEWAY_TILES.has(tile);
+
+          if (isSolid || isOneway) {
+            // Try opening locks before blocking
+            if (isSolid && this.checkLockInteraction(gx, gyBottom)) continue;
+
+            if (isOneway) {
+              // One-way: only collide if feet were at or above the tile top (2px tolerance for float precision)
+              const prevBottom = this.player.y + halfH - this.player.vy;
+              if (prevBottom > gyBottom * TILE_SIZE + 2) continue;
+            }
+
+            this.player.y = gyBottom * TILE_SIZE - halfH;
+            this.player.vy = 0;
+            this.player.grounded = true;
+
+            // Special landing effects
+            if (tile === TileType.SPRING) {
+              this.player.vy = JUMP_FORCE * SPRING_MULTIPLIER;
+              this.player.grounded = false;
+              playSpring();
+              this.emitSpringParticles(this.player.x, this.player.y + PLAYER_H / 2);
+            } else if (tile === TileType.TRAMPOLINE) {
+              this.player.vy = JUMP_FORCE * TRAMPOLINE_MULTIPLIER;
+              this.player.grounded = false;
+              playSpring();
+              this.emitSpringParticles(this.player.x, this.player.y + PLAYER_H / 2);
+            } else if (tile === TileType.FAKE_GROUND) {
+              this.startCrumbling(gx, gyBottom);
+            } else if (tile === TileType.HIDDEN_SPIKE) {
+              this.triggerHiddenSpike(gx, gyBottom);
+            } else if (tile === TileType.ICE_BREAKABLE) {
+              this.hitIceBreakable(gx, gyBottom);
+            }
+            break;
+          }
+        }
+        // Moving up
+        if (this.player.vy < 0 && this.isSolid(gx, gyTop)) {
+          if (this.checkLockInteraction(gx, gyTop)) continue;
+          this.player.y = (gyTop + 1) * TILE_SIZE + halfH;
+          this.player.vy = 0;
+
+          // Hit ? block from below
+          const tile = this.getTile(gx, gyTop);
+          if (tile === TileType.QUESTION) {
+            this.hitQuestionBlock(gx, gyTop);
+          } else if (tile === TileType.BRICK) {
+            this.breakBrick(gx, gyTop);
+          } else if (tile === TileType.TROLL_Q) {
+            this.hitTrollBlock(gx, gyTop);
+          } else if (tile === TileType.INVISIBLE) {
+            this.revealInvisible(gx, gyTop);
+          } else if (tile === TileType.POWERUP_BLOCK) {
+            this.hitPowerUpBlock(gx, gyTop);
+          } else if (tile === TileType.ICE_BREAKABLE) {
+            this.hitIceBreakable(gx, gyTop);
+          }
+          break;
+        }
       }
     }
 
@@ -1259,10 +1629,45 @@ export class GameScene extends Phaser.Scene {
     const halfW = PLAYER_W / 2;
     const halfH = PLAYER_H / 2;
 
+    // Process dying entity animations
     for (let i = 0; i < this.entities.length; i++) {
       const ent = this.entities[i];
       const sprite = this.entitySprites[i];
-      if (!ent.alive || !sprite) continue;
+      if (!ent.dying || !sprite) continue;
+
+      ent.deathTimer = (ent.deathTimer ?? 0) - 1;
+      const t = ent.deathTimer ?? 0;
+
+      if (ent.deathType === "lava") {
+        // Sink into lava with orange tint and fade
+        sprite.y += 1;
+        sprite.setTint(0xff4400);
+        sprite.setAlpha(Math.max(0, t / 30));
+        if (t <= 0) {
+          sprite.setVisible(false);
+          ent.dying = false;
+        }
+      } else if (ent.deathType === "spike") {
+        // Pop up, rotate, and fade
+        if (t > 10) {
+          sprite.y -= 3; // pop upward for first 5 frames
+        }
+        sprite.setAngle(((15 - t) / 15) * 180);
+        sprite.setAlpha(Math.max(0, t / 15));
+        if (t === 12) {
+          this.emitStompParticles(ent.x, ent.y);
+        }
+        if (t <= 0) {
+          sprite.setVisible(false);
+          ent.dying = false;
+        }
+      }
+    }
+
+    for (let i = 0; i < this.entities.length; i++) {
+      const ent = this.entities[i];
+      const sprite = this.entitySprites[i];
+      if (!ent.alive || ent.dying || !sprite) continue;
 
       // Update position for enemies
       if (ent.type === "goomba" || ent.type === "fast_goomba" || ent.type === "spiny") {
@@ -1293,6 +1698,22 @@ export class GameScene extends Phaser.Scene {
           ent.alive = false;
           sprite.setVisible(false);
         }
+
+        // Check if enemy stepped on lava or spikes
+        const hazGx = Math.floor(ent.x / TILE_SIZE);
+        const hazGy = Math.floor((ent.y + 12) / TILE_SIZE);
+        const hazTile = this.level.tiles[hazGy]?.[hazGx] ?? 0;
+        if (hazTile === TileType.LAVA && ent.alive) {
+          ent.alive = false;
+          ent.dying = true;
+          ent.deathType = "lava";
+          ent.deathTimer = 30;
+        } else if (hazTile === TileType.SPIKE && ent.alive) {
+          ent.alive = false;
+          ent.dying = true;
+          ent.deathType = "spike";
+          ent.deathTimer = 15;
+        }
       }
 
       if (ent.type === "flying") {
@@ -1301,6 +1722,24 @@ export class GameScene extends Phaser.Scene {
         ent.y = (ent.baseY ?? ent.y) + Math.sin(ent.frame * 0.05) * 40;
         if ((ent.frame % 120) === 0) {
           ent.dir = ((ent.dir ?? -1) * -1) as 1 | -1;
+        }
+      }
+
+      // Check if flying enemy is in lava or spikes
+      if (ent.type === "flying" && ent.alive) {
+        const fHazGy = Math.floor(ent.y / TILE_SIZE);
+        const fHazGx = Math.floor(ent.x / TILE_SIZE);
+        const fHazTile = this.level.tiles[fHazGy]?.[fHazGx] ?? 0;
+        if (fHazTile === TileType.LAVA) {
+          ent.alive = false;
+          ent.dying = true;
+          ent.deathType = "lava";
+          ent.deathTimer = 30;
+        } else if (fHazTile === TileType.SPIKE) {
+          ent.alive = false;
+          ent.dying = true;
+          ent.deathType = "spike";
+          ent.deathTimer = 15;
         }
       }
 
@@ -1377,6 +1816,144 @@ export class GameScene extends Phaser.Scene {
         sprite.y = ent.y + Math.sin(this.frame * 0.1) * 3;
       }
 
+      // Ghost: moves toward player when player isn't facing it, freezes when facing
+      if (ent.type === "ghost") {
+        const ghostDx = this.player.x - ent.x;
+        const ghostDy = this.player.y - ent.y;
+        const playerFacing = this.player.dir ?? 1;
+        const ghostIsRight = ghostDx > 0;
+        const playerLooking = (playerFacing === 1 && ghostIsRight) || (playerFacing === -1 && !ghostIsRight);
+        if (!playerLooking) {
+          const dist = Math.sqrt(ghostDx * ghostDx + ghostDy * ghostDy) || 1;
+          ent.x += (ghostDx / dist) * GHOST_SPEED;
+          ent.y += (ghostDy / dist) * GHOST_SPEED;
+          sprite.setAlpha(0.9);
+        } else {
+          sprite.setAlpha(0.4);
+        }
+        sprite.setFlipX(ghostDx > 0);
+        sprite.setPosition(ent.x, ent.y);
+      }
+
+      // Shooter: stationary, fires bullets toward player periodically
+      if (ent.type === "shooter") {
+        ent.frame = (ent.frame ?? 0) + 1;
+        if (ent.frame % SHOOTER_FIRE_RATE === 0) {
+          const sdx = this.player.x - ent.x;
+          const sdy = this.player.y - ent.y;
+          const sdist = Math.sqrt(sdx * sdx + sdy * sdy) || 1;
+          const bullet: GameEntity = {
+            type: "shooter_bullet",
+            x: ent.x,
+            y: ent.y,
+            vx: (sdx / sdist) * SHOOTER_BULLET_SPEED,
+            vy: (sdy / sdist) * SHOOTER_BULLET_SPEED,
+            dir: sdx > 0 ? 1 : -1,
+            alive: true,
+          };
+          this.entities.push(bullet);
+          const bSprite = this.add.image(bullet.x, bullet.y, "entity_shooter_bullet").setDepth(40);
+          this.entitySprites.push(bSprite);
+        }
+        sprite.setFlipX(this.player.x > ent.x);
+      }
+
+      // Giant Goomba boss: patrols like goomba but bigger, 3 HP, invincibility frames
+      if (ent.type === "giant_goomba") {
+        ent.hp = ent.hp ?? GIANT_GOOMBA_HP;
+        ent.invFrames = ent.invFrames ?? 0;
+        if (ent.invFrames > 0) {
+          ent.invFrames--;
+          sprite.setAlpha(this.frame % 4 < 2 ? 0.4 : 1);
+        } else {
+          sprite.setAlpha(1);
+        }
+        ent.vx = ent.vx ?? GIANT_GOOMBA_SPEED;
+        ent.x += ent.vx * (ent.dir ?? -1);
+        ent.vy = (ent.vy ?? 0) + GRAVITY;
+        if (ent.vy > MAX_FALL) ent.vy = MAX_FALL;
+        ent.y += ent.vy;
+        const bgx = Math.floor(ent.x / TILE_SIZE);
+        const bgyFoot = Math.floor((ent.y + 22) / TILE_SIZE);
+        if (this.isSolid(bgx, bgyFoot)) {
+          ent.y = bgyFoot * TILE_SIZE - 22;
+          ent.vy = 0;
+        }
+        const wallGx = Math.floor((ent.x + (ent.dir ?? -1) * 18) / TILE_SIZE);
+        const wallGy = Math.floor(ent.y / TILE_SIZE);
+        if (this.isSolid(wallGx, wallGy)) {
+          ent.dir = -(ent.dir ?? -1);
+        }
+        const walkFrame = Math.floor(this.frame / 12) % 2;
+        sprite.setTexture(walkFrame === 0 ? "entity_giant_goomba" : "entity_giant_goomba");
+        sprite.setFlipX((ent.dir ?? -1) === 1);
+        sprite.setPosition(ent.x, ent.y);
+      }
+
+      // Saw blade: follows waypoints in a loop
+      if (ent.type === "saw_blade") {
+        const wps = ent.waypoints;
+        if (wps && wps.length >= 2) {
+          ent.waypointIndex = ent.waypointIndex ?? 0;
+          const target = wps[ent.waypointIndex];
+          const swdx = target.x - ent.x;
+          const swdy = target.y - ent.y;
+          const swdist = Math.sqrt(swdx * swdx + swdy * swdy);
+          if (swdist < SAW_BLADE_SPEED) {
+            ent.waypointIndex = (ent.waypointIndex + 1) % wps.length;
+          } else {
+            ent.x += (swdx / swdist) * SAW_BLADE_SPEED;
+            ent.y += (swdy / swdist) * SAW_BLADE_SPEED;
+          }
+        }
+        sprite.setAngle((this.frame * 6) % 360);
+        sprite.setPosition(ent.x, ent.y);
+      }
+
+      // Slow-mo pickup: falls with gravity, collectible
+      if (ent.type === "slowmo") {
+        ent.vy = (ent.vy ?? 0) + POWERUP_GRAVITY;
+        if (ent.vy > MAX_FALL) ent.vy = MAX_FALL;
+        ent.y += ent.vy;
+        const sgx = Math.floor(ent.x / TILE_SIZE);
+        const sgyFoot = Math.floor((ent.y + 10) / TILE_SIZE);
+        if (this.isSolid(sgx, sgyFoot)) {
+          ent.y = sgyFoot * TILE_SIZE - 10;
+          ent.vy = 0;
+        }
+        sprite.y = ent.y + Math.sin(this.frame * 0.08) * 2;
+        sprite.setPosition(ent.x, sprite.y);
+      }
+
+      // Shooter bullet movement
+      if (ent.type === "shooter_bullet") {
+        ent.x += ent.vx ?? 0;
+        ent.y += ent.vy ?? 0;
+        sprite.setPosition(ent.x, ent.y);
+        // Remove if off screen or hits solid
+        const sbgx = Math.floor(ent.x / TILE_SIZE);
+        const sbgy = Math.floor(ent.y / TILE_SIZE);
+        if (this.isSolid(sbgx, sbgy) || ent.x < -64 || ent.x > this.level.width * TILE_SIZE + 64 ||
+            ent.y < -64 || ent.y > this.level.height * TILE_SIZE + 64) {
+          ent.alive = false;
+          sprite.setVisible(false);
+        }
+      }
+
+      // Cannon bullet movement
+      if (ent.type === "cannon_bullet") {
+        ent.x += ent.vx ?? 0;
+        ent.y += ent.vy ?? 0;
+        sprite.setPosition(ent.x, ent.y);
+        const cbgx = Math.floor(ent.x / TILE_SIZE);
+        const cbgy = Math.floor(ent.y / TILE_SIZE);
+        if (this.isSolid(cbgx, cbgy) || ent.x < -64 || ent.x > this.level.width * TILE_SIZE + 64 ||
+            ent.y < -64 || ent.y > this.level.height * TILE_SIZE + 64) {
+          ent.alive = false;
+          sprite.setVisible(false);
+        }
+      }
+
       // Player collision with entity
       const dx = Math.abs(this.player.x - ent.x);
       const dy = Math.abs(this.player.y - ent.y);
@@ -1433,7 +2010,106 @@ export class GameScene extends Phaser.Scene {
           } else {
             this.handleEnemyHit();
           }
+        } else if (ent.type === "ghost") {
+          if (this.powered && this.powerType === "star") {
+            ent.alive = false;
+            sprite.setVisible(false);
+            playStomp();
+            this.emitStompParticles(ent.x, ent.y);
+          } else {
+            this.handleEnemyHit();
+          }
+        } else if (ent.type === "shooter") {
+          if (this.powered && this.powerType === "star") {
+            ent.alive = false;
+            sprite.setVisible(false);
+            playStomp();
+            this.emitStompParticles(ent.x, ent.y);
+          } else if (this.player.vy > 0 && this.player.y < ent.y - 4) {
+            ent.alive = false;
+            sprite.setVisible(false);
+            this.player.vy = JUMP_FORCE * 0.6;
+            playStomp();
+            this.emitStompParticles(ent.x, ent.y);
+          } else {
+            this.handleEnemyHit();
+          }
+        } else if (ent.type === "giant_goomba") {
+          if (this.powered && this.powerType === "star") {
+            ent.alive = false;
+            sprite.setVisible(false);
+            playStomp();
+            this.emitStompParticles(ent.x, ent.y);
+          } else if (this.player.vy > 0 && this.player.y < ent.y - 10) {
+            ent.hp = (ent.hp ?? GIANT_GOOMBA_HP) - 1;
+            ent.invFrames = GIANT_GOOMBA_INV_FRAMES;
+            this.player.vy = JUMP_FORCE * 0.7;
+            playBossHit();
+            this.emitStompParticles(ent.x, ent.y);
+            if (ent.hp <= 0) {
+              ent.alive = false;
+              sprite.setVisible(false);
+              // Coin explosion on death
+              for (let c = 0; c < 8; c++) {
+                this.emitCoinParticles(ent.x + (Math.random() - 0.5) * 40, ent.y + (Math.random() - 0.5) * 40);
+              }
+              this.coins += 10;
+              this.pulseHud(this.hudCoins);
+              gameEvents.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
+            }
+          } else if ((ent.invFrames ?? 0) <= 0) {
+            this.handleEnemyHit();
+          }
+        } else if (ent.type === "saw_blade") {
+          if (!(this.powered && this.powerType === "star")) {
+            this.playerDie();
+          }
+        } else if (ent.type === "slowmo") {
+          ent.alive = false;
+          sprite.setVisible(false);
+          this.slowMoTimer = SLOWMO_DURATION;
+          playSlowMo();
+          this.showMessage("Slow Motion!");
+        } else if (ent.type === "cannon_bullet" || ent.type === "shooter_bullet") {
+          if (this.powered && this.powerType === "star") {
+            ent.alive = false;
+            sprite.setVisible(false);
+          } else {
+            this.handleEnemyHit();
+            ent.alive = false;
+            sprite.setVisible(false);
+          }
         }
+      }
+    }
+  }
+
+  private updateFallingBlocks(): void {
+    const halfW = PLAYER_W / 2;
+    const halfH = PLAYER_H / 2;
+    const blockHalf = TILE_SIZE / 2;
+
+    for (let i = this.fallingBlocks.length - 1; i >= 0; i--) {
+      const b = this.fallingBlocks[i];
+      b.y += b.vy;
+      b.vy += 0.1;
+      b.sprite.setPosition(b.x, b.y);
+
+      // AABB collision with player
+      if (
+        this.player.alive &&
+        this.player.x - halfW < b.x + blockHalf &&
+        this.player.x + halfW > b.x - blockHalf &&
+        this.player.y - halfH < b.y + blockHalf &&
+        this.player.y + halfH > b.y - blockHalf
+      ) {
+        this.playerDie();
+      }
+
+      // Remove when off screen
+      if (b.y > this.level.height * TILE_SIZE + 64) {
+        b.sprite.destroy();
+        this.fallingBlocks.splice(i, 1);
       }
     }
   }
@@ -1483,13 +2159,12 @@ export class GameScene extends Phaser.Scene {
               const count = troll.count ?? 3;
               for (let b = 0; b < count; b++) {
                 const bx = troll.startX + b * 40;
-                const block = this.add.image(bx, -32, "tile_brick");
-                this.tweens.add({
-                  targets: block,
-                  y: GAME_HEIGHT - 16,
-                  duration: 1200,
-                  ease: "Bounce.easeOut",
-                  onComplete: () => block.destroy(),
+                const sprite = this.add.image(bx, -32 - b * 20, "tile_brick").setDepth(50);
+                this.fallingBlocks.push({
+                  x: bx,
+                  y: -32 - b * 20,
+                  vy: 2 + Math.random(),
+                  sprite,
                 });
               }
             }
@@ -1523,13 +2198,312 @@ export class GameScene extends Phaser.Scene {
             break;
           case "gravity_flip":
             this.gravityFlipped = !this.gravityFlipped;
-            this.gravityFlipTimer = troll.flipDuration ?? GRAVITY_FLIP_DEFAULT_DURATION;
             playGravityFlip();
             this.showMessage("Gravidade invertida!");
             this.player.setFlipY(this.gravityFlipped);
             break;
+          case "sound":
+            if (troll.sfx) {
+              playTrollSfx(troll.sfx);
+            }
+            break;
         }
       }
+    }
+  }
+
+  // ===========================================================
+  // Teleporters
+  // ===========================================================
+  private checkTeleporters(): void {
+    if (this.teleporterCooldown > 0) return;
+    const pairs = this.level.teleporterPairs;
+    if (!pairs || pairs.length === 0) return;
+
+    const pgx = Math.floor(this.player.x / TILE_SIZE);
+    const pgy = Math.floor(this.player.y / TILE_SIZE);
+
+    for (const pair of pairs) {
+      if (pgx === pair.ax && pgy === pair.ay) {
+        this.player.x = pair.bx * TILE_SIZE + TILE_SIZE / 2;
+        this.player.y = pair.by * TILE_SIZE + TILE_SIZE / 2;
+        this.teleporterCooldown = TELEPORTER_COOLDOWN;
+        playTeleport();
+        return;
+      }
+      if (pgx === pair.bx && pgy === pair.by) {
+        this.player.x = pair.ax * TILE_SIZE + TILE_SIZE / 2;
+        this.player.y = pair.ay * TILE_SIZE + TILE_SIZE / 2;
+        this.teleporterCooldown = TELEPORTER_COOLDOWN;
+        playTeleport();
+        return;
+      }
+    }
+  }
+
+  // ===========================================================
+  // Sticky Blocks
+  // ===========================================================
+  private checkStickyBlocks(): void {
+    if (this.stuckToSticky) return;
+    const halfW = PLAYER_W / 2;
+    const halfH = PLAYER_H / 2;
+
+    // Check floor
+    const fgy = Math.floor((this.player.y + halfH + 1) / TILE_SIZE);
+    const fgxL = Math.floor((this.player.x - halfW + 2) / TILE_SIZE);
+    const fgxR = Math.floor((this.player.x + halfW - 2) / TILE_SIZE);
+    for (let gx = fgxL; gx <= fgxR; gx++) {
+      if (this.getTile(gx, fgy) === TileType.STICKY_BLOCK) {
+        this.stuckToSticky = true;
+        this.stickyDir = "floor";
+        this.player.vx = 0;
+        this.player.vy = 0;
+        this.player.grounded = true;
+        return;
+      }
+    }
+
+    // Check walls
+    const wgyTop = Math.floor((this.player.y - halfH + 2) / TILE_SIZE);
+    const wgyBot = Math.floor((this.player.y + halfH - 2) / TILE_SIZE);
+    const leftGx = Math.floor((this.player.x - halfW - 1) / TILE_SIZE);
+    const rightGx = Math.floor((this.player.x + halfW + 1) / TILE_SIZE);
+    for (let gy = wgyTop; gy <= wgyBot; gy++) {
+      if (this.getTile(leftGx, gy) === TileType.STICKY_BLOCK ||
+          this.getTile(rightGx, gy) === TileType.STICKY_BLOCK) {
+        this.stuckToSticky = true;
+        this.stickyDir = "wall";
+        this.player.vx = 0;
+        this.player.vy = 0;
+        return;
+      }
+    }
+  }
+
+  // ===========================================================
+  // Cannon System
+  // ===========================================================
+  private updateCannons(): void {
+    this.cannonTimer++;
+    if (this.cannonTimer >= CANNON_FIRE_RATE) {
+      this.cannonTimer = 0;
+      // Find all cannon tiles and fire bullets
+      for (let gy = 0; gy < this.level.height; gy++) {
+        for (let gx = 0; gx < this.level.width; gx++) {
+          const t = this.getTile(gx, gy);
+          let bvx = 0, bvy = 0;
+          const texKey = "entity_cannon_bullet";
+          if (t === TileType.CANNON_LEFT) { bvx = -CANNON_BULLET_SPEED; }
+          else if (t === TileType.CANNON_RIGHT) { bvx = CANNON_BULLET_SPEED; }
+          else if (t === TileType.CANNON_UP) { bvy = -CANNON_BULLET_SPEED; }
+          else if (t === TileType.CANNON_DOWN) { bvy = CANNON_BULLET_SPEED; }
+          else continue;
+
+          const bx = gx * TILE_SIZE + TILE_SIZE / 2 + bvx * 4;
+          const by = gy * TILE_SIZE + TILE_SIZE / 2 + bvy * 4;
+          const sprite = this.add.image(bx, by, texKey).setDepth(30);
+          this.cannonBullets.push({ x: bx, y: by, vx: bvx, vy: bvy, sprite });
+        }
+      }
+      if (this.cannonBullets.length > 0) playCannon();
+    }
+
+    // Update bullet positions
+    for (let i = this.cannonBullets.length - 1; i >= 0; i--) {
+      const b = this.cannonBullets[i];
+      b.x += b.vx;
+      b.y += b.vy;
+      b.sprite.setPosition(b.x, b.y);
+
+      // Destroy on solid tile contact
+      const bgx = Math.floor(b.x / TILE_SIZE);
+      const bgy = Math.floor(b.y / TILE_SIZE);
+      if (this.isSolid(bgx, bgy)) {
+        b.sprite.destroy();
+        this.cannonBullets.splice(i, 1);
+        continue;
+      }
+
+      // Destroy if off-screen
+      if (b.x < -50 || b.x > (this.level.width + 2) * TILE_SIZE ||
+          b.y < -50 || b.y > (this.level.height + 2) * TILE_SIZE) {
+        b.sprite.destroy();
+        this.cannonBullets.splice(i, 1);
+        continue;
+      }
+
+      // Player collision
+      if (this.player.alive && !this.dashing) {
+        const dx = Math.abs(b.x - this.player.x);
+        const dy = Math.abs(b.y - this.player.y);
+        if (dx < PLAYER_W / 2 + 4 && dy < PLAYER_H / 2 + 4) {
+          if (this.powered && this.powerType === "star") {
+            b.sprite.destroy();
+            this.cannonBullets.splice(i, 1);
+          } else {
+            this.playerDie();
+          }
+        }
+      }
+    }
+  }
+
+  // ===========================================================
+  // Shooter Bullets 
+  // ===========================================================
+  private updateShooterBullets(): void {
+    // Update existing bullets
+    for (let i = this.shooterBullets.length - 1; i >= 0; i--) {
+      const b = this.shooterBullets[i];
+      b.x += b.vx;
+      b.y += b.vy;
+      b.sprite.setPosition(b.x, b.y);
+
+      const bgx = Math.floor(b.x / TILE_SIZE);
+      const bgy = Math.floor(b.y / TILE_SIZE);
+      if (this.isSolid(bgx, bgy)) {
+        b.sprite.destroy();
+        this.shooterBullets.splice(i, 1);
+        continue;
+      }
+
+      if (b.x < -50 || b.x > (this.level.width + 2) * TILE_SIZE ||
+          b.y < -50 || b.y > (this.level.height + 2) * TILE_SIZE) {
+        b.sprite.destroy();
+        this.shooterBullets.splice(i, 1);
+        continue;
+      }
+
+      // Player collision
+      if (this.player.alive && !this.dashing) {
+        const dx = Math.abs(b.x - this.player.x);
+        const dy = Math.abs(b.y - this.player.y);
+        if (dx < PLAYER_W / 2 + 3 && dy < PLAYER_H / 2 + 3) {
+          if (this.powered && this.powerType === "star") {
+            b.sprite.destroy();
+            this.shooterBullets.splice(i, 1);
+          } else {
+            this.playerDie();
+          }
+        }
+      }
+    }
+  }
+
+  // ===========================================================
+  // Key/Lock System
+  // ===========================================================
+  private checkNearbyKeys(): void {
+    const halfW = PLAYER_W / 2;
+    const halfH = PLAYER_H / 2;
+    const gxL = Math.floor((this.player.x - halfW) / TILE_SIZE);
+    const gxR = Math.floor((this.player.x + halfW) / TILE_SIZE);
+    const gyT = Math.floor((this.player.y - halfH) / TILE_SIZE);
+    const gyB = Math.floor((this.player.y + halfH) / TILE_SIZE);
+    for (let gy = gyT; gy <= gyB; gy++) {
+      for (let gx = gxL; gx <= gxR; gx++) {
+        this.checkKeyPickup(gx, gy);
+      }
+    }
+  }
+
+  private checkKeyPickup(gx: number, gy: number): void {
+    const t = this.getTile(gx, gy);
+    if (t === TileType.KEY_RED) { this.keysRed++; this.removeTile(gx, gy); playKeyPickup(); }
+    else if (t === TileType.KEY_BLUE) { this.keysBlue++; this.removeTile(gx, gy); playKeyPickup(); }
+    else if (t === TileType.KEY_GREEN) { this.keysGreen++; this.removeTile(gx, gy); playKeyPickup(); }
+  }
+
+  private checkLockInteraction(gx: number, gy: number): boolean {
+    const t = this.getTile(gx, gy);
+    if (t === TileType.LOCK_RED && this.keysRed > 0) {
+      this.keysRed--;
+      this.removeTile(gx, gy);
+      playLockOpen();
+      return true;
+    }
+    if (t === TileType.LOCK_BLUE && this.keysBlue > 0) {
+      this.keysBlue--;
+      this.removeTile(gx, gy);
+      playLockOpen();
+      return true;
+    }
+    if (t === TileType.LOCK_GREEN && this.keysGreen > 0) {
+      this.keysGreen--;
+      this.removeTile(gx, gy);
+      playLockOpen();
+      return true;
+    }
+    return false;
+  }
+
+  private removeTile(gx: number, gy: number): void {
+    this.level.tiles[gy][gx] = TileType.AIR;
+    const sprite = this.tileSprites[gy]?.[gx];
+    if (sprite) {
+      sprite.destroy();
+      this.tileSprites[gy][gx] = null;
+    }
+  }
+
+  // ===========================================================
+  // Ice Breakable
+  // ===========================================================
+  private hitIceBreakable(gx: number, gy: number): void {
+    const key = `${gx},${gy}`;
+    this.iceHitCounts[key] = (this.iceHitCounts[key] ?? 0) + 1;
+    if (this.iceHitCounts[key] >= 3) {
+      this.removeTile(gx, gy);
+      playIceBreak();
+      delete this.iceHitCounts[key];
+    }
+  }
+
+  // ===========================================================
+  // Sign Text Bubbles
+  // ===========================================================
+  private updateSignBubbles(): void {
+    const pgx = Math.floor(this.player.x / TILE_SIZE);
+    const pgy = Math.floor(this.player.y / TILE_SIZE);
+    const signTexts = this.level.signTexts;
+
+    // Check adjacent tiles (player might overlap sign)
+    const adjacentKeys = [`${pgx},${pgy}`, `${pgx},${pgy+1}`, `${pgx-1},${pgy}`, `${pgx+1},${pgy}`];
+    let foundKey: string | null = null;
+    let foundText: string | null = null;
+    for (const k of adjacentKeys) {
+      if (signTexts && signTexts[k]) {
+        foundKey = k;
+        foundText = signTexts[k];
+        break;
+      }
+    }
+
+    if (foundText && foundKey !== this.activeSignKey) {
+      // Show new bubble
+      this.activeSignBubble?.destroy();
+      const [sx, sy] = foundKey!.split(",").map(Number);
+      const worldX = sx * TILE_SIZE + TILE_SIZE / 2;
+      const worldY = sy * TILE_SIZE - 20;
+      // Sanitize text: only printable chars, max 100 chars
+      const safeText = foundText.replace(/[^\x20-\x7E\u00C0-\u024F\u1E00-\u1EFF]/g, "").slice(0, 100);
+      this.activeSignBubble = this.add
+        .text(worldX, worldY, safeText, {
+          fontFamily: "monospace",
+          fontSize: "11px",
+          color: "#ffffff",
+          backgroundColor: "rgba(0,0,0,0.8)",
+          padding: { x: 8, y: 4 },
+          wordWrap: { width: 180 },
+        })
+        .setOrigin(0.5, 1)
+        .setDepth(90);
+      this.activeSignKey = foundKey;
+    } else if (!foundText && this.activeSignBubble) {
+      this.activeSignBubble.destroy();
+      this.activeSignBubble = null;
+      this.activeSignKey = null;
     }
   }
 
@@ -1625,6 +2599,13 @@ export class GameScene extends Phaser.Scene {
         mushroom: "entity_mushroom",
         star: "entity_star",
         fire_flower: "entity_fire_flower",
+        ghost: "entity_ghost",
+        shooter: "entity_shooter",
+        giant_goomba: "entity_giant_goomba",
+        saw_blade: "entity_saw_blade",
+        slowmo: "entity_slowmo",
+        cannon_bullet: "entity_cannon_bullet",
+        shooter_bullet: "entity_shooter_bullet",
       };
       const key = textureMap[ent.type];
       if (!key) continue;
@@ -1666,10 +2647,29 @@ export class GameScene extends Phaser.Scene {
     this.dashTimer = 0;
     this.canDash = true;
     this.gravityFlipped = false;
-    this.gravityFlipTimer = 0;
     this.timedBlockTimer = 0;
     this.timedBlockVisible = true;
     this.wallSliding = false;
+
+    // Reset new mechanic state
+    this.keysRed = 0;
+    this.keysBlue = 0;
+    this.keysGreen = 0;
+    this.cannonTimer = 0;
+    this.cannonBullets.forEach(b => b.sprite.destroy());
+    this.cannonBullets = [];
+    this.teleporterCooldown = 0;
+    this.stuckToSticky = false;
+    this.stickyDir = "floor";
+    this.iceHitCounts = {};
+    this.slowMoTimer = 0;
+    this.shooterBullets.forEach(b => b.sprite.destroy());
+    this.shooterBullets = [];
+    if (this.activeSignBubble) {
+      this.activeSignBubble.destroy();
+      this.activeSignBubble = null;
+      this.activeSignKey = null;
+    }
 
     // Re-initialize moving platforms
     this.movingPlatforms.forEach((mp) => mp.sprite.destroy());
@@ -1678,6 +2678,10 @@ export class GameScene extends Phaser.Scene {
 
   private respawn(): void {
     this.restoreSnapshot();
+
+    // Clean up falling blocks
+    for (const fb of this.fallingBlocks) fb.sprite.destroy();
+    this.fallingBlocks = [];
 
     const spawnX = this.level._checkpointX ?? this.level.playerStart.x;
     const spawnY = this.level._checkpointY ?? this.level.playerStart.y;
@@ -1689,6 +2693,9 @@ export class GameScene extends Phaser.Scene {
     this.player.setFlipY(false);
     this.player.alive = true;
     this.player.grounded = false;
+    this.idleTimer = 0;
+    this.idleState = "normal";
+    this.idleStateTimer = 0;
   }
 
   private showLevelComplete(): void {
@@ -2049,6 +3056,14 @@ export class GameScene extends Phaser.Scene {
       const gx = Math.floor(fb.x / TILE_SIZE);
       const gy = Math.floor(fb.y / TILE_SIZE);
       if (this.isSolid(gx, gy)) {
+        const hitTile = this.getTile(gx, gy);
+        if (hitTile === TileType.ICE_BREAKABLE) {
+          this.hitIceBreakable(gx, gy);
+        } else if (hitTile === TileType.MIRROR) {
+          fb.vx = -fb.vx; // Reflect off mirror
+          fb.x += fb.vx * 2;
+          continue;
+        }
         fb.alive = false;
         continue;
       }
@@ -2075,15 +3090,33 @@ export class GameScene extends Phaser.Scene {
         const ent = this.entities[e];
         if (!ent.alive) continue;
         if (ent.type === "coin" || ent.type === "flag" || ent.type === "fake_flag" ||
-            ent.type === "mushroom" || ent.type === "star" || ent.type === "fire_flower") continue;
+            ent.type === "mushroom" || ent.type === "star" || ent.type === "fire_flower" ||
+            ent.type === "slowmo" || ent.type === "saw_blade" || ent.type === "cannon_bullet" || ent.type === "shooter_bullet") continue;
         const dx = Math.abs(fb.x - ent.x);
         const dy = Math.abs(fb.y - ent.y);
         if (dx < 14 && dy < 14) {
-          ent.alive = false;
-          this.entitySprites[e]?.setVisible(false);
+          if (ent.type === "giant_goomba") {
+            ent.hp = (ent.hp ?? GIANT_GOOMBA_HP) - 1;
+            ent.invFrames = GIANT_GOOMBA_INV_FRAMES;
+            playBossHit();
+            this.emitStompParticles(ent.x, ent.y);
+            if (ent.hp <= 0) {
+              ent.alive = false;
+              this.entitySprites[e]?.setVisible(false);
+              for (let c = 0; c < 8; c++) {
+                this.emitCoinParticles(ent.x + (Math.random() - 0.5) * 40, ent.y + (Math.random() - 0.5) * 40);
+              }
+              this.coins += 10;
+              this.pulseHud(this.hudCoins);
+              gameEvents.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
+            }
+          } else {
+            ent.alive = false;
+            this.entitySprites[e]?.setVisible(false);
+            playStomp();
+            this.emitStompParticles(ent.x, ent.y);
+          }
           fb.alive = false;
-          playStomp();
-          this.emitStompParticles(ent.x, ent.y);
           break;
         }
       }
@@ -2120,15 +3153,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateGravityFlip(): void {
-    if (!this.gravityFlipped) return;
-    if (this.gravityFlipTimer > 0) {
-      this.gravityFlipTimer--;
-      if (this.gravityFlipTimer <= 0) {
-        this.gravityFlipped = false;
-        this.player.setFlipY(false);
-        this.showMessage("Gravidade normalizada!");
-      }
-    }
+    // Gravity stays flipped until player touches a GRAVITY_NORMAL tile
   }
 
   private checkGravityZoneContact(): void {
@@ -2137,11 +3162,18 @@ export class GameScene extends Phaser.Scene {
     // Check tiles player overlaps
     for (let gy = cy - 1; gy <= cy; gy++) {
       for (let gx = cx - 1; gx <= cx; gx++) {
-        if (this.getTile(gx, gy) === TileType.GRAVITY_ZONE && !this.gravityFlipped) {
+        const tile = this.getTile(gx, gy);
+        if (tile === TileType.GRAVITY_ZONE && !this.gravityFlipped) {
           this.gravityFlipped = true;
-          this.gravityFlipTimer = GRAVITY_FLIP_DEFAULT_DURATION;
           this.player.setFlipY(true);
           playGravityFlip();
+          return;
+        }
+        if (tile === TileType.GRAVITY_NORMAL && this.gravityFlipped) {
+          this.gravityFlipped = false;
+          this.player.setFlipY(false);
+          playGravityNormalize();
+          this.showMessage("Gravidade normalizada!");
           return;
         }
       }
@@ -2387,6 +3419,41 @@ export class GameScene extends Phaser.Scene {
       emitting: false,
     });
     this.coinEmitter.setDepth(60);
+
+    // Gravity particle texture — small pink dot
+    if (!this.textures.exists("particle_gravity")) {
+      const tex = this.textures.createCanvas("particle_gravity", 3, 3);
+      const pctx = tex!.getContext();
+      pctx.fillStyle = "#FF66BB";
+      pctx.beginPath();
+      pctx.arc(1.5, 1.5, 1.5, 0, Math.PI * 2);
+      pctx.fill();
+      tex!.refresh();
+    }
+
+    // Gravity zone — particles float upward
+    this.gravityUpEmitter = this.add.particles(0, 0, "particle_gravity", {
+      speed: { min: 15, max: 35 },
+      angle: { min: 255, max: 285 },
+      lifespan: 700,
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 0.9, end: 0 },
+      quantity: 1,
+      emitting: false,
+    });
+    this.gravityUpEmitter.setDepth(15);
+
+    // Gravity normal — particles fall downward
+    this.gravityDownEmitter = this.add.particles(0, 0, "particle_gravity", {
+      speed: { min: 15, max: 35 },
+      angle: { min: 75, max: 105 },
+      lifespan: 700,
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 0.9, end: 0 },
+      quantity: 1,
+      emitting: false,
+    });
+    this.gravityDownEmitter.setDepth(15);
 
     // Trail emitter (configured based on equipped trail)
     this.setupTrailEmitter();

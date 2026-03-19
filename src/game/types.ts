@@ -35,6 +35,42 @@ export enum TileType {
   TIMED_BLOCK = 27,
   GRAVITY_ZONE = 28,
   MOVING_PLATFORM = 29,
+  // Decorative & new terrain (v0.6+)
+  SAND = 30,
+  SNOW = 31,
+  WOOD = 32,
+  MOSSY_STONE = 33,
+  FENCE = 34,
+  TORCH = 35,
+  CHAIN = 36,
+  SIGN = 37,
+  METAL = 38,
+  GRATE = 39,
+  WATER = 40,
+  CRYSTAL = 41,
+  MUSHROOM_BLOCK = 42,
+  GRAVITY_NORMAL = 43,
+  // New gameplay mechanics (feature-ideas)
+  TELEPORTER_A = 44,
+  TELEPORTER_B = 45,
+  CANNON_LEFT = 46,
+  CANNON_RIGHT = 47,
+  CANNON_UP = 48,
+  CANNON_DOWN = 49,
+  STICKY_BLOCK = 50,
+  KEY_RED = 51,
+  KEY_BLUE = 52,
+  KEY_GREEN = 53,
+  LOCK_RED = 54,
+  LOCK_BLUE = 55,
+  LOCK_GREEN = 56,
+  ICE_BREAKABLE = 57,
+  WIND_UP = 58,
+  WIND_DOWN = 59,
+  WIND_LEFT = 60,
+  WIND_RIGHT = 61,
+  MIRROR = 62,
+  SIGN_CUSTOM = 63,
 }
 
 /** Entity types that can be placed on the map */
@@ -49,7 +85,14 @@ export type EntityType =
   | "fake_flag"
   | "mushroom"
   | "star"
-  | "fire_flower";
+  | "fire_flower"
+  | "ghost"
+  | "shooter"
+  | "giant_goomba"
+  | "saw_blade"
+  | "slowmo"
+  | "cannon_bullet"
+  | "shooter_bullet";
 
 /** Power-up types that can be spawned from blocks or triggers */
 export type PowerUpType = "mushroom" | "star" | "fire_flower";
@@ -66,10 +109,24 @@ export interface GameEntity {
   alive?: boolean;
   frame?: number;
   timer?: number;
+  dying?: boolean;
+  deathType?: "lava" | "spike";
+  deathTimer?: number;
+  // Giant goomba HP
+  hp?: number;
+  invFrames?: number;
+  // Saw blade path
+  waypoints?: { x: number; y: number }[];
+  waypointIndex?: number;
+  // Custom sign text
+  text?: string;
 }
 
 /** Troll trigger actions */
-export type TrollAction = "spawn" | "shake" | "message" | "fall_blocks" | "spawn_powerup" | "slide_block" | "gravity_flip";
+export type TrollAction = "spawn" | "shake" | "message" | "fall_blocks" | "spawn_powerup" | "slide_block" | "gravity_flip" | "sound";
+
+/** Available troll SFX types */
+export type TrollSfxType = "sfx_laugh" | "sfx_scream" | "sfx_boom" | "sfx_horn" | "sfx_sad" | "sfx_fart" | "sfx_drama" | "sfx_bruh";
 
 /** A troll trigger definition */
 export interface TrollTrigger {
@@ -96,6 +153,8 @@ export interface TrollTrigger {
   slideToY?: number;
   // gravity_flip
   flipDuration?: number;
+  // sound
+  sfx?: TrollSfxType;
 }
 
 /** Player state */
@@ -158,11 +217,20 @@ export interface LevelData {
   gridW: number;
   gridH: number;
   tiles: number[][];
-  entities: { type: EntityType; gx: number; gy: number }[];
+  entities: { type: EntityType; gx: number; gy: number; text?: string; waypoints?: { gx: number; gy: number }[] }[];
   trolls: TrollTrigger[];
   slideBlocks?: SlideBlockConfig[];
   movingPlatforms?: MovingPlatformConfig[];
   playerStart: { x: number; y: number };
+  // Teleporter pairs (A↔B linked by index)
+  teleporterPairs?: { ax: number; ay: number; bx: number; by: number }[];
+  // Sign texts keyed by "gx,gy"
+  signTexts?: Record<string, string>;
+  // Tags
+  tags?: string[];
+  // Community stats (read-only, from DB)
+  communityDeaths?: number;
+  completionRate?: number;
   // Metadata (from database)
   authorId?: string;
   authorNickname?: string;
@@ -191,6 +259,13 @@ export interface ParsedLevel {
   playerStart: { x: number; y: number };
   _checkpointX?: number;
   _checkpointY?: number;
+  // Teleporter pairs
+  teleporterPairs?: { ax: number; ay: number; bx: number; by: number }[];
+  // Sign texts keyed by "gx,gy"
+  signTexts?: Record<string, string>;
+  // Community stats
+  communityDeaths?: number;
+  completionRate?: number;
 }
 
 /** Editor palette item */
@@ -204,7 +279,7 @@ export interface PaletteItem {
   color: string;
 }
 
-export type PaletteCategory = "terrain" | "danger" | "interactive" | "entities";
+export type PaletteCategory = "terrain" | "danger" | "interactive" | "entities" | "decoration";
 
 /** User profile from database */
 export interface UserProfile {

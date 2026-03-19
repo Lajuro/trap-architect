@@ -12,6 +12,9 @@ import {
   PALETTE_ITEMS,
   FIXED_STEP,
   MAX_ACCUMULATED,
+  resolveAutoTileTexture,
+  AUTOTILE_TILES,
+  DECORATIVE_TILES,
 } from "../constants";
 import { TileType, type EntityType, type LevelData, type TrollTrigger } from "../types";
 import { gameEvents } from "../events";
@@ -93,6 +96,7 @@ export class EditorScene extends Phaser.Scene {
 
   // UI overlays
   private zoomText!: Phaser.GameObjects.Text;
+  private resetZoomText!: Phaser.GameObjects.Text;
   private minimapGraphics!: Phaser.GameObjects.Graphics;
 
   // Tool state
@@ -112,6 +116,9 @@ export class EditorScene extends Phaser.Scene {
   private levelName = "Meu Nível";
   private bgColor = "#5c94fc";
   private music = "level1";
+
+  // Sign texts map for custom signs
+  private signTextsMap: Record<string, string> = {};
 
   // Keys
   private wasd!: {
@@ -242,6 +249,16 @@ export class EditorScene extends Phaser.Scene {
 
     // Mouse draw
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      // Check if clicking on reset zoom button (hit-test via getBounds in world coords)
+      if (this.resetZoomText.visible) {
+        const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        const bounds = this.resetZoomText.getBounds();
+        if (bounds.contains(worldPoint.x, worldPoint.y)) {
+          this.cameras.main.setZoom(1);
+          return;
+        }
+      }
+
       if (pointer.rightButtonDown()) {
         // Right-click = erase
         const { gx, gy } = this.pointerToGrid(pointer);
@@ -272,17 +289,24 @@ export class EditorScene extends Phaser.Scene {
     // Register React event listeners
     this.registerEventListeners();
 
-    // Zoom indicator (screen-fixed)
+    // Zoom indicator (positioned in world coords each frame)
     this.zoomText = this.add.text(10, 10, "100%", {
       fontSize: "14px",
       color: "#ffffff",
       backgroundColor: "#00000088",
       padding: { x: 6, y: 3 },
-    }).setScrollFactor(0).setDepth(100);
+    }).setDepth(100);
 
-    // Mini-map graphics (screen-fixed)
+    // Reset zoom button (positioned in world coords each frame, hidden by default)
+    this.resetZoomText = this.add.text(0, 10, "↺ Resetar", {
+      fontSize: "13px",
+      color: "#ff8c00",
+      backgroundColor: "#00000088",
+      padding: { x: 6, y: 3 },
+    }).setDepth(100).setVisible(false);
+
+    // Mini-map graphics (positioned in world coords each frame)
     this.minimapGraphics = this.add.graphics()
-      .setScrollFactor(0)
       .setDepth(100);
 
     // Signal ready
@@ -329,9 +353,35 @@ export class EditorScene extends Phaser.Scene {
     // Hover preview
     this.updateHoverPreview();
 
-    // Zoom indicator
-    const zoomPct = Math.round(this.cameras.main.zoom * 100);
+    // HUD positioning — place in world coords so they appear fixed on screen
+    const cam = this.cameras.main;
+    const zoomPct = Math.round(cam.zoom * 100);
+    const pxScale = 1 / cam.zoom;
+    const wx = cam.worldView.x;
+    const wy = cam.worldView.y;
+
+    this.zoomText.setScale(pxScale);
+    this.zoomText.setPosition(wx + 10 * pxScale, wy + 10 * pxScale);
     this.zoomText.setText(`${zoomPct}%`);
+
+    // Reset zoom button — show only when zoom ≠ 100%
+    if (zoomPct !== 100) {
+      this.resetZoomText.setVisible(true);
+      this.resetZoomText.setScale(pxScale);
+      this.resetZoomText.setPosition(
+        wx + (10 + this.zoomText.width + 8) * pxScale,
+        wy + 10 * pxScale,
+      );
+
+      // Hover color effect
+      const ptr = this.input.activePointer;
+      const worldPtr = cam.getWorldPoint(ptr.x, ptr.y);
+      const bounds = this.resetZoomText.getBounds();
+      const hovering = bounds.contains(worldPtr.x, worldPtr.y);
+      this.resetZoomText.setColor(hovering ? "#ffcc66" : "#ff8c00");
+    } else {
+      this.resetZoomText.setVisible(false);
+    }
 
     // Mini-map
     this.drawMinimap();
@@ -484,7 +534,13 @@ export class EditorScene extends Phaser.Scene {
   private createTileSprite(gx: number, gy: number, tile: number): Phaser.GameObjects.Image | null {
     if (tile === TileType.AIR) return null;
 
-    const key = this.getTileTexture(tile);
+    // Try auto-tile resolution first
+    const getTile = (tx: number, ty: number): TileType => {
+      if (ty < 0 || ty >= this.gridH || tx < 0 || tx >= this.gridW) return TileType.AIR;
+      return this.tiles[ty][tx] as TileType;
+    };
+    const key = resolveAutoTileTexture(tile as TileType, gx, gy, getTile)
+      ?? this.getTileTexture(tile);
     if (!key) return null;
 
     const sprite = this.add
@@ -494,6 +550,16 @@ export class EditorScene extends Phaser.Scene {
     // Show invisible tiles with transparency in editor
     if (tile === TileType.INVISIBLE) {
       sprite.setAlpha(0.3);
+    }
+
+    // Decorative non-solid tiles shown semi-transparent in editor
+    if (DECORATIVE_TILES.has(tile as TileType)) {
+      sprite.setAlpha(0.8);
+    }
+
+    // Conveyor left uses flipped texture
+    if (tile === TileType.CONVEYOR_L) {
+      sprite.setFlipX(true);
     }
 
     return sprite;
@@ -529,9 +595,51 @@ export class EditorScene extends Phaser.Scene {
       [TileType.SLIDE_BLOCK]: "tile_slide_block",
       [TileType.TIMED_BLOCK]: "tile_timed_block",
       [TileType.GRAVITY_ZONE]: "tile_gravity_zone",
+      [TileType.GRAVITY_NORMAL]: "tile_gravity_normal",
       [TileType.MOVING_PLATFORM]: "tile_moving_platform",
+      [TileType.SAND]: "tile_sand",
+      [TileType.SNOW]: "tile_snow",
+      [TileType.WOOD]: "tile_wood",
+      [TileType.MOSSY_STONE]: "tile_mossy_stone",
+      [TileType.FENCE]: "tile_fence",
+      [TileType.TORCH]: "tile_torch",
+      [TileType.CHAIN]: "tile_chain",
+      [TileType.SIGN]: "tile_sign",
+      [TileType.METAL]: "tile_metal",
+      [TileType.GRATE]: "tile_grate",
+      [TileType.WATER]: "tile_water",
+      [TileType.CRYSTAL]: "tile_crystal",
+      [TileType.MUSHROOM_BLOCK]: "tile_mushroom",
+      [TileType.TELEPORTER_A]: "tile_teleporter_a",
+      [TileType.TELEPORTER_B]: "tile_teleporter_b",
+      [TileType.CANNON_LEFT]: "tile_cannon_left",
+      [TileType.CANNON_RIGHT]: "tile_cannon_right",
+      [TileType.CANNON_UP]: "tile_cannon_up",
+      [TileType.CANNON_DOWN]: "tile_cannon_down",
+      [TileType.STICKY_BLOCK]: "tile_sticky_block",
+      [TileType.KEY_RED]: "tile_key_red",
+      [TileType.KEY_BLUE]: "tile_key_blue",
+      [TileType.KEY_GREEN]: "tile_key_green",
+      [TileType.LOCK_RED]: "tile_lock_red",
+      [TileType.LOCK_BLUE]: "tile_lock_blue",
+      [TileType.LOCK_GREEN]: "tile_lock_green",
+      [TileType.ICE_BREAKABLE]: "tile_ice_breakable",
+      [TileType.WIND_UP]: "tile_wind_up",
+      [TileType.WIND_DOWN]: "tile_wind_down",
+      [TileType.WIND_LEFT]: "tile_wind_left",
+      [TileType.WIND_RIGHT]: "tile_wind_right",
+      [TileType.MIRROR]: "tile_mirror",
+      [TileType.SIGN_CUSTOM]: "tile_sign_custom",
     };
     return map[tile] ?? null;
+  }
+
+  private refreshAutoTile(gx: number, gy: number): void {
+    if (gy < 0 || gy >= this.gridH || gx < 0 || gx >= this.gridW) return;
+    if (!AUTOTILE_TILES.has(this.tiles[gy][gx] as TileType)) return;
+    const old = this.tileSprites[gy]?.[gx];
+    if (old) old.destroy();
+    this.tileSprites[gy][gx] = this.createTileSprite(gx, gy, this.tiles[gy][gx]);
   }
 
   private getEntityTexture(type: EntityType): string {
@@ -547,6 +655,11 @@ export class EditorScene extends Phaser.Scene {
       mushroom: "entity_mushroom",
       star: "entity_star",
       fire_flower: "entity_fire_flower",
+      ghost: "entity_ghost",
+      shooter: "entity_shooter",
+      giant_goomba: "entity_giant_goomba",
+      saw_blade: "entity_saw_blade",
+      slowmo: "entity_slowmo",
     };
     return map[type] ?? "entity_goomba";
   }
@@ -573,8 +686,14 @@ export class EditorScene extends Phaser.Scene {
     // Out of bounds
     if (gx < 0 || gx >= this.gridW || gy < 0 || gy >= this.gridH) return;
 
-    const item = PALETTE_ITEMS[this.selectedPaletteId];
+    const item = PALETTE_ITEMS.find((p) => p.id === this.selectedPaletteId);
     if (!item) return;
+
+    // Eraser: remove entity first, then tile
+    if (item.tileType === TileType.AIR) {
+      this.eraseTile(gx, gy);
+      return;
+    }
 
     if (item.entityType) {
       this.placeEntity(item.entityType, gx, gy);
@@ -597,6 +716,12 @@ export class EditorScene extends Phaser.Scene {
     const old = this.tileSprites[gy]?.[gx];
     if (old) old.destroy();
     this.tileSprites[gy][gx] = this.createTileSprite(gx, gy, tileType);
+
+    // Refresh adjacent neighbors so auto-tile visuals update
+    this.refreshAutoTile(gx, gy - 1);
+    this.refreshAutoTile(gx, gy + 1);
+    this.refreshAutoTile(gx - 1, gy);
+    this.refreshAutoTile(gx + 1, gy);
 
     this.emitLevelData();
   }
@@ -712,20 +837,27 @@ export class EditorScene extends Phaser.Scene {
   // Mini-map
   // ============================================================
   private drawMinimap(): void {
-    this.minimapGraphics.clear();
+    const cam = this.cameras.main;
+    const pxScale = 1 / cam.zoom;
+    const screenW = this.scale.width;
     const MW = 200;
     const MH = 60;
-    // Use game config dimensions (fixed) instead of cam dimensions (affected by zoom)
-    const gameW = Number(this.game.config.width);
-    const gameH = Number(this.game.config.height);
-    const mx = gameW - MW - 10;
-    const my = gameH - MH - 10;
+
+    // Position minimap at top-right of screen in world coords
+    this.minimapGraphics.setScale(pxScale);
+    this.minimapGraphics.setPosition(
+      cam.worldView.x + (screenW - MW - 10) * pxScale,
+      cam.worldView.y + 10 * pxScale,
+    );
+
+    // Draw everything at local coordinates (0,0 based)
+    this.minimapGraphics.clear();
 
     // Background
     this.minimapGraphics.fillStyle(0x000000, 0.6);
-    this.minimapGraphics.fillRoundedRect(mx, my, MW, MH, 4);
+    this.minimapGraphics.fillRoundedRect(0, 0, MW, MH, 4);
     this.minimapGraphics.lineStyle(1, 0x666666, 1);
-    this.minimapGraphics.strokeRoundedRect(mx, my, MW, MH, 4);
+    this.minimapGraphics.strokeRoundedRect(0, 0, MW, MH, 4);
 
     // Scale factors
     const sx = MW / (this.gridW * TILE_SIZE);
@@ -739,8 +871,8 @@ export class EditorScene extends Phaser.Scene {
           const color = this.getMinimapTileColor(t);
           this.minimapGraphics.fillStyle(color, 0.9);
           this.minimapGraphics.fillRect(
-            mx + gx * TILE_SIZE * sx,
-            my + gy * TILE_SIZE * sy,
+            gx * TILE_SIZE * sx,
+            gy * TILE_SIZE * sy,
             Math.max(1, TILE_SIZE * sx),
             Math.max(1, TILE_SIZE * sy),
           );
@@ -753,26 +885,29 @@ export class EditorScene extends Phaser.Scene {
       const ecolor = e.type === "player" ? 0xff8c00 : e.type === "flag" ? 0x00ff00 : 0xff4444;
       this.minimapGraphics.fillStyle(ecolor, 1);
       this.minimapGraphics.fillRect(
-        mx + e.gx * TILE_SIZE * sx - 1,
-        my + e.gy * TILE_SIZE * sy - 1,
+        e.gx * TILE_SIZE * sx - 1,
+        e.gy * TILE_SIZE * sy - 1,
         Math.max(2, TILE_SIZE * sx + 1),
         Math.max(2, TILE_SIZE * sy + 1),
       );
     }
 
-    // Viewport rectangle
-    const cam = this.cameras.main;
-    const vx = mx + cam.scrollX * sx;
-    const vy = my + cam.scrollY * sy;
-    const vw = (gameW / cam.zoom) * sx;
-    const vh = (gameH / cam.zoom) * sy;
-    this.minimapGraphics.lineStyle(2, 0xffff00, 0.9);
-    this.minimapGraphics.strokeRect(
-      Phaser.Math.Clamp(vx, mx, mx + MW),
-      Phaser.Math.Clamp(vy, my, my + MH),
-      Math.min(vw, MW),
-      Math.min(vh, MH)
-    );
+    // Viewport rectangle — map camera worldView onto minimap coords
+    const vpL = cam.worldView.x * sx;
+    const vpT = cam.worldView.y * sy;
+    const vpR = (cam.worldView.x + cam.worldView.width) * sx;
+    const vpB = (cam.worldView.y + cam.worldView.height) * sy;
+
+    // Clamp all 4 edges so the rect never overflows the minimap
+    const rx = Phaser.Math.Clamp(vpL, 0, MW);
+    const ry = Phaser.Math.Clamp(vpT, 0, MH);
+    const rw = Phaser.Math.Clamp(vpR, 0, MW) - rx;
+    const rh = Phaser.Math.Clamp(vpB, 0, MH) - ry;
+
+    if (rw > 0 && rh > 0) {
+      this.minimapGraphics.lineStyle(2, 0xffff00, 0.9);
+      this.minimapGraphics.strokeRect(rx, ry, rw, rh);
+    }
   }
 
   private getMinimapTileColor(t: number): number {
@@ -793,6 +928,18 @@ export class EditorScene extends Phaser.Scene {
     if (t === TileType.CHECKPOINT) return 0x44aaff;
     if (t === TileType.FAKE_GROUND) return 0x228b22;
     if (t === TileType.INVISIBLE) return 0x4444ff;
+    if (t === TileType.GRAVITY_ZONE) return 0xcc3388;
+    if (t === TileType.GRAVITY_NORMAL) return 0xbb2288;
+    if (t === TileType.TELEPORTER_A || t === TileType.TELEPORTER_B) return 0x8800ff;
+    if (t === TileType.CANNON_LEFT || t === TileType.CANNON_RIGHT || t === TileType.CANNON_UP || t === TileType.CANNON_DOWN) return 0x333333;
+    if (t === TileType.STICKY_BLOCK) return 0xffaa00;
+    if (t === TileType.KEY_RED || t === TileType.LOCK_RED) return 0xff2222;
+    if (t === TileType.KEY_BLUE || t === TileType.LOCK_BLUE) return 0x2266ff;
+    if (t === TileType.KEY_GREEN || t === TileType.LOCK_GREEN) return 0x22cc44;
+    if (t === TileType.ICE_BREAKABLE) return 0xcceeFF;
+    if (t === TileType.WIND_UP || t === TileType.WIND_DOWN || t === TileType.WIND_LEFT || t === TileType.WIND_RIGHT) return 0xaaddff;
+    if (t === TileType.MIRROR) return 0xccccff;
+    if (t === TileType.SIGN_CUSTOM) return 0x886622;
     return 0x44aa44;
   }
 
@@ -838,6 +985,10 @@ export class EditorScene extends Phaser.Scene {
           action.gy!,
           tile
         );
+        this.refreshAutoTile(action.gx!, action.gy! - 1);
+        this.refreshAutoTile(action.gx!, action.gy! + 1);
+        this.refreshAutoTile(action.gx! - 1, action.gy!);
+        this.refreshAutoTile(action.gx! + 1, action.gy!);
         break;
       }
       case "entity_add": {
@@ -928,6 +1079,32 @@ export class EditorScene extends Phaser.Scene {
   }
 
   exportLevelData(): LevelData {
+    // Build teleporter pairs by scanning for A/B tiles
+    const teleporterPairs: Array<{ ax: number; ay: number; bx: number; by: number }> = [];
+    const teleA: Array<{ x: number; y: number }> = [];
+    const teleB: Array<{ x: number; y: number }> = [];
+    for (let gy = 0; gy < this.gridH; gy++) {
+      for (let gx = 0; gx < this.gridW; gx++) {
+        if (this.tiles[gy][gx] === TileType.TELEPORTER_A) teleA.push({ x: gx, y: gy });
+        if (this.tiles[gy][gx] === TileType.TELEPORTER_B) teleB.push({ x: gx, y: gy });
+      }
+    }
+    const pairCount = Math.min(teleA.length, teleB.length);
+    for (let i = 0; i < pairCount; i++) {
+      teleporterPairs.push({ ax: teleA[i].x, ay: teleA[i].y, bx: teleB[i].x, by: teleB[i].y });
+    }
+
+    // Build sign texts map
+    const signTexts: Record<string, string> = {};
+    for (let gy = 0; gy < this.gridH; gy++) {
+      for (let gx = 0; gx < this.gridW; gx++) {
+        if (this.tiles[gy][gx] === TileType.SIGN_CUSTOM) {
+          const key = `${gx},${gy}`;
+          signTexts[key] = (this.signTextsMap?.[key]) ?? "...";
+        }
+      }
+    }
+
     return {
       name: this.levelName,
       bgColor: this.bgColor,
@@ -942,6 +1119,8 @@ export class EditorScene extends Phaser.Scene {
       slideBlocks: [],
       movingPlatforms: [],
       playerStart: { x: this.playerStart.gx, y: this.playerStart.gy },
+      teleporterPairs,
+      signTexts,
     };
   }
 
