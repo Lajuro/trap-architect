@@ -1,4 +1,5 @@
 import HomeLevelFeed from "@/components/HomeLevelFeed";
+import WeeklyChallenge from "@/components/WeeklyChallenge";
 import HudBar from "@/components/ui/HudBar";
 import HudButton from "@/components/ui/HudButton";
 import FloatingBackground from "@/components/ui/FloatingBackground";
@@ -40,6 +41,9 @@ export default function HomePage() {
           apiUrl="/api/levels?featured=true&limit=3"
           icon={<PixelIcon name="star" size={14} color="#FFD700" />}
         />
+
+        {/* Weekly Challenge */}
+        <WeeklyChallenge />
 
         {/* Recent Levels */}
         <HomeLevelFeed

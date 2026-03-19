@@ -1,4 +1,4 @@
-import { TileType, type CreatorRank, type CosmeticSkin, type CosmeticTrail, type CosmeticDeathEffect, type CosmeticFrame, type PaletteItem } from "./types";
+import { TileType, type CreatorRank, type CosmeticSkin, type CosmeticTrail, type CosmeticDeathEffect, type CosmeticFrame, type PaletteItem, type LevelTheme, type AchievementDef } from "./types";
 
 // ============================================================
 // Physics
@@ -503,3 +503,137 @@ export const CHAR_TO_TILE: Record<string, TileType> = {
   "0": TileType.WIND_RIGHT,
   p: TileType.SIGN_CUSTOM,
 };
+
+// ============================================================
+// Theme Palettes
+// ============================================================
+export interface ThemePalette {
+  name: string;
+  label: string;
+  bgColor: string;
+  groundTop: string;
+  ground: string;
+  brick: string;
+  platform: string;
+  spike: string;
+  accent: string;
+  ambient?: { color: number; particle: string };
+}
+
+export const THEME_PALETTES: Record<LevelTheme, ThemePalette> = {
+  default: {
+    name: "default",
+    label: "Clássico",
+    bgColor: "#5c94fc",
+    groundTop: "#228b22",
+    ground: "#8b5a2b",
+    brick: "#cd853f",
+    platform: "#b0804a",
+    spike: "#aaaaaa",
+    accent: "#ff8c00",
+  },
+  snow: {
+    name: "snow",
+    label: "Neve",
+    bgColor: "#c8d8e8",
+    groundTop: "#e8f0f8",
+    ground: "#a0b8d0",
+    brick: "#b8c8d8",
+    platform: "#d0dde8",
+    spike: "#88aacc",
+    accent: "#4488cc",
+    ambient: { color: 0xffffff, particle: "snowflake" },
+  },
+  inferno: {
+    name: "inferno",
+    label: "Inferno",
+    bgColor: "#1a0a00",
+    groundTop: "#8b2500",
+    ground: "#4a1800",
+    brick: "#6b3000",
+    platform: "#5a2000",
+    spike: "#ff4400",
+    accent: "#ff6600",
+    ambient: { color: 0xff4400, particle: "ember" },
+  },
+  neon: {
+    name: "neon",
+    label: "Neon",
+    bgColor: "#0a0a14",
+    groundTop: "#00ff88",
+    ground: "#1a1a2e",
+    brick: "#ff00ff",
+    platform: "#00ccff",
+    spike: "#ff0044",
+    accent: "#ffff00",
+    ambient: { color: 0x00ff88, particle: "scanline" },
+  },
+  retro: {
+    name: "retro",
+    label: "Retro",
+    bgColor: "#9bbc0f",
+    groundTop: "#306230",
+    ground: "#0f380f",
+    brick: "#8bac0f",
+    platform: "#306230",
+    spike: "#0f380f",
+    accent: "#9bbc0f",
+  },
+  underwater: {
+    name: "underwater",
+    label: "Subaquático",
+    bgColor: "#0a2a4a",
+    groundTop: "#1a6a5a",
+    ground: "#0a3a2a",
+    brick: "#2a5a6a",
+    platform: "#1a5a5a",
+    spike: "#446688",
+    accent: "#44ccaa",
+    ambient: { color: 0x88ccff, particle: "bubble" },
+  },
+};
+
+// ============================================================
+// Achievements
+// ============================================================
+export const ACHIEVEMENTS: AchievementDef[] = [
+  { id: "first_death", name: "Primeira Morte", description: "Morra pela primeira vez", icon: "💀" },
+  { id: "100_deaths", name: "Persistente", description: "Morra 100 vezes", icon: "🪦" },
+  { id: "1000_deaths", name: "Imortal às Avessas", description: "Morra 1.000 vezes", icon: "☠️" },
+  { id: "first_clear", name: "Primeiro Nível", description: "Complete 1 nível", icon: "🏁" },
+  { id: "10_clears", name: "Explorador", description: "Complete 10 níveis", icon: "🗺️" },
+  { id: "50_clears", name: "Veterano", description: "Complete 50 níveis", icon: "🎖️" },
+  { id: "100_clears", name: "Lendário", description: "Complete 100 níveis", icon: "👑" },
+  { id: "first_publish", name: "Criador", description: "Publique 1 nível", icon: "🔨" },
+  { id: "10_publish", name: "Arquiteto", description: "Publique 10 níveis", icon: "🏗️" },
+  { id: "speedster", name: "Velocista", description: "Complete um nível em menos de 10 segundos", icon: "⚡" },
+  { id: "no_death_run", name: "Perfeito", description: "Complete um nível sem morrer", icon: "✨" },
+  { id: "1000_coins", name: "Rico", description: "Colete 1.000 moedas", icon: "💰" },
+  { id: "campaign_done", name: "Herói da Campanha", description: "Complete todas as fases da campanha", icon: "🏆" },
+  { id: "liked_100", name: "Popular", description: "Receba 100 likes nos seus níveis", icon: "❤️" },
+  { id: "devs_choice", name: "Escolha dos Devs", description: "Receba um Dev's Choice", icon: "⭐" },
+];
+
+// ============================================================
+// Custom Titles
+// ============================================================
+export interface TitleDef {
+  id: string;
+  name: string;
+  unlock: string; // human-readable unlock description
+  cost: number; // 0 = free / achievement-unlocked
+}
+
+export const TITLES: TitleDef[] = [
+  { id: "novato", name: "Novato", unlock: "Padrão (grátis)", cost: 0 },
+  { id: "mestre_trolls", name: "Mestre dos Trolls", unlock: "Publique 20 níveis com tag troll", cost: 0 },
+  { id: "velocista", name: "Velocista", unlock: "Conquista: Velocista", cost: 0 },
+  { id: "sobrevivente", name: "Sobrevivente", unlock: "Conquista: Imortal às Avessas", cost: 0 },
+  { id: "arquiteto_supremo", name: "Arquiteto Supremo", unlock: "Rank Arquiteto", cost: 0 },
+  { id: "lenda_viva", name: "Lenda Viva", unlock: "Rank Lenda", cost: 0 },
+  { id: "colecionador", name: "Colecionador", unlock: "Desbloqueie 15+ cosméticos", cost: 0 },
+  { id: "desafiante", name: "Desafiante", unlock: "Complete 10 desafios semanais", cost: 0 },
+  { id: "explorador", name: "Explorador", unlock: "Compre na loja", cost: 50 },
+  { id: "heroi", name: "Herói", unlock: "Compre na loja", cost: 100 },
+  { id: "lendario", name: "Lendário", unlock: "Compre na loja", cost: 200 },
+];

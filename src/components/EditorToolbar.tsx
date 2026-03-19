@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { gameEvents, GAME_EVENTS } from "@/game/events";
 import { EDITOR_EVENTS } from "@/game/scenes/EditorScene";
-import type { LevelData, TrollTrigger } from "@/game/types";
+import type { LevelData, TrollTrigger, LevelTag, LevelTheme } from "@/game/types";
+import { LEVEL_TAGS, TAG_CONFIG, LEVEL_THEMES } from "@/game/types";
+import { THEME_PALETTES } from "@/game/constants";
 import { generateThumbnail } from "@/lib/thumbnail";
 import { RankUpToast, useRankUpToast } from "@/components/RankUpToast";
 import {
@@ -28,6 +30,12 @@ import {
   Lock,
   Loader2,
   Save,
+  Tag,
+  Paintbrush,
+  Layers,
+  Copy,
+  Clipboard,
+  Scissors,
 } from "lucide-react";
 
 export function EditorToolbar() {
@@ -46,6 +54,9 @@ export function EditorToolbar() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [configOpen, setConfigOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<LevelTag[]>([]);
+  const [theme, setTheme] = useState<LevelTheme>("default");
+  const [activeLayer, setActiveLayer] = useState<"foreground" | "background">("foreground");
   const { rankUp, checkRankUp, dismiss } = useRankUpToast();
   const configRef = useRef<HTMLDivElement>(null);
   const shortcutsRef = useRef<HTMLDivElement>(null);
@@ -67,6 +78,8 @@ export function EditorToolbar() {
       setGridW(d.gridW);
       setGridH(d.gridH);
       setTrolls(d.trolls);
+      if (d.tags) setSelectedTags(d.tags);
+      if (d.theme) setTheme(d.theme);
       if (userEdit) setTested(false);
     };
     const onTestComplete = () => setTested(true);
@@ -171,11 +184,14 @@ export function EditorToolbar() {
             gridW: levelData.gridW,
             gridH: levelData.gridH,
             tiles: levelData.tiles,
+            backgroundTiles: levelData.backgroundTiles,
             entities: levelData.entities,
             trolls: levelData.trolls,
             playerStart: levelData.playerStart,
             published: true,
             thumbnail,
+            tags: selectedTags,
+            theme,
           }),
         });
         if (res.ok) {
@@ -195,7 +211,7 @@ export function EditorToolbar() {
     };
     gameEvents.on(EDITOR_EVENTS.EXPORT_REQUEST, handler);
     gameEvents.emit(EDITOR_EVENTS.EXPORT_LEVEL);
-  }, [checkRankUp]);
+  }, [checkRankUp, selectedTags, theme]);
 
   const handleSaveDraft = useCallback(() => {
     setPublishMsg(null);
@@ -222,11 +238,14 @@ export function EditorToolbar() {
             gridW: levelData.gridW,
             gridH: levelData.gridH,
             tiles: levelData.tiles,
+            backgroundTiles: levelData.backgroundTiles,
             entities: levelData.entities,
             trolls: levelData.trolls,
             playerStart: levelData.playerStart,
             published: false,
             thumbnail,
+            tags: selectedTags,
+            theme,
           }),
         });
         if (res.ok) {
@@ -277,6 +296,46 @@ export function EditorToolbar() {
           label="Refazer"
           shortcut="Ctrl+Y"
           onClick={() => gameEvents.emit(EDITOR_EVENTS.REDO)}
+        />
+
+        <div className="w-px h-5 bg-border/30 mx-1" />
+
+        {/* Layer toggle */}
+        <button
+          onClick={() => {
+            const next = activeLayer === "foreground" ? "background" : "foreground";
+            setActiveLayer(next);
+            gameEvents.emit(EDITOR_EVENTS.SET_LAYER, next);
+          }}
+          className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] border transition-all ${
+            activeLayer === "background"
+              ? "border-purple-500 bg-purple-500/10 text-purple-400"
+              : "border-border/30 text-muted-foreground/60 hover:border-primary/30"
+          }`}
+          title="Alternar camada (L)"
+        >
+          <Layers size={12} />
+          {activeLayer === "foreground" ? "FG" : "BG"}
+        </button>
+
+        {/* Copy/Paste */}
+        <ToolbarButton
+          icon={Copy}
+          label="Copiar"
+          shortcut="Ctrl+C"
+          onClick={() => gameEvents.emit(EDITOR_EVENTS.COPY)}
+        />
+        <ToolbarButton
+          icon={Scissors}
+          label="Recortar"
+          shortcut="Ctrl+X"
+          onClick={() => gameEvents.emit(EDITOR_EVENTS.CUT)}
+        />
+        <ToolbarButton
+          icon={Clipboard}
+          label="Colar"
+          shortcut="Ctrl+V"
+          onClick={() => gameEvents.emit(EDITOR_EVENTS.PASTE)}
         />
 
         <div className="w-px h-5 bg-border/30 mx-1" />
@@ -499,6 +558,75 @@ export function EditorToolbar() {
                   <p className="text-[9px] text-muted-foreground/30 mt-1">
                     {gridW * gridH} tiles ({gridW} x {gridH})
                   </p>
+                </div>
+
+                {/* Theme Selector */}
+                <div className="border-t border-border/20 pt-3">
+                  <label className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Paintbrush size={10} /> Tema
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {LEVEL_THEMES.map((t) => {
+                      const palette = THEME_PALETTES[t];
+                      return (
+                        <button
+                          key={t}
+                          onClick={() => {
+                            setTheme(t);
+                            gameEvents.emit(EDITOR_EVENTS.SET_LEVEL_META, { theme: t });
+                          }}
+                          className={`text-[9px] px-2 py-1.5 rounded border transition-all ${
+                            theme === t
+                              ? "border-primary bg-primary/10 text-foreground"
+                              : "border-border/30 text-muted-foreground/60 hover:border-primary/30"
+                          }`}
+                        >
+                          <span
+                            className="inline-block w-2 h-2 rounded-full mr-1"
+                            style={{ backgroundColor: palette.groundTop }}
+                          />
+                          {palette.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Tags Selector */}
+                <div className="border-t border-border/20 pt-3">
+                  <label className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Tag size={10} /> Tags ({selectedTags.length}/3)
+                  </label>
+                  <div className="flex flex-wrap gap-1">
+                    {LEVEL_TAGS.map((tag) => {
+                      const cfg = TAG_CONFIG[tag];
+                      const isSelected = selectedTags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedTags(selectedTags.filter((t) => t !== tag));
+                            } else if (selectedTags.length < 3) {
+                              setSelectedTags([...selectedTags, tag]);
+                            }
+                          }}
+                          className={`text-[8px] px-1.5 py-0.5 border rounded transition-all ${
+                            isSelected
+                              ? "text-foreground font-bold"
+                              : "text-muted-foreground/50 hover:text-muted-foreground"
+                          }`}
+                          style={{
+                            borderColor: isSelected ? cfg.color : undefined,
+                            backgroundColor: isSelected ? cfg.color + "20" : undefined,
+                            color: isSelected ? cfg.color : undefined,
+                          }}
+                        >
+                          {cfg.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Troll Triggers */}

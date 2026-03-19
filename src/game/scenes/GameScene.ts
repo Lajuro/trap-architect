@@ -55,6 +55,7 @@ import {
   SAW_BLADE_SPEED,
   SLOWMO_DURATION,
   SLOWMO_FACTOR,
+  THEME_PALETTES,
 } from "../constants";
 import { TileType, type ParsedLevel, type GameEntity, type SlideBlockConfig, type MovingPlatformConfig, type PowerUpType } from "../types";
 import { gameEvents, GAME_EVENTS } from "../events";
@@ -232,6 +233,17 @@ export class GameScene extends Phaser.Scene {
   // Shooter bullets (shared with cannon bullets interface)
   private shooterBullets: { x: number; y: number; vx: number; vy: number; sprite: Phaser.GameObjects.Image }[] = [];
 
+  // Background layer tile sprites
+  private bgTileSprites: (Phaser.GameObjects.Image | null)[][] = [];
+
+  // Theme ambient particle emitter
+  private ambientEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+
+  // Ghost recording (replay ghosts)
+  private ghostRecording: Array<{ x: number; y: number; frame: number }> = [];
+  private ghostPlayback: Array<{ x: number; y: number; frame: number }> | null = null;
+  private ghostSprite: Phaser.GameObjects.Image | null = null;
+
   constructor() {
     super({ key: "GameScene" });
   }
@@ -291,6 +303,14 @@ export class GameScene extends Phaser.Scene {
     this.activeSignBubble?.destroy();
     this.activeSignBubble = null;
     this.activeSignKey = null;
+    // Reset background layer and ghost
+    this.bgTileSprites.forEach(row => row?.forEach(s => s?.destroy()));
+    this.bgTileSprites = [];
+    this.ambientEmitter?.destroy();
+    this.ambientEmitter = null;
+    this.ghostRecording = [];
+    this.ghostSprite?.destroy();
+    this.ghostSprite = null;
 
     this.cameras.main.setBackgroundColor(this.level.bgColor);
 
@@ -306,6 +326,15 @@ export class GameScene extends Phaser.Scene {
 
     // Build tile map
     this.buildTileMap();
+
+    // Build background tiles layer
+    this.buildBgTileMap();
+
+    // Setup theme ambient particles
+    this.setupAmbientParticles();
+
+    // Load ghost playback data if available
+    this.loadGhostPlayback();
 
     // Spawn entities
     this.spawnEntities();
@@ -537,12 +566,21 @@ export class GameScene extends Phaser.Scene {
 
       // Sign text bubble check
       this.updateSignBubbles();
+
+      // Ghost recording — record player position every 3rd frame
+      if (this.frame % 3 === 0 && this.player.alive) {
+        this.ghostRecording.push({ x: this.player.x, y: this.player.y, frame: this.frame });
+      }
+
+      // Ghost playback
+      this.updateGhostPlayback();
     }
 
     // Per-render updates (visual only, not physics)
     this.drawParallax();
     this.animateTiles();
     this.animatePlayer();
+    this.updateAmbientParticles();
 
     // Update HUD
     this.hudCoins.setText(`$ ${this.coins}`);
@@ -2702,6 +2740,9 @@ export class GameScene extends Phaser.Scene {
     this.player.alive = false;
     playComplete();
 
+    // Save ghost recording for replay
+    this.saveGhostRecording();
+
     // Emit completion data for LevelSelectScene progress tracking
     if (this.levelIndex >= 0) {
       gameEvents.emit(GAME_EVENTS.LEVEL_COMPLETE, {
@@ -2718,8 +2759,36 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
+    // Dark overlay for dramatic effect
+    const darkBg = this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0)
+      .setScrollFactor(0)
+      .setDepth(195);
+    this.tweens.add({ targets: darkBg, fillAlpha: 0.5, duration: 600 });
+
+    // Confetti burst particles
+    const confettiColors = [0xff4444, 0x44ff44, 0x4444ff, 0xffff44, 0xff44ff, 0x44ffff, 0xff8c00, 0xffd700];
+    for (let i = 0; i < 40; i++) {
+      const cx = GAME_WIDTH / 2 + (Math.random() - 0.5) * 200;
+      const cy = GAME_HEIGHT / 2;
+      const confetti = this.add
+        .rectangle(cx, cy, 6, 4, confettiColors[i % confettiColors.length])
+        .setScrollFactor(0)
+        .setDepth(210);
+      this.tweens.add({
+        targets: confetti,
+        x: cx + (Math.random() - 0.5) * 400,
+        y: cy + (Math.random() - 0.5) * 300 - 100,
+        angle: Math.random() * 720 - 360,
+        alpha: 0,
+        duration: 2000 + Math.random() * 1000,
+        ease: "Quad.easeOut",
+        onComplete: () => confetti.destroy(),
+      });
+    }
+
     const overlay = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "NIVEL COMPLETO!", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20, "NIVEL COMPLETO!", {
         fontFamily: "monospace",
         fontSize: "28px",
         color: "#44ff44",
@@ -2728,12 +2797,23 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(200);
+      .setDepth(200)
+      .setScale(0);
 
+    // Punch-in entrance animation
+    this.tweens.add({
+      targets: overlay,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 400,
+      ease: "Back.easeOut",
+    });
+
+    const elapsedSecs = Math.floor((Date.now() - this.startTime - this.totalPausedMs) / 1000);
     const statsText = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50, `Moedas: ${this.coins}  |  Mortes: ${this.deaths}`, {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, `Moedas: ${this.coins}  |  Mortes: ${this.deaths}  |  Tempo: ${elapsedSecs}s`, {
         fontFamily: "monospace",
-        fontSize: "16px",
+        fontSize: "14px",
         color: "#ffffff",
       })
       .setOrigin(0.5)
@@ -2741,23 +2821,27 @@ export class GameScene extends Phaser.Scene {
       .setDepth(200)
       .setAlpha(0);
 
-    this.tweens.add({
-      targets: overlay,
-      scaleX: 1.1,
-      scaleY: 1.1,
-      duration: 300,
-      yoyo: true,
-      repeat: 1,
-    });
+    // Show zero-death badge
+    const noDeath = this.deaths === 0;
+    const badgeText = noDeath
+      ? this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70, "✨ PERFEITO — Zero Mortes! ✨", {
+          fontFamily: "monospace",
+          fontSize: "12px",
+          color: "#ffd700",
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0)
+      : null;
 
-    this.time.delayedCall(800, () => {
+    this.time.delayedCall(600, () => {
       statsText.setAlpha(1);
+      if (badgeText) badgeText.setAlpha(1);
     });
 
     // Navigate to next level or level select
     this.time.delayedCall(3000, () => {
       overlay.destroy();
       statsText.destroy();
+      darkBg.destroy();
+      badgeText?.destroy();
       if (this.levelIndex >= 0 && this.levelIndex < CAMPAIGN_LEVELS.length - 1) {
         // Next level
         this.scene.start("GameScene", { levelIndex: this.levelIndex + 1 });
@@ -3889,6 +3973,131 @@ export class GameScene extends Phaser.Scene {
       (this as unknown as Record<string, unknown>)._pauseRKey = rKey;
       (this as unknown as Record<string, unknown>)._pauseRHandler = rHandler;
     }
+  }
+
+  // ============================================================
+  // Background tile layer
+  // ============================================================
+  private buildBgTileMap(): void {
+    const bgTiles = this.level.backgroundTiles;
+    if (!bgTiles) return;
+    this.bgTileSprites = [];
+    for (let gy = 0; gy < this.level.height; gy++) {
+      this.bgTileSprites[gy] = [];
+      for (let gx = 0; gx < this.level.width; gx++) {
+        const tile = (bgTiles[gy]?.[gx] ?? 0) as TileType;
+        if (tile === TileType.AIR) {
+          this.bgTileSprites[gy][gx] = null;
+          continue;
+        }
+        const getTileFn = (tx: number, ty: number): TileType => {
+          if (ty < 0 || ty >= this.level.height || tx < 0 || tx >= this.level.width) return TileType.AIR;
+          return (bgTiles[ty]?.[tx] ?? TileType.AIR) as TileType;
+        };
+        const textureMap: Partial<Record<TileType, string>> = {
+          [TileType.GROUND_TOP]: "tile_ground_top",
+          [TileType.GROUND]: "tile_ground",
+          [TileType.BRICK]: "tile_brick",
+          [TileType.CASTLE]: "tile_castle",
+          [TileType.SAND]: "tile_sand",
+          [TileType.SNOW]: "tile_snow",
+          [TileType.WOOD]: "tile_wood",
+          [TileType.MOSSY_STONE]: "tile_mossy_stone",
+          [TileType.METAL]: "tile_metal",
+          [TileType.FENCE]: "tile_fence",
+          [TileType.CHAIN]: "tile_chain",
+          [TileType.SIGN]: "tile_sign",
+          [TileType.GRATE]: "tile_grate",
+          [TileType.CRYSTAL]: "tile_crystal",
+          [TileType.MUSHROOM_BLOCK]: "tile_mushroom",
+        };
+        const key = resolveAutoTileTexture(tile, gx, gy, getTileFn) ?? textureMap[tile];
+        if (!key) {
+          this.bgTileSprites[gy][gx] = null;
+          continue;
+        }
+        const sprite = this.add.image(
+          gx * TILE_SIZE + TILE_SIZE / 2,
+          gy * TILE_SIZE + TILE_SIZE / 2,
+          key
+        ).setDepth(-5).setAlpha(0.35);
+        this.bgTileSprites[gy][gx] = sprite;
+      }
+    }
+  }
+
+  // ============================================================
+  // Theme ambient particles
+  // ============================================================
+  private setupAmbientParticles(): void {
+    const theme = this.level.theme || "default";
+    const palette = THEME_PALETTES[theme];
+    if (!palette?.ambient) return;
+
+    const { color, particle } = palette.ambient;
+    let particleKey = "particle_dust";
+    if (particle === "snowflake" && this.textures.exists("particle_trail")) particleKey = "particle_trail";
+    else if (particle === "ember" && this.textures.exists("particle_trail")) particleKey = "particle_trail";
+    else if (particle === "bubble" && this.textures.exists("particle_trail")) particleKey = "particle_trail";
+
+    this.ambientEmitter = this.add.particles(0, 0, particleKey, {
+      x: { min: 0, max: this.level.width * TILE_SIZE },
+      y: particle === "bubble" ? { min: this.level.height * TILE_SIZE - 64, max: this.level.height * TILE_SIZE } : { min: -32, max: -16 },
+      lifespan: particle === "bubble" ? 4000 : 6000,
+      speedX: particle === "snowflake" ? { min: -20, max: 20 } : particle === "ember" ? { min: -10, max: 10 } : { min: -5, max: 5 },
+      speedY: particle === "bubble" ? { min: -40, max: -20 } : { min: 15, max: 40 },
+      scale: { start: particle === "snowflake" ? 0.5 : 0.3, end: 0.1 },
+      alpha: { start: 0.6, end: 0 },
+      tint: color,
+      frequency: particle === "snowflake" ? 80 : particle === "ember" ? 150 : 200,
+      quantity: 1,
+    }).setDepth(-8);
+  }
+
+  private updateAmbientParticles(): void {
+    if (!this.ambientEmitter) return;
+    // Keep ambient emitter area aligned with camera viewport
+    const cam = this.cameras.main;
+    this.ambientEmitter.particleX = cam.scrollX + GAME_WIDTH / 2;
+  }
+
+  // ============================================================
+  // Ghost replay system
+  // ============================================================
+  private loadGhostPlayback(): void {
+    if (this.levelIndex < 0) return;
+    try {
+      const raw = localStorage.getItem(`trap_ghost_${this.levelIndex}`);
+      if (raw) {
+        this.ghostPlayback = JSON.parse(raw);
+        this.ghostSprite = this.add.image(0, 0, "player").setAlpha(0.25).setDepth(15).setTint(0x88aaff);
+        this.ghostSprite.setVisible(false);
+      }
+    } catch { /* ignore */ }
+  }
+
+  private updateGhostPlayback(): void {
+    if (!this.ghostPlayback || !this.ghostSprite) return;
+    const entry = this.ghostPlayback.find((g) => g.frame === this.frame);
+    if (entry) {
+      this.ghostSprite.setPosition(entry.x, entry.y).setVisible(true);
+    }
+    // Hide when past all ghost data
+    if (this.ghostPlayback.length > 0 && this.frame > this.ghostPlayback[this.ghostPlayback.length - 1].frame) {
+      this.ghostSprite.setVisible(false);
+    }
+  }
+
+  private saveGhostRecording(): void {
+    if (this.levelIndex < 0 || this.ghostRecording.length === 0) return;
+    try {
+      const existing = localStorage.getItem(`trap_ghost_${this.levelIndex}`);
+      const existingData: Array<{ frame: number }> = existing ? JSON.parse(existing) : [];
+      // Only save if this run is faster (fewer total frames)
+      if (existingData.length === 0 || this.ghostRecording.length < existingData.length) {
+        localStorage.setItem(`trap_ghost_${this.levelIndex}`, JSON.stringify(this.ghostRecording));
+      }
+    } catch { /* ignore */ }
   }
 
   private resumeGame(): void {

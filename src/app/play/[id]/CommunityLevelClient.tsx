@@ -67,6 +67,8 @@ function dbLevelToParsedLevel(db: DbLevel): ParsedLevel {
     entities: dbEntitiesToGameEntities(db.entities),
     trolls: dbTrollsToTrollTriggers(db.trolls),
     playerStart: db.player_start,
+    backgroundTiles: db.background_tiles ?? undefined,
+    theme: (db.theme as ParsedLevel["theme"]) ?? undefined,
   };
 }
 
@@ -96,6 +98,10 @@ export default function CommunityLevelClient() {
   const [reportDesc, setReportDesc] = useState("");
   const [reportMsg, setReportMsg] = useState<string | null>(null);
   const [reporting, setReporting] = useState(false);
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [avgRating, setAvgRating] = useState(0);
+  const [ratingCount, setRatingCount] = useState(0);
 
   // Fetch level data
   useEffect(() => {
@@ -113,6 +119,9 @@ export default function CommunityLevelClient() {
         setAuthorName(data.level.profiles?.nickname || "Anônimo");
         setAuthorId(lvl.author_id);
         setParsedLevel(dbLevelToParsedLevel(lvl));
+        setAvgRating(data.level.avg_rating ?? 0);
+        setRatingCount(data.level.rating_count ?? 0);
+        if (data.userRating) setUserRating(data.userRating);
       } catch {
         setError("Erro ao carregar nível");
       } finally {
@@ -155,6 +164,22 @@ export default function CommunityLevelClient() {
     }).catch(() => {});
     setPlaying(true);
   }, [levelId]);
+
+  const handleRate = useCallback(async (stars: number) => {
+    setUserRating(stars);
+    try {
+      const res = await fetch(`/api/levels/${levelId}/rate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stars }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAvgRating(data.avg_rating ?? avgRating);
+        setRatingCount(data.rating_count ?? ratingCount);
+      }
+    } catch { /* ignore */ }
+  }, [levelId, avgRating, ratingCount]);
 
   const handleReport = useCallback(async () => {
     if (!reportReason) return;
@@ -297,6 +322,24 @@ export default function CommunityLevelClient() {
           >
             <PixelIcon name="flag" size={12} color="#888" /> Denunciar
           </HudButton>
+
+          {/* Star Rating */}
+          <div className="flex items-center gap-1 ml-auto">
+            <span className="text-[9px] text-muted-foreground mr-1">
+              {ratingCount > 0 ? `${avgRating.toFixed(1)} (${ratingCount})` : "Avaliar"}
+            </span>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(0)}
+                onClick={() => handleRate(star)}
+                className="text-lg leading-none transition-transform hover:scale-125"
+              >
+                {star <= (hoverRating || userRating) ? "★" : "☆"}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Report Modal */}

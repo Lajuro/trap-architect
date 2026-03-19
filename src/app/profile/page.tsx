@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import RankBadge from "@/components/RankBadge";
 import { RankUpToast, useRankUpToast } from "@/components/RankUpToast";
+import { ACHIEVEMENTS } from "@/game/constants";
 import type { User } from "@supabase/supabase-js";
 import HudBar from "@/components/ui/HudBar";
 import HudPanel from "@/components/ui/HudPanel";
@@ -19,7 +20,13 @@ interface Profile {
   levels_created: number;
   total_plays_received: number;
   total_likes_received: number;
+  equipped_title: string | null;
   created_at: string;
+}
+
+interface UserAchievement {
+  achievement_id: string;
+  unlocked_at: string;
 }
 
 export default function ProfilePage() {
@@ -28,6 +35,8 @@ export default function ProfilePage() {
   const [nickname, setNickname] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [achievements, setAchievements] = useState<UserAchievement[]>([]);
+  const [newAchievements, setNewAchievements] = useState<string[]>([]);
   const { rankUp, checkRankUp, dismiss } = useRankUpToast();
   const router = useRouter();
   const supabase = createClient();
@@ -43,9 +52,11 @@ export default function ProfilePage() {
 
       const res = await fetch("/api/profile");
       if (res.ok) {
-        const { profile, rankUp: ru } = await res.json();
+        const { profile, rankUp: ru, achievements: ach, newAchievements: newAch } = await res.json();
         setProfile(profile);
         setNickname(profile.nickname || "");
+        setAchievements(ach ?? []);
+        setNewAchievements(newAch ?? []);
         if (ru) checkRankUp(ru.oldRank, ru.newRank);
       }
     }
@@ -177,6 +188,47 @@ export default function ProfilePage() {
             <PixelIcon name="logout" size={12} /> Sair
           </HudButton>
         </div>
+
+        {/* Achievements Section */}
+        <HudPanel className="mt-6">
+          <h2 className="text-[10px] font-bold mb-4 uppercase tracking-wider flex items-center gap-2">
+            <PixelIcon name="trophy" size={14} color="#FFD700" /> Conquistas ({achievements.length}/{ACHIEVEMENTS.length})
+          </h2>
+          {newAchievements.length > 0 && (
+            <HudPanel variant="highlight" className="mb-4">
+              <p className="text-[9px] font-bold text-yellow-400 mb-1">Novas conquistas desbloqueadas!</p>
+              {newAchievements.map((id) => {
+                const def = ACHIEVEMENTS.find((a) => a.id === id);
+                return def ? (
+                  <p key={id} className="text-[8px]">
+                    {def.icon} {def.name} — {def.description}
+                  </p>
+                ) : null;
+              })}
+            </HudPanel>
+          )}
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+            {ACHIEVEMENTS.map((ach) => {
+              const unlocked = achievements.some((a) => a.achievement_id === ach.id);
+              return (
+                <div
+                  key={ach.id}
+                  className={`text-center p-2 border-2 transition-colors ${
+                    unlocked
+                      ? "border-primary/50 bg-primary/10"
+                      : "border-border/30 opacity-40 grayscale"
+                  }`}
+                  title={unlocked ? `${ach.name}: ${ach.description}` : `??? ${ach.description}`}
+                >
+                  <span className="text-lg block mb-1">{ach.icon}</span>
+                  <span className="text-[7px] uppercase tracking-wider block truncate">
+                    {unlocked ? ach.name : "???"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </HudPanel>
       </main>
 
       {rankUp && <RankUpToast rankUp={rankUp} onDismiss={dismiss} />}

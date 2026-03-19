@@ -7,6 +7,7 @@ import HudBar from "@/components/ui/HudBar";
 import HudPanel from "@/components/ui/HudPanel";
 import HudButton from "@/components/ui/HudButton";
 import { PixelIcon } from "@/components/ui/PixelIcon";
+import { LEVEL_TAGS, TAG_CONFIG, type LevelTag } from "@/game/types";
 
 interface LevelSummary {
   id: string;
@@ -21,6 +22,9 @@ interface LevelSummary {
   author_id: string;
   featured?: boolean;
   featured_category?: string | null;
+  tags?: string[] | null;
+  avg_rating?: number | null;
+  rating_count?: number | null;
 }
 
 const SORT_OPTIONS = [
@@ -45,6 +49,7 @@ export default function BrowsePage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("created_at");
   const [difficultyFilter, setDifficultyFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -59,6 +64,7 @@ export default function BrowsePage() {
       });
       if (search.trim()) params.set("search", search.trim());
       if (difficultyFilter) params.set("difficulty", difficultyFilter);
+      if (tagFilter) params.set("tag", tagFilter);
 
       try {
         const res = await fetch(`/api/levels?${params}`);
@@ -72,7 +78,7 @@ export default function BrowsePage() {
         setLoading(false);
       }
     },
-    [sort, search, difficultyFilter],
+    [sort, search, difficultyFilter, tagFilter],
   );
 
   useEffect(() => {
@@ -93,6 +99,19 @@ export default function BrowsePage() {
       <HudBar />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
+        {/* Navigation tabs */}
+        <div className="flex gap-1 mb-4 border-b-2 border-border">
+          <span className="px-3 py-2 text-[8px] font-bold uppercase tracking-wider border-b-2 border-primary text-primary -mb-[2px]">
+            Niveis
+          </span>
+          <Link
+            href="/collections"
+            className="px-3 py-2 text-[8px] font-bold uppercase tracking-wider border-b-2 border-transparent text-muted-foreground hover:text-foreground -mb-[2px]"
+          >
+            Colecoes
+          </Link>
+        </div>
+
         {/* Filters */}
         <HudPanel className="mb-6">
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -143,6 +162,41 @@ export default function BrowsePage() {
               </button>
             ))}
           </div>
+
+          {/* Tag filter */}
+          <div className="flex gap-1.5 flex-wrap mt-3">
+            <button
+              onClick={() => setTagFilter("")}
+              className={`text-[7px] px-2 py-1 border transition-colors uppercase tracking-wider ${
+                tagFilter === ""
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border text-muted-foreground hover:border-primary/50"
+              }`}
+            >
+              Todas Tags
+            </button>
+            {LEVEL_TAGS.map((tag) => {
+              const cfg = TAG_CONFIG[tag as LevelTag];
+              return (
+                <button
+                  key={tag}
+                  onClick={() => setTagFilter(tag === tagFilter ? "" : tag)}
+                  className={`text-[7px] px-2 py-1 border transition-colors uppercase tracking-wider ${
+                    tagFilter === tag
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  style={{
+                    borderColor: tagFilter === tag ? cfg.color : undefined,
+                    backgroundColor: tagFilter === tag ? cfg.color + "15" : undefined,
+                    color: tagFilter === tag ? cfg.color : undefined,
+                  }}
+                >
+                  {cfg.label}
+                </button>
+              );
+            })}
+          </div>
         </HudPanel>
 
         {/* Results */}
@@ -180,6 +234,9 @@ export default function BrowsePage() {
                   authorId={level.author_id}
                   featured={level.featured}
                   featuredCategory={level.featured_category}
+                  tags={level.tags}
+                  avgRating={level.avg_rating}
+                  ratingCount={level.rating_count}
                 />
               ))}
             </div>

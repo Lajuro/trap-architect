@@ -3,6 +3,7 @@ import Image from "next/image";
 import { getDifficultyLabel } from "@/lib/difficulty";
 import PixelIcon from "@/components/ui/PixelIcon";
 import DevPickRibbon from "@/components/ui/DevPickRibbon";
+import { TAG_CONFIG, type LevelTag } from "@/game/types";
 
 interface LevelCardProps {
   id: string;
@@ -18,6 +19,9 @@ interface LevelCardProps {
   thumbnail?: string | null;
   featured?: boolean;
   featuredCategory?: string | null;
+  tags?: string[] | null;
+  avgRating?: number | null;
+  ratingCount?: number | null;
 }
 
 export default function LevelCard({
@@ -33,6 +37,9 @@ export default function LevelCard({
   thumbnail,
   featured,
   featuredCategory,
+  tags,
+  avgRating,
+  ratingCount,
 }: LevelCardProps) {
   const d = getDifficultyLabel(difficulty, plays);
 
@@ -71,6 +78,25 @@ export default function LevelCard({
           <p className="text-[7px] text-muted-foreground mb-2 truncate">{subtitle}</p>
         )}
 
+        {/* Tags */}
+        {tags && tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {tags.slice(0, 3).map((tag) => {
+              const cfg = TAG_CONFIG[tag as LevelTag];
+              if (!cfg) return null;
+              return (
+                <span
+                  key={tag}
+                  className="px-1.5 py-0.5 text-[6px] font-bold uppercase tracking-wider border"
+                  style={{ color: cfg.color, borderColor: cfg.color + "44", backgroundColor: cfg.color + "15" }}
+                >
+                  {cfg.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
         {/* Stats bar */}
         <div className="flex items-center justify-between text-[7px] text-muted-foreground">
           <div className="flex items-center gap-3">
@@ -86,6 +112,11 @@ export default function LevelCard({
               <PixelIcon name={d.icon} size={10} />
               {d.label}
             </span>
+            {avgRating != null && ratingCount != null && ratingCount >= 5 && (
+              <span className="flex items-center gap-0.5 text-yellow-400">
+                ★ {avgRating.toFixed(1)}
+              </span>
+            )}
           </div>
           {authorName && authorId && (
             <Link

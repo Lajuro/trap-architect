@@ -25,7 +25,19 @@ export async function GET(
     return NextResponse.json({ error: "Nível não encontrado" }, { status: 404 });
   }
 
-  return NextResponse.json({ level: data });
+  // Fetch user's rating for this level if logged in
+  let userRating: number | null = null;
+  if (user) {
+    const { data: ratingRow } = await supabase
+      .from("level_ratings")
+      .select("stars")
+      .eq("level_id", id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    userRating = ratingRow?.stars ?? null;
+  }
+
+  return NextResponse.json({ level: data, userRating });
 }
 
 /** PATCH /api/levels/[id] — update a level (author only) */
@@ -53,7 +65,7 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const allowed = ["name", "subtitle", "bg_color", "music", "grid_w", "grid_h", "tiles", "entities", "trolls", "player_start", "published", "thumbnail"];
+  const allowed = ["name", "subtitle", "bg_color", "music", "grid_w", "grid_h", "tiles", "entities", "trolls", "player_start", "published", "thumbnail", "tags", "theme", "background_tiles"];
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   for (const key of allowed) {
     if (body[key] !== undefined) {

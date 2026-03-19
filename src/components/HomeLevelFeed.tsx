@@ -17,6 +17,9 @@ interface LevelSummary {
   author_id: string;
   featured?: boolean;
   featured_category?: string | null;
+  tags?: string[] | null;
+  avg_rating?: number | null;
+  rating_count?: number | null;
 }
 
 export default function HomeLevelFeed({
@@ -75,6 +78,9 @@ export default function HomeLevelFeed({
                   thumbnail={level.thumbnail}
                   featured={level.featured}
                   featuredCategory={level.featured_category}
+                  tags={(level.tags ?? []) as import("@/game/types").LevelTag[]}
+                  avgRating={level.avg_rating ?? undefined}
+                  ratingCount={level.rating_count ?? undefined}
                 />
               ))}
         </div>

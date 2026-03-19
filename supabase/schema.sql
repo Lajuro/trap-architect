@@ -32,6 +32,7 @@ create table if not exists public.profiles (
   equipped_trail text not null default '',
   equipped_death_effect text not null default '',
   equipped_frame text not null default '',
+  equipped_title text not null default 'novato',
   unlocked_cosmetics text[] not null default '{}',
   -- Campaign progress (cloud save)
   campaign_progress jsonb not null default '{}',
@@ -78,7 +79,14 @@ create table if not exists public.levels (
   difficulty real not null default 0,
   featured boolean not null default false,
   featured_category text,
-  thumbnail text
+  thumbnail text,
+  -- v0.6+ columns
+  tags text[] not null default '{}',
+  theme text not null default 'default',
+  background_tiles jsonb,
+  avg_rating real not null default 0,
+  rating_count int not null default 0,
+  weekly_challenge_date date
 );
 
 -- Indexes for common queries
@@ -293,3 +301,103 @@ begin
   end if;
 end;
 $$ language plpgsql security definer;
+
+-- ============================================================
+-- Level ratings (1-5 stars, one per user per level)
+-- ============================================================
+create table if not exists public.level_ratings (
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  level_id uuid references public.levels(id) on delete cascade not null,
+  stars int not null check (stars between 1 and 5),
+  created_at timestamptz not null default now(),
+  primary key (user_id, level_id)
+);
+
+alter table public.level_ratings enable row level security;
+
+create policy "Ratings are publicly readable"
+  on public.level_ratings for select using (true);
+
+create policy "Authenticated users can rate"
+  on public.level_ratings for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update own rating"
+  on public.level_ratings for update
+  using (auth.uid() = user_id);
+
+-- Function: rate a level and update averages
+create or replace function public.rate_level(p_level_id uuid, p_user_id uuid, p_stars int)
+returns void as $$
+begin
+  insert into public.level_ratings (level_id, user_id, stars)
+  values (p_level_id, p_user_id, p_stars)
+  on conflict (user_id, level_id) do update set stars = p_stars;
+
+  update public.levels set
+    avg_rating = (select avg(stars)::real from public.level_ratings where level_id = p_level_id),
+    rating_count = (select count(*) from public.level_ratings where level_id = p_level_id)
+  where id = p_level_id;
+end;
+$$ language plpgsql security definer;
+
+-- ============================================================
+-- User achievements
+-- ============================================================
+create table if not exists public.user_achievements (
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  achievement_id text not null,
+  unlocked_at timestamptz not null default now(),
+  primary key (user_id, achievement_id)
+);
+
+alter table public.user_achievements enable row level security;
+
+create policy "Achievements are publicly readable"
+  on public.user_achievements for select using (true);
+
+create policy "System can insert achievements"
+  on public.user_achievements for insert
+  with check (auth.uid() = user_id);
+
+-- ============================================================
+-- Level collections
+-- ============================================================
+create table if not exists public.collections (
+  id uuid primary key default uuid_generate_v4(),
+  owner_id uuid references public.profiles(id) on delete cascade not null,
+  name text not null,
+  description text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.collection_levels (
+  collection_id uuid references public.collections(id) on delete cascade not null,
+  level_id uuid references public.levels(id) on delete cascade not null,
+  position int not null default 0,
+  added_at timestamptz not null default now(),
+  primary key (collection_id, level_id)
+);
+
+alter table public.collections enable row level security;
+alter table public.collection_levels enable row level security;
+
+create policy "Collections are publicly readable"
+  on public.collections for select using (true);
+
+create policy "Owners can manage collections"
+  on public.collections for all
+  using (auth.uid() = owner_id);
+
+create policy "Collection levels are publicly readable"
+  on public.collection_levels for select using (true);
+
+create policy "Collection owners can manage levels"
+  on public.collection_levels for all
+  using (
+    auth.uid() = (select owner_id from public.collections where id = collection_id)
+  );
+
+-- Tags index for filtering
+create index levels_tags_idx on public.levels using gin(tags);
+create index levels_avg_rating_idx on public.levels(avg_rating desc);

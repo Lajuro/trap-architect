@@ -6,6 +6,7 @@ import HudBar from "@/components/ui/HudBar";
 import HudPanel from "@/components/ui/HudPanel";
 import HudButton from "@/components/ui/HudButton";
 import { PixelIcon } from "@/components/ui/PixelIcon";
+import { TITLES } from "@/game/constants";
 
 const SKINS = [
   { id: "default", name: "Classico", color: "#22c55e" },
@@ -31,12 +32,14 @@ function getOwnedSkins(): string[] {
 export default function SettingsPage() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [equippedSkin, setEquippedSkin] = useState("default");
+  const [equippedTitle, setEquippedTitle] = useState("novato");
   const [ownedSkins, setOwnedSkins] = useState<string[]>(["default"]);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setSoundEnabled(localStorage.getItem("trap_sound_enabled") !== "false");
     setEquippedSkin(localStorage.getItem("trap_equipped_skin") || "default");
+    setEquippedTitle(localStorage.getItem("trap_equipped_title") || "novato");
     setOwnedSkins(getOwnedSkins());
   }, []);
 
@@ -49,6 +52,16 @@ export default function SettingsPage() {
   function selectSkin(skinId: string) {
     setEquippedSkin(skinId);
     localStorage.setItem("trap_equipped_skin", skinId);
+  }
+
+  function selectTitle(titleId: string) {
+    setEquippedTitle(titleId);
+    localStorage.setItem("trap_equipped_title", titleId);
+    fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ equipped_title: titleId }),
+    });
   }
 
   function resetProgress() {
@@ -122,6 +135,36 @@ export default function SettingsPage() {
           </div>
           <p className="text-[8px] text-muted-foreground mt-3">
             Compre mais skins na{" "}
+            <Link href="/shop" className="text-primary hover:underline">
+              Loja
+            </Link>
+            .
+          </p>
+        </HudPanel>
+
+        {/* Title selector */}
+        <HudPanel className="mb-4">
+          <h2 className="text-[10px] font-bold mb-3 uppercase tracking-wider flex items-center gap-2">
+            <PixelIcon name="crown" size={14} /> Titulo Ativo
+          </h2>
+          <div className="grid grid-cols-2 gap-2">
+            {TITLES.filter((t) => t.cost === 0).map((title) => (
+              <button
+                key={title.id}
+                onClick={() => selectTitle(title.id)}
+                className={`text-left px-3 py-2 border-2 text-[8px] transition-colors ${
+                  equippedTitle === title.id
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border hover:border-border/80"
+                }`}
+              >
+                <span className="font-bold block">{title.name}</span>
+                <span className="text-muted-foreground text-[7px]">{title.unlock}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[8px] text-muted-foreground mt-3">
+            Desbloqueie mais titulos com conquistas e na{" "}
             <Link href="/shop" className="text-primary hover:underline">
               Loja
             </Link>

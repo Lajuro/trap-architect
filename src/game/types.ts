@@ -207,6 +207,50 @@ export interface MovingPlatformConfig {
   speed: number;
 }
 
+/** Available level tags */
+export const LEVEL_TAGS = [
+  "puzzle", "speedrun", "troll", "precision", "kaizo",
+  "easy", "art", "story", "music", "impossible",
+] as const;
+export type LevelTag = (typeof LEVEL_TAGS)[number];
+
+/** Tag display configuration */
+export const TAG_CONFIG: Record<LevelTag, { label: string; color: string }> = {
+  puzzle: { label: "Puzzle", color: "#8b5cf6" },
+  speedrun: { label: "Speedrun", color: "#f59e0b" },
+  troll: { label: "Troll", color: "#ef4444" },
+  precision: { label: "Precisão", color: "#3b82f6" },
+  kaizo: { label: "Kaizo", color: "#dc2626" },
+  easy: { label: "Fácil", color: "#22c55e" },
+  art: { label: "Art", color: "#ec4899" },
+  story: { label: "História", color: "#6366f1" },
+  music: { label: "Música", color: "#14b8a6" },
+  impossible: { label: "Impossível", color: "#991b1b" },
+};
+
+/** Available level themes */
+export const LEVEL_THEMES = [
+  "default", "snow", "inferno", "neon", "retro", "underwater",
+] as const;
+export type LevelTheme = (typeof LEVEL_THEMES)[number];
+
+/** Victory animation types */
+export type VictoryAnimation =
+  | "victory_default"
+  | "victory_dance"
+  | "victory_backflip"
+  | "victory_fireworks"
+  | "victory_dab"
+  | "victory_troll_face";
+
+/** Achievement definition */
+export interface AchievementDef {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
 /** Level configuration as stored/shared (JSON-serializable) */
 export interface LevelData {
   id?: string;
@@ -217,6 +261,7 @@ export interface LevelData {
   gridW: number;
   gridH: number;
   tiles: number[][];
+  backgroundTiles?: number[][];
   entities: { type: EntityType; gx: number; gy: number; text?: string; waypoints?: { gx: number; gy: number }[] }[];
   trolls: TrollTrigger[];
   slideBlocks?: SlideBlockConfig[];
@@ -226,11 +271,15 @@ export interface LevelData {
   teleporterPairs?: { ax: number; ay: number; bx: number; by: number }[];
   // Sign texts keyed by "gx,gy"
   signTexts?: Record<string, string>;
-  // Tags
-  tags?: string[];
+  // Tags (1-3 per level)
+  tags?: LevelTag[];
+  // Theme
+  theme?: LevelTheme;
   // Community stats (read-only, from DB)
   communityDeaths?: number;
   completionRate?: number;
+  avgRating?: number;
+  ratingCount?: number;
   // Metadata (from database)
   authorId?: string;
   authorNickname?: string;
@@ -252,6 +301,7 @@ export interface ParsedLevel {
   width: number;
   height: number;
   tiles: number[][];
+  backgroundTiles?: number[][];
   entities: GameEntity[];
   trolls: TrollTrigger[];
   slideBlocks?: SlideBlockConfig[];
@@ -263,6 +313,8 @@ export interface ParsedLevel {
   teleporterPairs?: { ax: number; ay: number; bx: number; by: number }[];
   // Sign texts keyed by "gx,gy"
   signTexts?: Record<string, string>;
+  // Theme
+  theme?: LevelTheme;
   // Community stats
   communityDeaths?: number;
   completionRate?: number;

@@ -5,7 +5,8 @@ import { gameEvents } from "@/game/events";
 import { EDITOR_EVENTS } from "@/game/scenes/EditorScene";
 import { PALETTE_ITEMS } from "@/game/constants";
 import { textureCache, PALETTE_TEXTURE_KEY } from "@/game/texture-cache";
-import { Layers, Skull, Zap, Users, ChevronDown, Loader2, Flower2 } from "lucide-react";
+import { loadPrefabs, deletePrefab, type Prefab } from "@/lib/prefabs";
+import { Layers, Skull, Zap, Users, ChevronDown, Loader2, Flower2, PackagePlus, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 const CATEGORY_META: Record<string, { label: string; Icon: LucideIcon; color: string }> = {
@@ -156,9 +157,13 @@ function PaletteButton({
 export function EditorSidebar() {
   const [selectedId, setSelectedId] = useState(1);
   const [ready, setReady] = useState(false);
+  const [prefabs, setPrefabs] = useState<Prefab[]>([]);
 
   useEffect(() => {
-    const onReady = () => setReady(true);
+    const onReady = () => {
+      setReady(true);
+      setPrefabs(loadPrefabs());
+    };
     gameEvents.on(EDITOR_EVENTS.READY, onReady);
     return () => {
       gameEvents.off(EDITOR_EVENTS.READY, onReady);
@@ -241,6 +246,54 @@ export function EditorSidebar() {
             </CollapsibleSection>
           );
         })}
+
+        {/* Prefabs section */}
+        <CollapsibleSection
+          title="Prefabs"
+          Icon={PackagePlus}
+          color="#10B981"
+          count={prefabs.length}
+          defaultOpen={false}
+        >
+          <div className="space-y-1">
+            {prefabs.map((prefab) => (
+              <div
+                key={prefab.id}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 group"
+              >
+                <button
+                  onClick={() => {
+                    gameEvents.emit(EDITOR_EVENTS.PASTE_PREFAB, {
+                      tiles: prefab.tiles,
+                      width: prefab.width,
+                      height: prefab.height,
+                    });
+                  }}
+                  className="flex-1 text-left min-w-0"
+                >
+                  <p className="text-xs font-medium truncate text-foreground/80">{prefab.name}</p>
+                  <p className="text-[10px] text-muted-foreground/60">{prefab.width}×{prefab.height}</p>
+                </button>
+                {!prefab.id.startsWith("prefab_") && (
+                  <button
+                    onClick={() => {
+                      deletePrefab(prefab.id);
+                      setPrefabs(loadPrefabs());
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-red-400"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+              </div>
+            ))}
+            {prefabs.length === 0 && (
+              <p className="text-[10px] text-muted-foreground/50 px-2 py-2">
+                Nenhum prefab salvo
+              </p>
+            )}
+          </div>
+        </CollapsibleSection>
       </div>
     </div>
   );

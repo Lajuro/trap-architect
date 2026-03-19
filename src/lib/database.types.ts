@@ -20,6 +20,7 @@ export interface DbProfile {
   equipped_trail: string;
   equipped_death_effect: string;
   equipped_frame: string;
+  equipped_title: string;
   unlocked_cosmetics: string[];
 }
 
@@ -45,6 +46,12 @@ export interface DbLevel {
   featured: boolean;
   featured_category: string | null;
   thumbnail: string | null;
+  background_tiles: number[][] | null;
+  theme: string | null;
+  tags: string[] | null;
+  avg_rating: number;
+  rating_count: number;
+  weekly_challenge_date: string | null;
 }
 
 export interface DbTrollTrigger {

@@ -13,9 +13,10 @@ export async function GET(request: NextRequest) {
   const authorId = searchParams.get("author");
   const search = searchParams.get("search");
   const difficulty = searchParams.get("difficulty");
+  const tag = searchParams.get("tag");
   const offset = (page - 1) * limit;
 
-  const allowedSorts = ["created_at", "plays", "likes", "difficulty", "name"];
+  const allowedSorts = ["created_at", "plays", "likes", "difficulty", "name", "avg_rating"];
   const sortCol = allowedSorts.includes(sort) ? sort : "created_at";
 
   const supabase = await createClient();
@@ -49,6 +50,10 @@ export async function GET(request: NextRequest) {
   if (difficulty && difficultyRanges[difficulty]) {
     const [min, max] = difficultyRanges[difficulty];
     query = query.gte("difficulty", min).lt("difficulty", max).gte("plays", 10);
+  }
+
+  if (tag) {
+    query = query.contains("tags", [tag]);
   }
 
   const { data, error, count } = await query;
@@ -86,7 +91,7 @@ export async function POST(request: NextRequest) {
     );
 
   const body = await request.json();
-  const { name, subtitle, bgColor, music, gridW, gridH, tiles, entities, trolls, playerStart, published, thumbnail } = body;
+  const { name, subtitle, bgColor, music, gridW, gridH, tiles, entities, trolls, playerStart, published, thumbnail, tags, theme, backgroundTiles } = body;
 
   if (!name || !tiles || !gridW || !gridH) {
     return NextResponse.json({ error: "Dados do nível incompletos" }, { status: 400 });
@@ -108,6 +113,9 @@ export async function POST(request: NextRequest) {
       player_start: playerStart || { x: 3, y: 12 },
       published: published ?? false,
       thumbnail: thumbnail || null,
+      tags: Array.isArray(tags) ? tags.slice(0, 3) : [],
+      theme: theme || 'default',
+      background_tiles: backgroundTiles || null,
     })
     .select()
     .single();

@@ -15,8 +15,9 @@ import {
   resolveAutoTileTexture,
   AUTOTILE_TILES,
   DECORATIVE_TILES,
+  THEME_PALETTES,
 } from "../constants";
-import { TileType, type EntityType, type LevelData, type TrollTrigger } from "../types";
+import { TileType, type EntityType, type LevelData, type TrollTrigger, type LevelTheme } from "../types";
 import { gameEvents } from "../events";
 import { playBGM } from "../audio";
 
@@ -46,6 +47,11 @@ export const EDITOR_EVENTS = {
   ADD_TROLL: "editor:add_troll",
   REMOVE_TROLL: "editor:remove_troll",
   UPDATE_TROLL: "editor:update_troll",
+  SET_LAYER: "editor:set_layer",
+  COPY: "editor:copy",
+  PASTE: "editor:paste",
+  CUT: "editor:cut",
+  PASTE_PREFAB: "editor:paste_prefab",
 } as const;
 
 // ============================================================
@@ -120,6 +126,20 @@ export class EditorScene extends Phaser.Scene {
   // Sign texts map for custom signs
   private signTextsMap: Record<string, string> = {};
 
+  // Theme
+  private theme: LevelTheme = "default";
+
+  // Background layer
+  private backgroundTiles: number[][] = [];
+  private bgTileSprites: (Phaser.GameObjects.Image | null)[][] = [];
+  private activeLayer: "foreground" | "background" = "foreground";
+
+  // Copy/paste clipboard
+  private clipboard: { tiles: number[][]; w: number; h: number } | null = null;
+  private selectionStart: { gx: number; gy: number } | null = null;
+  private selectionEnd: { gx: number; gy: number } | null = null;
+  private selectionGraphics!: Phaser.GameObjects.Graphics;
+
   // Keys
   private wasd!: {
     W: Phaser.Input.Keyboard.Key;
@@ -174,11 +194,17 @@ export class EditorScene extends Phaser.Scene {
     // Build initial tile sprites
     this.buildAllTileSprites();
 
+    // Build background tile sprites
+    this.buildAllBgTileSprites();
+
     // Build entity sprites
     this.buildAllEntitySprites();
 
     // Build troll markers
     this.buildTrollMarkers();
+
+    // Selection overlay graphics
+    this.selectionGraphics = this.add.graphics().setDepth(55);
 
     // Input: keyboard
     if (this.input.keyboard) {
@@ -217,6 +243,34 @@ export class EditorScene extends Phaser.Scene {
       gKey.on("down", () => {
         if (!this.ctrlKey.isDown) {
           this.gridGraphics.setVisible(!this.gridGraphics.visible);
+        }
+      });
+
+      // C = copy selection (Ctrl+C)
+      const cKey = this.input.keyboard.addKey("C");
+      cKey.on("down", () => {
+        if (this.ctrlKey.isDown) this.copySelection();
+      });
+
+      // V = paste clipboard (Ctrl+V)
+      const vKey = this.input.keyboard.addKey("V");
+      vKey.on("down", () => {
+        if (this.ctrlKey.isDown) this.pasteClipboard();
+      });
+
+      // X = cut selection (Ctrl+X)
+      const xKey = this.input.keyboard.addKey("X");
+      xKey.on("down", () => {
+        if (this.ctrlKey.isDown) this.cutSelection();
+      });
+
+      // L = toggle layer
+      const lKey = this.input.keyboard.addKey("L");
+      lKey.on("down", () => {
+        if (!this.ctrlKey.isDown) {
+          this.activeLayer = this.activeLayer === "foreground" ? "background" : "foreground";
+          this.updateLayerVisuals();
+          gameEvents.emit(EDITOR_EVENTS.SELECTION_CHANGED, { layer: this.activeLayer });
         }
       });
 
@@ -392,8 +446,10 @@ export class EditorScene extends Phaser.Scene {
   // ============================================================
   private initEmptyGrid(): void {
     this.tiles = [];
+    this.backgroundTiles = [];
     for (let y = 0; y < this.gridH; y++) {
       this.tiles[y] = [];
+      this.backgroundTiles[y] = [];
       for (let x = 0; x < this.gridW; x++) {
         // Default: ground at bottom 2 rows
         if (y === this.gridH - 2) {
@@ -403,6 +459,7 @@ export class EditorScene extends Phaser.Scene {
         } else {
           this.tiles[y][x] = TileType.AIR;
         }
+        this.backgroundTiles[y][x] = TileType.AIR;
       }
     }
     this.entities = [];
@@ -416,14 +473,18 @@ export class EditorScene extends Phaser.Scene {
     this.levelName = data.name;
     this.bgColor = data.bgColor;
     this.music = data.music;
+    this.theme = (data.theme as LevelTheme) || "default";
     this.playerStart = { gx: data.playerStart.x, gy: data.playerStart.y };
 
     // Copy tiles
     this.tiles = [];
+    this.backgroundTiles = [];
     for (let y = 0; y < this.gridH; y++) {
       this.tiles[y] = [];
+      this.backgroundTiles[y] = [];
       for (let x = 0; x < this.gridW; x++) {
         this.tiles[y][x] = data.tiles[y]?.[x] ?? TileType.AIR;
+        this.backgroundTiles[y][x] = data.backgroundTiles?.[y]?.[x] ?? TileType.AIR;
       }
     }
 
@@ -532,37 +593,7 @@ export class EditorScene extends Phaser.Scene {
   }
 
   private createTileSprite(gx: number, gy: number, tile: number): Phaser.GameObjects.Image | null {
-    if (tile === TileType.AIR) return null;
-
-    // Try auto-tile resolution first
-    const getTile = (tx: number, ty: number): TileType => {
-      if (ty < 0 || ty >= this.gridH || tx < 0 || tx >= this.gridW) return TileType.AIR;
-      return this.tiles[ty][tx] as TileType;
-    };
-    const key = resolveAutoTileTexture(tile as TileType, gx, gy, getTile)
-      ?? this.getTileTexture(tile);
-    if (!key) return null;
-
-    const sprite = this.add
-      .image(gx * TILE_SIZE + TILE_SIZE / 2, gy * TILE_SIZE + TILE_SIZE / 2, key)
-      .setDepth(10);
-
-    // Show invisible tiles with transparency in editor
-    if (tile === TileType.INVISIBLE) {
-      sprite.setAlpha(0.3);
-    }
-
-    // Decorative non-solid tiles shown semi-transparent in editor
-    if (DECORATIVE_TILES.has(tile as TileType)) {
-      sprite.setAlpha(0.8);
-    }
-
-    // Conveyor left uses flipped texture
-    if (tile === TileType.CONVEYOR_L) {
-      sprite.setFlipX(true);
-    }
-
-    return sprite;
+    return this.createTileSpriteAt(gx, gy, tile, 10, 1);
   }
 
   private getTileTexture(tile: number): string | null {
@@ -686,6 +717,16 @@ export class EditorScene extends Phaser.Scene {
     // Out of bounds
     if (gx < 0 || gx >= this.gridW || gy < 0 || gy >= this.gridH) return;
 
+    // When shift is held, update selection rectangle
+    if (this.shiftKey?.isDown) {
+      if (!this.selectionStart) {
+        this.selectionStart = { gx, gy };
+      }
+      this.selectionEnd = { gx, gy };
+      this.drawSelection();
+      return;
+    }
+
     const item = PALETTE_ITEMS.find((p) => p.id === this.selectedPaletteId);
     if (!item) return;
 
@@ -703,25 +744,31 @@ export class EditorScene extends Phaser.Scene {
   }
 
   private placeTile(tileType: TileType, gx: number, gy: number): void {
-    const oldTile = this.tiles[gy][gx];
+    const targetTiles = this.activeLayer === "background" ? this.backgroundTiles : this.tiles;
+    const targetSprites = this.activeLayer === "background" ? this.bgTileSprites : this.tileSprites;
+    const oldTile = targetTiles[gy][gx];
     if (oldTile === tileType) return;
 
     // Record undo
     this.pushUndo({ type: "tile", gx, gy, oldTile, newTile: tileType });
 
     // Update data
-    this.tiles[gy][gx] = tileType;
+    targetTiles[gy][gx] = tileType;
 
     // Update sprite
-    const old = this.tileSprites[gy]?.[gx];
+    const old = targetSprites[gy]?.[gx];
     if (old) old.destroy();
-    this.tileSprites[gy][gx] = this.createTileSprite(gx, gy, tileType);
+    const depth = this.activeLayer === "background" ? 5 : 10;
+    const alpha = this.activeLayer === "background" ? 0.4 : 1;
+    targetSprites[gy][gx] = this.createTileSpriteAt(gx, gy, tileType, depth, alpha);
 
-    // Refresh adjacent neighbors so auto-tile visuals update
-    this.refreshAutoTile(gx, gy - 1);
-    this.refreshAutoTile(gx, gy + 1);
-    this.refreshAutoTile(gx - 1, gy);
-    this.refreshAutoTile(gx + 1, gy);
+    // Refresh adjacent neighbors so auto-tile visuals update (foreground only)
+    if (this.activeLayer === "foreground") {
+      this.refreshAutoTile(gx, gy - 1);
+      this.refreshAutoTile(gx, gy + 1);
+      this.refreshAutoTile(gx - 1, gy);
+      this.refreshAutoTile(gx + 1, gy);
+    }
 
     this.emitLevelData();
   }
@@ -1109,9 +1156,13 @@ export class EditorScene extends Phaser.Scene {
       name: this.levelName,
       bgColor: this.bgColor,
       music: this.music,
+      theme: this.theme,
       gridW: this.gridW,
       gridH: this.gridH,
       tiles: this.tiles.map((row) => [...row]),
+      backgroundTiles: this.backgroundTiles.some((row) => row.some((t) => t !== TileType.AIR))
+        ? this.backgroundTiles.map((row) => [...row])
+        : undefined,
       entities: this.entities
         .filter((e) => e.type !== "player")
         .map((e) => ({ type: e.type, gx: e.gx, gy: e.gy })),
@@ -1142,13 +1193,22 @@ export class EditorScene extends Phaser.Scene {
     });
 
     register(EDITOR_EVENTS.SET_LEVEL_META, (meta: unknown) => {
-      const m = meta as { name?: string; bgColor?: string; music?: string };
+      const m = meta as { name?: string; bgColor?: string; music?: string; theme?: LevelTheme };
       if (m.name !== undefined) this.levelName = m.name;
       if (m.bgColor !== undefined) {
         this.bgColor = m.bgColor;
         if (this.scene.isActive()) this.cameras.main.setBackgroundColor(m.bgColor);
       }
       if (m.music !== undefined) this.music = m.music;
+      if (m.theme !== undefined) {
+        this.theme = m.theme;
+        // Apply theme background color
+        const palette = THEME_PALETTES[m.theme];
+        if (palette) {
+          this.bgColor = palette.bgColor;
+          if (this.scene.isActive()) this.cameras.main.setBackgroundColor(palette.bgColor);
+        }
+      }
       this.emitLevelData();
     });
 
@@ -1196,6 +1256,22 @@ export class EditorScene extends Phaser.Scene {
       this.buildTrollMarkers();
       this.emitLevelData();
     });
+
+    register(EDITOR_EVENTS.SET_LAYER, (layer: unknown) => {
+      this.activeLayer = layer as "foreground" | "background";
+      this.updateLayerVisuals();
+    });
+
+    register(EDITOR_EVENTS.COPY, () => this.copySelection());
+    register(EDITOR_EVENTS.PASTE, () => this.pasteClipboard());
+    register(EDITOR_EVENTS.CUT, () => this.cutSelection());
+
+    register(EDITOR_EVENTS.PASTE_PREFAB, (data: unknown) => {
+      const prefab = data as { tiles: number[][]; width: number; height: number };
+      // Set clipboard to prefab data and trigger paste at camera center
+      this.clipboard = { tiles: prefab.tiles, w: prefab.width, h: prefab.height };
+      this.pasteClipboard();
+    });
   }
 
   // ============================================================
@@ -1203,6 +1279,7 @@ export class EditorScene extends Phaser.Scene {
   // ============================================================
   private resizeLevel(newW: number, newH: number): void {
     const oldTiles = this.tiles;
+    const oldBg = this.backgroundTiles;
     const oldW = this.gridW;
     const oldH = this.gridH;
 
@@ -1211,13 +1288,17 @@ export class EditorScene extends Phaser.Scene {
 
     // Resize tiles array (preserve existing)
     this.tiles = [];
+    this.backgroundTiles = [];
     for (let y = 0; y < newH; y++) {
       this.tiles[y] = [];
+      this.backgroundTiles[y] = [];
       for (let x = 0; x < newW; x++) {
         if (y < oldH && x < oldW) {
           this.tiles[y][x] = oldTiles[y][x];
+          this.backgroundTiles[y][x] = oldBg[y]?.[x] ?? TileType.AIR;
         } else {
           this.tiles[y][x] = TileType.AIR;
+          this.backgroundTiles[y][x] = TileType.AIR;
         }
       }
     }
@@ -1243,6 +1324,7 @@ export class EditorScene extends Phaser.Scene {
     this.drawGrid();
     this.drawBounds();
     this.buildAllTileSprites();
+    this.buildAllBgTileSprites();
 
     this.emitLevelData();
   }
@@ -1268,6 +1350,149 @@ export class EditorScene extends Phaser.Scene {
       this.selectedPaletteId = firstItem.id;
       gameEvents.emit(EDITOR_EVENTS.SELECTION_CHANGED, { paletteId: firstItem.id });
     }
+  }
+
+  // ============================================================
+  // Background tile sprites
+  // ============================================================
+  private buildAllBgTileSprites(): void {
+    for (const row of this.bgTileSprites) {
+      if (!row) continue;
+      for (const s of row) {
+        if (s) s.destroy();
+      }
+    }
+    this.bgTileSprites = [];
+    for (let y = 0; y < this.gridH; y++) {
+      this.bgTileSprites[y] = [];
+      for (let x = 0; x < this.gridW; x++) {
+        this.bgTileSprites[y][x] = this.createTileSpriteAt(x, y, this.backgroundTiles[y]?.[x] ?? 0, 5, 0.4);
+      }
+    }
+  }
+
+  private createTileSpriteAt(gx: number, gy: number, tile: number, depth: number, alpha: number): Phaser.GameObjects.Image | null {
+    if (tile === TileType.AIR) return null;
+    const getTile = (tx: number, ty: number): TileType => {
+      if (ty < 0 || ty >= this.gridH || tx < 0 || tx >= this.gridW) return TileType.AIR;
+      return this.tiles[ty][tx] as TileType;
+    };
+    const key = resolveAutoTileTexture(tile as TileType, gx, gy, getTile) ?? this.getTileTexture(tile);
+    if (!key) return null;
+    const sprite = this.add.image(gx * TILE_SIZE + TILE_SIZE / 2, gy * TILE_SIZE + TILE_SIZE / 2, key).setDepth(depth).setAlpha(alpha);
+    if (tile === TileType.INVISIBLE) sprite.setAlpha(alpha * 0.3);
+    if (DECORATIVE_TILES.has(tile as TileType)) sprite.setAlpha(alpha * 0.8);
+    if (tile === TileType.CONVEYOR_L) sprite.setFlipX(true);
+    return sprite;
+  }
+
+  private updateLayerVisuals(): void {
+    const fgAlpha = this.activeLayer === "foreground" ? 1 : 0.3;
+    const bgAlpha = this.activeLayer === "background" ? 0.7 : 0.4;
+    for (const row of this.tileSprites) {
+      if (!row) continue;
+      for (const s of row) {
+        if (s) s.setAlpha(fgAlpha);
+      }
+    }
+    for (const row of this.bgTileSprites) {
+      if (!row) continue;
+      for (const s of row) {
+        if (s) s.setAlpha(bgAlpha);
+      }
+    }
+  }
+
+  // ============================================================
+  // Selection & Copy/Paste
+  // ============================================================
+  private drawSelection(): void {
+    this.selectionGraphics.clear();
+    if (!this.selectionStart || !this.selectionEnd) return;
+    const x1 = Math.min(this.selectionStart.gx, this.selectionEnd.gx);
+    const y1 = Math.min(this.selectionStart.gy, this.selectionEnd.gy);
+    const x2 = Math.max(this.selectionStart.gx, this.selectionEnd.gx);
+    const y2 = Math.max(this.selectionStart.gy, this.selectionEnd.gy);
+    this.selectionGraphics.lineStyle(2, 0x00ffff, 0.8);
+    this.selectionGraphics.fillStyle(0x00ffff, 0.1);
+    this.selectionGraphics.strokeRect(x1 * TILE_SIZE, y1 * TILE_SIZE, (x2 - x1 + 1) * TILE_SIZE, (y2 - y1 + 1) * TILE_SIZE);
+    this.selectionGraphics.fillRect(x1 * TILE_SIZE, y1 * TILE_SIZE, (x2 - x1 + 1) * TILE_SIZE, (y2 - y1 + 1) * TILE_SIZE);
+  }
+
+  private getSelectionBounds(): { x1: number; y1: number; x2: number; y2: number } | null {
+    if (!this.selectionStart || !this.selectionEnd) return null;
+    return {
+      x1: Math.min(this.selectionStart.gx, this.selectionEnd.gx),
+      y1: Math.min(this.selectionStart.gy, this.selectionEnd.gy),
+      x2: Math.max(this.selectionStart.gx, this.selectionEnd.gx),
+      y2: Math.max(this.selectionStart.gy, this.selectionEnd.gy),
+    };
+  }
+
+  private copySelection(): void {
+    const bounds = this.getSelectionBounds();
+    if (!bounds) return;
+    const { x1, y1, x2, y2 } = bounds;
+    const w = x2 - x1 + 1;
+    const h = y2 - y1 + 1;
+    const tiles: number[][] = [];
+    const src = this.activeLayer === "background" ? this.backgroundTiles : this.tiles;
+    for (let y = 0; y < h; y++) {
+      tiles[y] = [];
+      for (let x = 0; x < w; x++) {
+        tiles[y][x] = src[y1 + y]?.[x1 + x] ?? TileType.AIR;
+      }
+    }
+    this.clipboard = { tiles, w, h };
+  }
+
+  private pasteClipboard(): void {
+    if (!this.clipboard) return;
+    const pointer = this.input.activePointer;
+    const { gx, gy } = this.pointerToGrid(pointer);
+    const target = this.activeLayer === "background" ? this.backgroundTiles : this.tiles;
+    const sprites = this.activeLayer === "background" ? this.bgTileSprites : this.tileSprites;
+    const depth = this.activeLayer === "background" ? 5 : 10;
+    const alpha = this.activeLayer === "background" ? 0.4 : 1;
+    for (let y = 0; y < this.clipboard.h; y++) {
+      for (let x = 0; x < this.clipboard.w; x++) {
+        const tx = gx + x;
+        const ty = gy + y;
+        if (tx >= this.gridW || ty >= this.gridH || tx < 0 || ty < 0) continue;
+        const tile = this.clipboard.tiles[y][x];
+        if (tile === TileType.AIR) continue;
+        this.pushUndo({ type: "tile", gx: tx, gy: ty, oldTile: target[ty][tx], newTile: tile });
+        target[ty][tx] = tile;
+        const old = sprites[ty]?.[tx];
+        if (old) old.destroy();
+        sprites[ty][tx] = this.createTileSpriteAt(tx, ty, tile, depth, alpha);
+      }
+    }
+    this.emitLevelData();
+  }
+
+  private cutSelection(): void {
+    this.copySelection();
+    const bounds = this.getSelectionBounds();
+    if (!bounds) return;
+    const { x1, y1, x2, y2 } = bounds;
+    const target = this.activeLayer === "background" ? this.backgroundTiles : this.tiles;
+    const sprites = this.activeLayer === "background" ? this.bgTileSprites : this.tileSprites;
+    for (let y = y1; y <= y2; y++) {
+      for (let x = x1; x <= x2; x++) {
+        if (target[y][x] !== TileType.AIR) {
+          this.pushUndo({ type: "tile", gx: x, gy: y, oldTile: target[y][x], newTile: TileType.AIR });
+          target[y][x] = TileType.AIR;
+          const old = sprites[y]?.[x];
+          if (old) old.destroy();
+          sprites[y][x] = null;
+        }
+      }
+    }
+    this.selectionStart = null;
+    this.selectionEnd = null;
+    this.selectionGraphics.clear();
+    this.emitLevelData();
   }
 
   // ============================================================
