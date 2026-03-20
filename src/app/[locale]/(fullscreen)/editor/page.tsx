@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
@@ -12,6 +15,22 @@ const EditorToolbar = dynamic(() => import("@/components/EditorToolbar").then((m
 
 export default function EditorPage() {
   const t = useTranslations("editor");
+  const [authorized, setAuthorized] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+      setAuthorized(true);
+    });
+  }, [router]);
+
+  if (!authorized) return null;
+
   return (
     <div className="h-screen w-screen flex flex-col bg-editor-bg overflow-hidden select-none">
       {/* Top navbar with integrated toolbar */}

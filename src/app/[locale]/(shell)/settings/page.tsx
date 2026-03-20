@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import HudPanel from "@/components/ui/HudPanel";
@@ -30,6 +32,7 @@ function getOwnedSkins(): string[] {
 }
 
 export default function SettingsPage() {
+  const [authorized, setAuthorized] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [equippedSkin, setEquippedSkin] = useState("default");
   const [equippedTitle, setEquippedTitle] = useState("novato");
@@ -38,13 +41,26 @@ export default function SettingsPage() {
   const t = useTranslations("settings");
   const tsk = useTranslations("cosmetics.skins");
   const tTitles = useTranslations("titles");
+  const router = useRouter();
 
   useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+      setAuthorized(true);
+    });
+  }, [router]);
+
+  useEffect(() => {
+    if (!authorized) return;
     setSoundEnabled(localStorage.getItem("trap_sound_enabled") !== "false");
     setEquippedSkin(localStorage.getItem("trap_equipped_skin") || "default");
     setEquippedTitle(localStorage.getItem("trap_equipped_title") || "novato");
     setOwnedSkins(getOwnedSkins());
-  }, []);
+  }, [authorized]);
 
   function toggleSound() {
     const next = !soundEnabled;
@@ -73,6 +89,8 @@ export default function SettingsPage() {
     localStorage.removeItem("trap_campaign_unlocked");
     setMessage(t("resetDone"));
   }
+
+  if (!authorized) return null;
 
   return (
     <main className="flex-1 max-w-3xl mx-auto px-4 py-6 w-full overflow-y-auto">
