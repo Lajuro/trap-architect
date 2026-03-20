@@ -401,3 +401,26 @@ create policy "Collection owners can manage levels"
 -- Tags index for filtering
 create index levels_tags_idx on public.levels using gin(tags);
 create index levels_avg_rating_idx on public.levels(avg_rating desc);
+
+-- ============================================================
+-- Admin: banned_at column for user banning
+-- ============================================================
+alter table public.profiles add column if not exists banned_at timestamptz;
+
+-- Admin policies: allow admins to read all levels (including unpublished)
+create policy "Admins can read all levels" on public.levels
+  for select using (
+    exists (select 1 from public.profiles where id = auth.uid() and creator_rank = 99)
+  );
+
+-- Admin policies: allow admins to update any profile (rank, ban)
+create policy "Admins can update any profile" on public.profiles
+  for update using (
+    exists (select 1 from public.profiles where id = auth.uid() and creator_rank = 99)
+  );
+
+-- Admin policies: allow admins to update any level (hide, feature, weekly)
+create policy "Admins can update any level" on public.levels
+  for update using (
+    exists (select 1 from public.profiles where id = auth.uid() and creator_rank = 99)
+  );

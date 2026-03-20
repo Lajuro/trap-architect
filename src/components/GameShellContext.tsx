@@ -10,6 +10,7 @@ export interface GameShellContextValue {
   user: User | null;
   coins: number;
   setCoins: (c: number) => void;
+  creatorRank: number;
   isGameFullscreen: boolean;
   setGameFullscreen: (v: boolean) => void;
 }
@@ -19,6 +20,7 @@ export const GameShellContext = createContext<GameShellContextValue>({
   user: null,
   coins: 0,
   setCoins: () => {},
+  creatorRank: 0,
   isGameFullscreen: false,
   setGameFullscreen: () => {},
 });

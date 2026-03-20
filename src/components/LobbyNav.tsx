@@ -7,6 +7,7 @@ import { useGameShell } from "@/components/GameShellContext";
 import PixelIcon from "@/components/ui/PixelIcon";
 import type { PixelIconName } from "@/components/ui/PixelIcon";
 import { playUIClick, playUIHover } from "@/game/audio";
+import { isAdmin } from "@/lib/ranks";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 
 interface NavTab {
@@ -26,7 +27,7 @@ const TABS: NavTab[] = [
 export default function LobbyNav() {
   const t = useTranslations("nav");
   const pathname = usePathname();
-  const { coins, user } = useGameShell();
+  const { coins, user, creatorRank } = useGameShell();
 
   const isActive = (tab: NavTab) =>
     tab.match?.some((m) => (m === "/" ? pathname === "/" : pathname.startsWith(m))) ?? false;
@@ -103,6 +104,23 @@ export default function LobbyNav() {
 
           {/* Locale */}
           <LocaleSwitcher />
+
+          {/* Admin (only for rank 99) */}
+          {isAdmin(creatorRank) && (
+            <Link
+              href="/admin"
+              className={`flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider transition-all duration-200 px-2 py-1 ${
+                pathname.startsWith("/admin")
+                  ? "text-red-400"
+                  : "text-red-400/60 hover:text-red-400"
+              }`}
+              onClick={() => playUIClick()}
+              onMouseEnter={() => playUIHover()}
+            >
+              <PixelIcon name="crown" size={14} color="#EF4444" />
+              <span className="hidden sm:inline">{t("admin")}</span>
+            </Link>
+          )}
 
           {/* Settings */}
           <Link

@@ -17,6 +17,7 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
   const [screen, setScreen] = useState<ShellScreen>("intro");
   const [user, setUser] = useState<User | null>(null);
   const [coins, setCoins] = useState(0);
+  const [creatorRank, setCreatorRank] = useState(0);
   const [lobbyReady, setLobbyReady] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [isGameFullscreen, setGameFullscreen] = useState(false);
@@ -43,6 +44,9 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
             const data = await inventoryRes.json();
             setCoins(data.creator_coins ?? 0);
             const profileData = profileRes.ok ? await profileRes.json() : null;
+            if (profileData?.profile?.creator_rank != null) {
+              setCreatorRank(profileData.profile.creator_rank);
+            }
             hydrateFromProfile({
               equipped_skin: data.equipped_skin,
               equipped_trail: data.equipped_trail,
@@ -89,6 +93,9 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
             const data = await inventoryRes.json();
             setCoins(data.creator_coins ?? 0);
             const profileData = profileRes.ok ? await profileRes.json() : null;
+            if (profileData?.profile?.creator_rank != null) {
+              setCreatorRank(profileData.profile.creator_rank);
+            }
             hydrateFromProfile({
               equipped_skin: data.equipped_skin,
               equipped_trail: data.equipped_trail,
@@ -108,8 +115,8 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
   }, [supabase]);
 
   const ctxValue = useMemo(
-    () => ({ screen, user, coins, setCoins, isGameFullscreen, setGameFullscreen }),
-    [screen, user, coins, isGameFullscreen],
+    () => ({ screen, user, coins, setCoins, creatorRank, isGameFullscreen, setGameFullscreen }),
+    [screen, user, coins, creatorRank, isGameFullscreen],
   );
 
   return (
