@@ -706,8 +706,10 @@
     "home": "Home"
   },
   "notFound": {
-    "title": "[?] Pagina Non Trovata",
-    "description": "Il livello che cerchi potrebbe essere stato rimosso o non è mai esistito.",
+    "title": "LIVELLO 404 — PAGINA NON TROVATA",
+    "description": "Questa pagina è caduta in una trappola! Ogni percorso porta alla morte... come nel gioco.",
+    "deaths": "MORTI:",
+    "controlsHint": "← → MUOVI | ↑ SALTA | PROVA A RAGGIUNGERE LA BANDIERA!",
     "browseLevels": "Esplora Livelli",
     "home": "Home"
   },

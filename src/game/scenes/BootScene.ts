@@ -44,8 +44,9 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     // If a startScene was set via game.registry (e.g. from React), use it
     const target = this.registry.get("startScene") as string | undefined;
+    const customLevel = this.registry.get("customLevel") as import("../types").ParsedLevel | undefined;
     if (target && this.scene.get(target)) {
-      this.scene.start(target);
+      this.scene.start(target, customLevel ? { customLevel } : undefined);
     } else if (this.scene.get("MenuScene")) {
       this.scene.start("MenuScene");
     } else {

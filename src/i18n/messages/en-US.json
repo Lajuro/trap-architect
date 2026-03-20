@@ -706,8 +706,10 @@
     "home": "Home"
   },
   "notFound": {
-    "title": "[?] Page Not Found",
-    "description": "The level you're looking for may have been removed or never existed.",
+    "title": "LEVEL 404 — PAGE NOT FOUND",
+    "description": "This page fell into a trap! Every path leads to death... just like in the game.",
+    "deaths": "DEATHS:",
+    "controlsHint": "← → MOVE | ↑ JUMP | TRY TO REACH THE FLAG!",
     "browseLevels": "Browse Levels",
     "home": "Home"
   },

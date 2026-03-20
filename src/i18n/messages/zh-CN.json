@@ -706,8 +706,10 @@
     "home": "首页"
   },
   "notFound": {
-    "title": "[?] 页面未找到",
-    "description": "你要找的关卡可能已被删除或不存在。",
+    "title": "第404关 — 页面未找到",
+    "description": "这个页面掉进了陷阱！每条路都通向死亡…和游戏一样。",
+    "deaths": "死亡:",
+    "controlsHint": "← → 移动 | ↑ 跳跃 | 试着到达旗帜！",
     "browseLevels": "浏览关卡",
     "home": "首页"
   },

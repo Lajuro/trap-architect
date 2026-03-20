@@ -1,29 +1,23 @@
+"use client";
+
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import dynamic from "next/dynamic";
+
+const NotFoundGame = dynamic(() => import("@/components/NotFoundGame"), {
+  ssr: false,
+});
 
 export default function NotFound() {
   const t = useTranslations("notFound");
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 text-center">
-      <h1 className="text-[14px] font-bold mb-2 text-primary">{t("title")}</h1>
-      <p className="text-[9px] text-muted-foreground mb-6">
-        {t("description")}
-      </p>
-      <div className="flex gap-3">
-        <Link
-          href="/browse"
-          className="px-4 py-2 bg-primary text-primary-foreground border-2 border-primary text-[9px] font-bold uppercase tracking-wider hover:opacity-90"
-        >
-          {t("browseLevels")}
-        </Link>
-        <Link
-          href="/"
-          className="px-4 py-2 border-2 border-border text-[9px] font-bold uppercase tracking-wider hover:bg-muted"
-        >
-          {t("home")}
-        </Link>
-      </div>
-    </div>
+    <NotFoundGame
+      title={t("title")}
+      description={t("description")}
+      browseText={t("browseLevels")}
+      homeText={t("home")}
+      browseHref="/browse"
+      homeHref="/"
+    />
   );
 }

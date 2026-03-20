@@ -6,6 +6,7 @@ import { GameScene } from "./scenes/GameScene";
 import { LevelSelectScene } from "./scenes/LevelSelectScene";
 import { EditorScene } from "./scenes/EditorScene";
 import { LobbyScene } from "./scenes/LobbyScene";
+import { NOT_FOUND_LEVEL } from "./levels/notfound";
 
 export function createPhaserGame(parent: HTMLElement, options?: { startScene?: string }): Phaser.Game {
   const config: Phaser.Types.Core.GameConfig = {
@@ -67,6 +68,38 @@ export function createEditorGame(parent: HTMLElement): Phaser.Game {
   };
 
   return new Phaser.Game(config);
+}
+
+export function createNotFoundGame(parent: HTMLElement): Phaser.Game {
+  const config: Phaser.Types.Core.GameConfig = {
+    type: Phaser.AUTO,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
+    parent,
+    backgroundColor: "#0a0a0a",
+    pixelArt: true,
+    fps: {
+      target: 60,
+      forceSetTimeOut: false,
+    },
+    physics: {
+      default: "arcade",
+      arcade: {
+        gravity: { x: 0, y: 0 },
+        debug: false,
+      },
+    },
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
+    scene: [BootScene, GameScene],
+  };
+
+  const game = new Phaser.Game(config);
+  game.registry.set("startScene", "GameScene");
+  game.registry.set("customLevel", NOT_FOUND_LEVEL);
+  return game;
 }
 
 export function createLobbyGame(parent: HTMLElement): Phaser.Game {

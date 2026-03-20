@@ -706,8 +706,10 @@
     "home": "Accueil"
   },
   "notFound": {
-    "title": "[?] Page Introuvable",
-    "description": "Le niveau que vous cherchez a peut-être été supprimé ou n'a jamais existé.",
+    "title": "NIVEAU 404 — PAGE INTROUVABLE",
+    "description": "Cette page est tombée dans un piège ! Chaque chemin mène à la mort... comme dans le jeu.",
+    "deaths": "MORTS:",
+    "controlsHint": "← → BOUGER | ↑ SAUTER | ESSAYEZ D'ATTEINDRE LE DRAPEAU !",
     "browseLevels": "Explorer les Niveaux",
     "home": "Accueil"
   },

@@ -706,8 +706,10 @@
     "home": "Página Inicial"
   },
   "notFound": {
-    "title": "[?] Página não encontrada",
-    "description": "O nível que você procura pode ter sido removido ou nunca existiu.",
+    "title": "NÍVEL 404 — PÁGINA NÃO ENCONTRADA",
+    "description": "Esta página caiu numa armadilha! Todo caminho leva à morte... igual no jogo.",
+    "deaths": "MORTES:",
+    "controlsHint": "← → MOVER | ↑ PULAR | TENTE CHEGAR NA BANDEIRA!",
     "browseLevels": "Explorar Níveis",
     "home": "Página Inicial"
   },
