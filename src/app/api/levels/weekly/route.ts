@@ -8,7 +8,7 @@ export async function GET() {
   // Get the most recent weekly challenge
   const { data, error } = await supabase
     .from("levels")
-    .select("*, profiles!inner(nickname, photo_url, creator_rank)")
+    .select("*, profiles!author_id(nickname, photo_url, creator_rank)")
     .not("weekly_challenge_date", "is", null)
     .eq("published", true)
     .order("weekly_challenge_date", { ascending: false })

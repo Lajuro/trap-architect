@@ -349,7 +349,8 @@
       "publish": "Pubblica",
       "saveDraft": "Salva bozza",
       "saving": "Salvataggio...",
-      "publishLevel": "Pubblica livello"
+      "publishLevel": "Pubblica livello",
+      "myLevels": "I Miei Livelli"
     },
     "editMenu": {
       "undo": "Annulla",
@@ -428,6 +429,13 @@
       "commandPalette": "Palette comandi",
       "searchCommand": "Cerca comando...",
       "noResults": "Nessun comando trovato"
+    },
+    "myLevels": {
+      "all": "Tutti",
+      "drafts": "Bozze",
+      "published": "Pubblicati",
+      "draft": "Bozza",
+      "empty": "Nessun livello trovato."
     },
     "status": {
       "tested": "Livello testato — pronto per la pubblicazione",

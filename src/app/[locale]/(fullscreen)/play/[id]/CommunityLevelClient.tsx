@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import type { DbLevel } from "@/lib/database.types";
-import type { ParsedLevel, TrollTrigger, GameEntity, EntityType } from "@/game/types";
-import { TILE_SIZE } from "@/game/constants";
+import type { ParsedLevel } from "@/game/types";
 import { getDifficultyLabel } from "@/lib/difficulty";
 import { PixelIcon } from "@/components/ui/PixelIcon";
 import HudPanel from "@/components/ui/HudPanel";
 import HudButton from "@/components/ui/HudButton";
+import {
+  dbLevelToParsedLevel,
+} from "@/lib/level-utils";
 
 const CommunityGameCanvas = dynamic(
   () =>
@@ -20,58 +22,6 @@ const CommunityGameCanvas = dynamic(
     ),
   { ssr: false },
 );
-
-/** Convert DB entities to GameEntity[] with pixel positions */
-function dbEntitiesToGameEntities(
-  entities: { type: string; gx: number; gy: number }[],
-): GameEntity[] {
-  return entities.map((e) => ({
-    type: e.type as EntityType,
-    x: e.gx * TILE_SIZE,
-    y: e.gy * TILE_SIZE,
-    alive: true,
-    ...(["goomba", "fast_goomba", "spiny"].includes(e.type)
-      ? { vx: -1.5, vy: 0, dir: -1 }
-      : {}),
-    ...(e.type === "flying" ? { vx: -1.5, vy: 0, dir: -1, baseY: e.gy * TILE_SIZE } : {}),
-  }));
-}
-
-/** Convert DB troll triggers to typed TrollTrigger[] */
-function dbTrollsToTrollTriggers(
-  trolls: DbLevel["trolls"],
-): TrollTrigger[] {
-  return trolls.map((t) => ({
-    triggerX: t.triggerX,
-    action: t.action as TrollTrigger["action"],
-    triggered: false,
-    ...("entityType" in t ? { entityType: t.entityType as EntityType } : {}),
-    ...("spawnX" in t ? { spawnX: t.spawnX } : {}),
-    ...("spawnY" in t ? { spawnY: t.spawnY } : {}),
-    ...("duration" in t ? { duration: t.duration } : {}),
-    ...("text" in t ? { text: t.text } : {}),
-    ...("startX" in t ? { startX: t.startX } : {}),
-    ...("count" in t ? { count: t.count } : {}),
-  }));
-}
-
-/** Convert a DB level to a ParsedLevel ready for the game engine */
-function dbLevelToParsedLevel(db: DbLevel): ParsedLevel {
-  return {
-    name: db.name,
-    subtitle: db.subtitle ?? undefined,
-    bgColor: db.bg_color,
-    music: db.music,
-    width: db.grid_w,
-    height: db.grid_h,
-    tiles: db.tiles,
-    entities: dbEntitiesToGameEntities(db.entities),
-    trolls: dbTrollsToTrollTriggers(db.trolls),
-    playerStart: db.player_start,
-    backgroundTiles: db.background_tiles ?? undefined,
-    theme: (db.theme as ParsedLevel["theme"]) ?? undefined,
-  };
-}
 
 interface LeaderboardEntry {
   deaths: number;
@@ -103,6 +53,8 @@ export default function CommunityLevelClient() {
   const [reportMsg, setReportMsg] = useState<string | null>(null);
   const [reporting, setReporting] = useState(false);
   const [userRating, setUserRating] = useState(0);
+  const [creatingRace, setCreatingRace] = useState(false);
+  const raceRouter = useRouter();
   const [hoverRating, setHoverRating] = useState(0);
   const [avgRating, setAvgRating] = useState(0);
   const [ratingCount, setRatingCount] = useState(0);
@@ -159,6 +111,29 @@ export default function CommunityLevelClient() {
       // ignore
     }
   }, [levelId]);
+
+  const handleCreateRace = useCallback(async () => {
+    if (creatingRace) return;
+    setCreatingRace(true);
+    try {
+      const res = await fetch("/api/race/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ levelId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Erro ao criar sala");
+        return;
+      }
+      const { code } = await res.json();
+      raceRouter.push(`/race/${code}`);
+    } catch {
+      alert("Falha ao criar sala de corrida");
+    } finally {
+      setCreatingRace(false);
+    }
+  }, [levelId, creatingRace, raceRouter]);
 
   const handlePlay = useCallback(() => {
     fetch(`/api/levels/${levelId}/play`, {
@@ -300,13 +275,23 @@ export default function CommunityLevelClient() {
               <img
                 src={level.thumbnail}
                 alt={level.name}
-                className="absolute inset-0 w-full h-full object-cover opacity-40"
+                className="absolute inset-0 w-full h-full object-cover opacity-40 pointer-events-none"
                 style={{ imageRendering: "pixelated" }}
               />
             )}
-            <HudButton onClick={handlePlay} variant="primary">
-              <PixelIcon name="play" size={14} /> {t("play")}
-            </HudButton>
+            <div className="relative z-10 flex gap-3">
+              <HudButton onClick={handlePlay} variant="primary">
+                <PixelIcon name="play" size={14} /> {t("play")}
+              </HudButton>
+              <HudButton
+                onClick={handleCreateRace}
+                variant="secondary"
+                disabled={creatingRace}
+              >
+                <PixelIcon name="flag" size={14} />{" "}
+                {creatingRace ? "Criando..." : "Race"}
+              </HudButton>
+            </div>
           </div>
         )}
 

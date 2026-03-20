@@ -349,7 +349,8 @@
       "publish": "Publicar",
       "saveDraft": "Salvar rascunho",
       "saving": "Salvando...",
-      "publishLevel": "Publicar nível"
+      "publishLevel": "Publicar nível",
+      "myLevels": "Meus Níveis"
     },
     "editMenu": {
       "undo": "Desfazer",
@@ -428,6 +429,13 @@
       "commandPalette": "Paleta de comandos",
       "searchCommand": "Buscar comando...",
       "noResults": "Nenhum comando encontrado"
+    },
+    "myLevels": {
+      "all": "Todos",
+      "drafts": "Rascunhos",
+      "published": "Publicados",
+      "draft": "Rascunho",
+      "empty": "Nenhum nível encontrado."
     },
     "status": {
       "tested": "Nível testado — pronto para publicar",

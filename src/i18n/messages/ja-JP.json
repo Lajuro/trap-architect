@@ -349,7 +349,8 @@
       "publish": "公開",
       "saveDraft": "下書きを保存",
       "saving": "保存中...",
-      "publishLevel": "レベルを公開"
+      "publishLevel": "レベルを公開",
+      "myLevels": "マイレベル"
     },
     "editMenu": {
       "undo": "元に戻す",
@@ -428,6 +429,13 @@
       "commandPalette": "コマンドパレット",
       "searchCommand": "コマンドを検索...",
       "noResults": "コマンドが見つかりません"
+    },
+    "myLevels": {
+      "all": "すべて",
+      "drafts": "下書き",
+      "published": "公開済み",
+      "draft": "下書き",
+      "empty": "レベルが見つかりません。"
     },
     "status": {
       "tested": "テスト完了 — 公開可能です",

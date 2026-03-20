@@ -349,7 +349,8 @@
       "publish": "Publish",
       "saveDraft": "Save Draft",
       "saving": "Saving...",
-      "publishLevel": "Publish Level"
+      "publishLevel": "Publish Level",
+      "myLevels": "My Levels"
     },
     "editMenu": {
       "undo": "Undo",
@@ -428,6 +429,13 @@
       "commandPalette": "Command Palette",
       "searchCommand": "Search command...",
       "noResults": "No commands found"
+    },
+    "myLevels": {
+      "all": "All",
+      "drafts": "Drafts",
+      "published": "Published",
+      "draft": "Draft",
+      "empty": "No levels found."
     },
     "status": {
       "tested": "Level tested — ready to publish",

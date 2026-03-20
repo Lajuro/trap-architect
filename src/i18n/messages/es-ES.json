@@ -349,7 +349,8 @@
       "publish": "Publicar",
       "saveDraft": "Guardar borrador",
       "saving": "Guardando...",
-      "publishLevel": "Publicar nivel"
+      "publishLevel": "Publicar nivel",
+      "myLevels": "Mis Niveles"
     },
     "editMenu": {
       "undo": "Deshacer",
@@ -428,6 +429,13 @@
       "commandPalette": "Paleta de comandos",
       "searchCommand": "Buscar comando...",
       "noResults": "No se encontraron comandos"
+    },
+    "myLevels": {
+      "all": "Todos",
+      "drafts": "Borradores",
+      "published": "Publicados",
+      "draft": "Borrador",
+      "empty": "No se encontraron niveles."
     },
     "status": {
       "tested": "Nivel probado — listo para publicar",

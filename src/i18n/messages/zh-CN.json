@@ -349,7 +349,8 @@
       "publish": "发布",
       "saveDraft": "保存草稿",
       "saving": "保存中...",
-      "publishLevel": "发布关卡"
+      "publishLevel": "发布关卡",
+      "myLevels": "我的关卡"
     },
     "editMenu": {
       "undo": "撤销",
@@ -428,6 +429,13 @@
       "commandPalette": "命令面板",
       "searchCommand": "搜索命令...",
       "noResults": "未找到命令"
+    },
+    "myLevels": {
+      "all": "全部",
+      "drafts": "草稿",
+      "published": "已发布",
+      "draft": "草稿",
+      "empty": "未找到关卡。"
     },
     "status": {
       "tested": "测试通过 — 可以发布",

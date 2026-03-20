@@ -58,7 +58,7 @@ import {
   THEME_PALETTES,
 } from "../constants";
 import { TileType, type ParsedLevel, type GameEntity, type SlideBlockConfig, type MovingPlatformConfig, type PowerUpType } from "../types";
-import { gameEvents, GAME_EVENTS } from "../events";
+import { gameEvents, GAME_EVENTS, type GameEventBus } from "../events";
 import { DEMO_LEVEL } from "../levels/demo";
 import { getCampaignLevel, CAMPAIGN_LEVELS } from "../levels/campaign";
 import { playJump, playDeath, playCoin, playComplete, playSpring, playStomp, playBGM, isSoundEnabled, isMusicEnabled, setMusicEnabled, setSoundEnabled, stopBGM, playPowerUp, playWallJump, playDash, playGravityFlip, playGravityNormalize, playSlideBlock, playFireball, playTeleport, playCannon, playKeyPickup, playLockOpen, playIceBreak, playSlowMo, playBossHit, playTrollSfx } from "../audio";
@@ -258,11 +258,34 @@ export class GameScene extends Phaser.Scene {
   private ghostPlayback: Array<{ x: number; y: number; frame: number }> | null = null;
   private ghostSprite: Phaser.GameObjects.Image | null = null;
 
+  // Event bus — uses injected instance (race mode) or global singleton
+  private gameBus: GameEventBus = gameEvents;
+  // Race mode flags
+  private raceMode = false;
+  private muteAudio = false;
+  private onPositionBroadcast: ((x: number, y: number, alive: boolean, frame: number) => void) | null = null;
+  private onRaceComplete: ((timeMs: number, deaths: number) => void) | null = null;
+
   constructor() {
     super({ key: "GameScene" });
   }
 
-  init(data?: { levelIndex?: number; customLevel?: ParsedLevel }): void {
+  init(data?: {
+    levelIndex?: number;
+    customLevel?: ParsedLevel;
+    eventBus?: GameEventBus;
+    raceMode?: boolean;
+    muteAudio?: boolean;
+    onPositionBroadcast?: (x: number, y: number, alive: boolean, frame: number) => void;
+    onRaceComplete?: (timeMs: number, deaths: number) => void;
+  }): void {
+    // Race mode setup
+    this.gameBus = data?.eventBus ?? gameEvents;
+    this.raceMode = data?.raceMode ?? false;
+    this.muteAudio = data?.muteAudio ?? false;
+    this.onPositionBroadcast = data?.onPositionBroadcast ?? null;
+    this.onRaceComplete = data?.onRaceComplete ?? null;
+
     if (data?.customLevel) {
       this.level = data.customLevel;
       this.levelIndex = -1;
@@ -277,7 +300,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     // Signal React that gameplay has started (hide lobby nav)
-    gameEvents.emit(GAME_EVENTS.ENTER_GAME_SCENE);
+    this.gameBus.emit(GAME_EVENTS.ENTER_GAME_SCENE);
 
     this.coins = 0;
     this.deaths = 0;
@@ -478,7 +501,7 @@ export class GameScene extends Phaser.Scene {
     this.createParticles();
 
     // Listen for React events
-    gameEvents.on(GAME_EVENTS.RESTART_LEVEL, () => this.restartLevel());
+    this.gameBus.on(GAME_EVENTS.RESTART_LEVEL, () => this.restartLevel());
 
     // ESC / P to toggle pause
     if (this.input.keyboard) {
@@ -603,6 +626,11 @@ export class GameScene extends Phaser.Scene {
       // Ghost recording — record player position every 3rd frame
       if (this.frame % 3 === 0 && this.player.alive) {
         this.ghostRecording.push({ x: this.player.x, y: this.player.y, frame: this.frame });
+      }
+
+      // Race mode: broadcast position every 3rd frame
+      if (this.raceMode && this.frame % 3 === 0 && this.onPositionBroadcast) {
+        this.onPositionBroadcast(this.player.x, this.player.y, this.player.alive, this.frame);
       }
 
       // Ghost playback
@@ -1548,7 +1576,7 @@ export class GameScene extends Phaser.Scene {
     // Spawn coin
     this.coins++;
     this.pulseHud(this.hudCoins);
-    gameEvents.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
+    this.gameBus.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
   }
 
   private breakBrick(gx: number, gy: number): void {
@@ -2062,7 +2090,7 @@ export class GameScene extends Phaser.Scene {
           this.pulseHud(this.hudCoins);
           playCoin();
           this.emitCoinParticles(ent.x, ent.y);
-          gameEvents.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
+          this.gameBus.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
         } else if (ent.type === "mushroom") {
           ent.alive = false;
           sprite.setVisible(false);
@@ -2151,7 +2179,7 @@ export class GameScene extends Phaser.Scene {
               }
               this.coins += 10;
               this.pulseHud(this.hudCoins);
-              gameEvents.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
+              this.gameBus.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
             }
           } else if ((ent.invFrames ?? 0) <= 0) {
             this.handleEnemyHit();
@@ -2864,7 +2892,7 @@ export class GameScene extends Phaser.Scene {
     playDeath();
     this.emitDeathParticles();
 
-    gameEvents.emit(GAME_EVENTS.PLAYER_DIED, this.deaths);
+    this.gameBus.emit(GAME_EVENTS.PLAYER_DIED, this.deaths);
 
     // Death animation
     this.tweens.add({
@@ -2945,7 +2973,7 @@ export class GameScene extends Phaser.Scene {
 
     // Restore coins
     this.coins = this.snapshot.coins;
-    gameEvents.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
+    this.gameBus.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
 
     // Restore troll triggers
     for (let i = 0; i < this.level.trolls.length; i++) {
@@ -3030,21 +3058,32 @@ export class GameScene extends Phaser.Scene {
 
   private showLevelComplete(): void {
     this.player.alive = false;
-    playComplete();
+    if (!this.muteAudio) playComplete();
 
     // Save ghost recording for replay
     this.saveGhostRecording();
 
+    // Race mode: notify React layer and stop — don't navigate
+    if (this.raceMode && this.onRaceComplete) {
+      this.onRaceComplete(this.elapsedMs, this.deaths);
+      this.gameBus.emit(GAME_EVENTS.LEVEL_COMPLETE, {
+        levelIndex: -1,
+        deaths: this.deaths,
+        coins: this.coins,
+      });
+      return;
+    }
+
     // Emit completion data for LevelSelectScene progress tracking
     if (this.levelIndex >= 0) {
-      gameEvents.emit(GAME_EVENTS.LEVEL_COMPLETE, {
+      this.gameBus.emit(GAME_EVENTS.LEVEL_COMPLETE, {
         levelIndex: this.levelIndex,
         deaths: this.deaths,
         coins: this.coins,
       });
     } else {
       // Custom/editor test level — also emit so EditorCanvas can handle return
-      gameEvents.emit(GAME_EVENTS.LEVEL_COMPLETE, {
+      this.gameBus.emit(GAME_EVENTS.LEVEL_COMPLETE, {
         levelIndex: -1,
         deaths: this.deaths,
         coins: this.coins,
@@ -3141,14 +3180,14 @@ export class GameScene extends Phaser.Scene {
         // Campaign complete — show victory screen
         this.showCampaignVictory();
       } else if (this.levelIndex >= 0) {
-        gameEvents.emit(GAME_EVENTS.EXIT_GAME_SCENE);
+        this.gameBus.emit(GAME_EVENTS.EXIT_GAME_SCENE);
         this.scene.start("LevelSelectScene");
       } else {
         // Custom/test level — EditorCanvas handles return via LEVEL_COMPLETE event
         // For standalone play via React page, return to lobby
         if (this.registry.get("startScene")) {
-          gameEvents.emit(GAME_EVENTS.EXIT_GAME_SCENE);
-          gameEvents.emit(GAME_EVENTS.RETURN_TO_LOBBY);
+          this.gameBus.emit(GAME_EVENTS.EXIT_GAME_SCENE);
+          this.gameBus.emit(GAME_EVENTS.RETURN_TO_LOBBY);
         } else if (this.scene.get("MenuScene")) {
           this.scene.start("MenuScene");
         }
@@ -3182,7 +3221,7 @@ export class GameScene extends Phaser.Scene {
     } catch { /* ignore */ }
 
     // Emit campaign complete event
-    gameEvents.emit(GAME_EVENTS.CAMPAIGN_COMPLETE, { totalDeaths, totalCoins });
+    this.gameBus.emit(GAME_EVENTS.CAMPAIGN_COMPLETE, { totalDeaths, totalCoins });
 
     // Dark overlay
     this.add
@@ -3276,9 +3315,9 @@ export class GameScene extends Phaser.Scene {
     menuBtn.on("pointerover", () => menuBtn.setAlpha(0.8));
     menuBtn.on("pointerout", () => menuBtn.setAlpha(1));
     menuBtn.on("pointerdown", () => {
-      gameEvents.emit(GAME_EVENTS.EXIT_GAME_SCENE);
+      this.gameBus.emit(GAME_EVENTS.EXIT_GAME_SCENE);
       if (this.registry.get("startScene")) {
-        gameEvents.emit(GAME_EVENTS.RETURN_TO_LOBBY);
+        this.gameBus.emit(GAME_EVENTS.RETURN_TO_LOBBY);
       } else {
         this.scene.start("MenuScene");
       }
@@ -3300,7 +3339,7 @@ export class GameScene extends Phaser.Scene {
     selectBtn.on("pointerover", () => selectBtn.setAlpha(0.8));
     selectBtn.on("pointerout", () => selectBtn.setAlpha(1));
     selectBtn.on("pointerdown", () => {
-      gameEvents.emit(GAME_EVENTS.EXIT_GAME_SCENE);
+      this.gameBus.emit(GAME_EVENTS.EXIT_GAME_SCENE);
       this.scene.start("LevelSelectScene");
     });
   }
@@ -3498,7 +3537,7 @@ export class GameScene extends Phaser.Scene {
               }
               this.coins += 10;
               this.pulseHud(this.hudCoins);
-              gameEvents.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
+              this.gameBus.emit(GAME_EVENTS.COINS_CHANGED, this.coins);
             }
           } else {
             ent.alive = false;
@@ -4099,7 +4138,7 @@ export class GameScene extends Phaser.Scene {
     if (this.paused) return;
     this.paused = true;
     this.pauseStartTime = Date.now();
-    gameEvents.emit(GAME_EVENTS.GAME_PAUSED);
+    this.gameBus.emit(GAME_EVENTS.GAME_PAUSED);
 
     const cw = GAME_WIDTH;
     const ch = GAME_HEIGHT;
@@ -4250,17 +4289,17 @@ export class GameScene extends Phaser.Scene {
       stopBGM();
       if (this.levelIndex >= 0) {
         // Campaign: return to level select
-        gameEvents.emit(GAME_EVENTS.EXIT_GAME_SCENE);
+        this.gameBus.emit(GAME_EVENTS.EXIT_GAME_SCENE);
         this.scene.start("LevelSelectScene");
       } else if (this.registry.get("startScene")) {
         // Demo/campaign page: return to lobby
-        gameEvents.emit(GAME_EVENTS.EXIT_GAME_SCENE);
-        gameEvents.emit(GAME_EVENTS.RETURN_TO_LOBBY);
+        this.gameBus.emit(GAME_EVENTS.EXIT_GAME_SCENE);
+        this.gameBus.emit(GAME_EVENTS.RETURN_TO_LOBBY);
       } else if (this.scene.get("MenuScene")) {
         this.scene.start("MenuScene");
       } else {
         // Editor test mode — emit event so EditorCanvas can handle return
-        gameEvents.emit(GAME_EVENTS.LEVEL_COMPLETE, {
+        this.gameBus.emit(GAME_EVENTS.LEVEL_COMPLETE, {
           levelIndex: -1,
           deaths: this.deaths,
           coins: this.coins,
@@ -4412,12 +4451,35 @@ export class GameScene extends Phaser.Scene {
     } catch { /* ignore */ }
   }
 
+  // ============================================================
+  // Race mode — opponent ghost via real-time sync
+  // ============================================================
+
+  /** Called by the React layer to update the opponent's ghost position in real time */
+  setOpponentPosition(x: number, y: number, alive: boolean): void {
+    if (!this.ghostSprite) {
+      this.ghostSprite = this.add.image(0, 0, "player").setAlpha(0.3).setDepth(15).setTint(0xff6666);
+      this.ghostSprite.setVisible(true);
+    }
+    this.ghostSprite.setPosition(x, y).setVisible(alive);
+  }
+
+  /** Returns current elapsed time in ms for race result reporting */
+  getRaceTime(): number {
+    return this.elapsedMs;
+  }
+
+  /** Returns current death count */
+  getRaceDeaths(): number {
+    return this.deaths;
+  }
+
   private resumeGame(): void {
     if (!this.paused) return;
     this.paused = false;
     // Accumulate paused time so we don't count it
     this.totalPausedMs += Date.now() - this.pauseStartTime;
-    gameEvents.emit(GAME_EVENTS.GAME_RESUMED);
+    this.gameBus.emit(GAME_EVENTS.GAME_RESUMED);
     this.pauseOverlay.forEach((obj) => obj.destroy());
     this.pauseOverlay = [];
 

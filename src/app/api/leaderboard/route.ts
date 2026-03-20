@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const { data } = await supabase
       .from("level_plays")
       .select(
-        "deaths, time_ms, created_at, profiles!inner(nickname)",
+        "deaths, time_ms, created_at, profiles!user_id!inner(nickname)",
       )
       .eq("level_id", levelId)
       .eq("completed", true)

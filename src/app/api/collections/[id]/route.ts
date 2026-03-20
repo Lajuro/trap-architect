@@ -11,7 +11,7 @@ export async function GET(
 
   const { data: collection, error } = await supabase
     .from("collections")
-    .select("*, profiles!inner(nickname)")
+    .select("*, profiles!owner_id(nickname)")
     .eq("id", id)
     .single();
 
@@ -22,7 +22,7 @@ export async function GET(
   // Get levels in collection
   const { data: collectionLevels } = await supabase
     .from("collection_levels")
-    .select("position, levels!inner(id, name, subtitle, plays, likes, difficulty, bg_color, thumbnail, author_id, profiles:profiles!inner(nickname, photo_url))")
+    .select("position, levels!inner(id, name, subtitle, plays, likes, difficulty, bg_color, thumbnail, author_id, profiles:profiles!author_id(nickname, photo_url))")
     .eq("collection_id", id)
     .order("position", { ascending: true });
 

@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { data } = await supabase
     .from("levels")
-    .select("name, subtitle, plays, likes, profiles!inner(nickname)")
+    .select("name, subtitle, plays, likes, profiles!author_id(nickname)")
     .eq("id", id)
     .eq("published", true)
     .single();

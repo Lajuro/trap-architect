@@ -43,6 +43,10 @@ import {
   Pipette,
   Search,
   ChevronDown,
+  FolderOpen,
+  Clock,
+  Globe,
+  FileEdit,
 } from "lucide-react";
 import type { EditorTool } from "@/game/constants";
 
@@ -71,6 +75,8 @@ export function EditorToolbar() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [editMenuOpen, setEditMenuOpen] = useState(false);
+  const [myLevelsOpen, setMyLevelsOpen] = useState(false);
+  const [currentLevelId, setCurrentLevelId] = useState<string | null>(null);
   const { rankUp, checkRankUp, dismiss } = useRankUpToast();
   const configRef = useRef<HTMLDivElement>(null);
   const fileMenuRef = useRef<HTMLDivElement>(null);
@@ -200,10 +206,7 @@ export function EditorToolbar() {
           levelData.playerStart,
           levelData.bgColor,
         );
-        const res = await fetch("/api/levels", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const payload = {
             name: levelData.name,
             bgColor: levelData.bgColor,
             music: levelData.music,
@@ -218,10 +221,35 @@ export function EditorToolbar() {
             thumbnail,
             tags: selectedTags,
             theme,
-          }),
+        };
+        const url = currentLevelId ? `/api/levels/${currentLevelId}` : "/api/levels";
+        const method = currentLevelId ? "PATCH" : "POST";
+        // When publishing an existing draft via PATCH, also send snake_case keys
+        const body = currentLevelId ? {
+            name: payload.name,
+            bg_color: payload.bgColor,
+            music: payload.music,
+            grid_w: payload.gridW,
+            grid_h: payload.gridH,
+            tiles: payload.tiles,
+            background_tiles: payload.backgroundTiles,
+            entities: payload.entities,
+            trolls: payload.trolls,
+            player_start: payload.playerStart,
+            published: true,
+            thumbnail,
+            tags: selectedTags,
+            theme,
+        } : payload;
+        const res = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
         });
         if (res.ok) {
-          const { rankUp: ru } = await res.json();
+          const json = await res.json();
+          if (json.level?.id) setCurrentLevelId(json.level.id);
+          const ru = json.rankUp;
           setPublishMsg(t("publish.success"));
           if (ru) checkRankUp(ru.oldRank, ru.newRank);
         } else if (res.status === 401) {
@@ -237,7 +265,7 @@ export function EditorToolbar() {
     };
     gameEvents.on(EDITOR_EVENTS.EXPORT_REQUEST, handler);
     gameEvents.emit(EDITOR_EVENTS.EXPORT_LEVEL);
-  }, [checkRankUp, selectedTags, theme, t]);
+  }, [checkRankUp, selectedTags, theme, t, currentLevelId]);
 
   const handleSaveDraft = useCallback(() => {
     setPublishMsg(null);
@@ -254,10 +282,26 @@ export function EditorToolbar() {
           levelData.playerStart,
           levelData.bgColor,
         );
-        const res = await fetch("/api/levels", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const url = currentLevelId ? `/api/levels/${currentLevelId}` : "/api/levels";
+        const method = currentLevelId ? "PATCH" : "POST";
+        // When updating an existing level, don't change the published status
+        // (preserves published state so saving a draft doesn't unpublish it).
+        // Only new levels (POST) are created as drafts.
+        const body = currentLevelId ? {
+            name: levelData.name,
+            bg_color: levelData.bgColor,
+            music: levelData.music,
+            grid_w: levelData.gridW,
+            grid_h: levelData.gridH,
+            tiles: levelData.tiles,
+            background_tiles: levelData.backgroundTiles,
+            entities: levelData.entities,
+            trolls: levelData.trolls,
+            player_start: levelData.playerStart,
+            thumbnail,
+            tags: selectedTags,
+            theme,
+        } : {
             name: levelData.name,
             bgColor: levelData.bgColor,
             music: levelData.music,
@@ -272,9 +316,15 @@ export function EditorToolbar() {
             thumbnail,
             tags: selectedTags,
             theme,
-          }),
+        };
+        const res = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
         });
         if (res.ok) {
+          const json = await res.json();
+          if (json.level?.id) setCurrentLevelId(json.level.id);
           setPublishMsg(t("publish.draftSaved"));
         } else if (res.status === 401) {
           setPublishMsg(t("publish.loginToSave"));
@@ -289,7 +339,38 @@ export function EditorToolbar() {
     };
     gameEvents.on(EDITOR_EVENTS.EXPORT_REQUEST, handler);
     gameEvents.emit(EDITOR_EVENTS.EXPORT_LEVEL);
-  }, [t]);
+  }, [t, selectedTags, theme, currentLevelId]);
+
+  const handleLoadLevel = useCallback(async (levelId: string) => {
+    try {
+      const res = await fetch(`/api/levels/${levelId}`);
+      if (!res.ok) return;
+      const { level } = await res.json();
+      const levelData: LevelData = {
+        id: level.id,
+        name: level.name,
+        subtitle: level.subtitle ?? undefined,
+        bgColor: level.bg_color,
+        music: level.music,
+        gridW: level.grid_w,
+        gridH: level.grid_h,
+        tiles: level.tiles,
+        backgroundTiles: level.background_tiles ?? undefined,
+        entities: level.entities ?? [],
+        trolls: level.trolls ?? [],
+        playerStart: level.player_start ?? { x: 3, y: 12 },
+        tags: level.tags ?? [],
+        theme: level.theme ?? 'default',
+      };
+      setCurrentLevelId(level.id);
+      if (level.tags) setSelectedTags(level.tags);
+      if (level.theme) setTheme(level.theme as LevelTheme);
+      gameEvents.emit(EDITOR_EVENTS.IMPORT_LEVEL, levelData);
+      setMyLevelsOpen(false);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const handleTestPlay = useCallback(() => {
     const handler = (data: unknown) => {
@@ -337,6 +418,7 @@ export function EditorToolbar() {
     { id: "publish", group: t("menus.file"), label: t("fileMenu.publishLevel"), shortcut: "Ctrl+Shift+P", icon: Rocket, action: handlePublish },
     { id: "export", group: t("menus.file"), label: t("fileMenu.export"), shortcut: "Ctrl+E", icon: Download, action: handleExport },
     { id: "import", group: t("menus.file"), label: t("fileMenu.import"), icon: Upload, action: handleImport },
+    { id: "mylevels", group: t("menus.file"), label: t("fileMenu.myLevels"), icon: FolderOpen, action: () => { closeAllMenus(); setMyLevelsOpen(true); } },
     { id: "undo", group: t("menus.edit"), label: t("editMenu.undo"), shortcut: "Ctrl+Z", icon: Undo2, action: () => gameEvents.emit(EDITOR_EVENTS.UNDO) },
     { id: "redo", group: t("menus.edit"), label: t("editMenu.redo"), shortcut: "Ctrl+Y", icon: Redo2, action: () => gameEvents.emit(EDITOR_EVENTS.REDO) },
     { id: "copy", group: t("menus.edit"), label: t("editMenu.copySelection"), shortcut: "Ctrl+C", icon: Copy, action: () => gameEvents.emit(EDITOR_EVENTS.COPY) },
@@ -397,6 +479,8 @@ export function EditorToolbar() {
                 <div className="border-t border-border/20 my-1 mx-2" />
                 <DropdownItem icon={Download} label={t("fileMenu.export")} shortcut="Ctrl+E" onClick={() => { handleExport(); setFileMenuOpen(false); }} />
                 <DropdownItem icon={Upload} label={t("fileMenu.import")} onClick={() => { handleImport(); setFileMenuOpen(false); }} />
+                <div className="border-t border-border/20 my-1 mx-2" />
+                <DropdownItem icon={FolderOpen} label={t("fileMenu.myLevels")} onClick={() => { setMyLevelsOpen(true); setFileMenuOpen(false); }} disabled={!isLoggedIn} />
                 {!isLoggedIn && (
                   <>
                     <div className="border-t border-border/20 my-1 mx-2" />
@@ -795,6 +879,14 @@ export function EditorToolbar() {
         />
       )}
 
+      {/* My Levels dialog */}
+      {myLevelsOpen && (
+        <MyLevelsDialog
+          onClose={() => setMyLevelsOpen(false)}
+          onLoad={handleLoadLevel}
+        />
+      )}
+
       {rankUp && <RankUpToast rankUp={rankUp} onDismiss={dismiss} />}
     </>
   );
@@ -1032,6 +1124,161 @@ function CommandPalette({
             <p className="text-[11px] text-muted-foreground/30 text-center py-6">
               {t("commands.noResults")}
             </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MyLevelsDialog — load saved drafts / published levels
+// ============================================================
+
+interface MyLevel {
+  id: string;
+  name: string;
+  published: boolean;
+  thumbnail: string | null;
+  bg_color: string;
+  grid_w: number;
+  grid_h: number;
+  plays: number;
+  likes: number;
+  updated_at: string;
+  created_at: string;
+}
+
+function MyLevelsDialog({
+  onClose,
+  onLoad,
+}: {
+  onClose: () => void;
+  onLoad: (id: string) => void;
+}) {
+  const t = useTranslations("editor");
+  const [levels, setLevels] = useState<MyLevel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "draft" | "published">("all");
+
+  useEffect(() => {
+    setLoading(true);
+    const params = filter === "all" ? "" : `?filter=${filter}`;
+    fetch(`/api/levels/mine${params}`)
+      .then((r) => r.json())
+      .then((data) => setLevels(data.levels || []))
+      .catch(() => setLevels([]))
+      .finally(() => setLoading(false));
+  }, [filter]);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("fileMenu.myLevels")}
+      className="fixed inset-0 z-200 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
+    >
+      <div
+        role="presentation"
+        className="w-[520px] max-h-[70vh] bg-[#15151f] border border-border/40 rounded-xl shadow-2xl flex flex-col animate-slide-up overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
+          <div className="flex items-center gap-2">
+            <FolderOpen size={15} className="text-primary" />
+            <span className="text-xs font-bold text-foreground/80">{t("fileMenu.myLevels")}</span>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors">
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Filter tabs */}
+        <div className="flex gap-1 px-4 pt-3 pb-2">
+          {(["all", "draft", "published"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-[9px] px-3 py-1 rounded-full border transition-all uppercase tracking-wider font-bold ${
+                filter === f
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border/30 text-muted-foreground/50 hover:border-primary/30"
+              }`}
+            >
+              {f === "all" ? t("myLevels.all") : f === "draft" ? t("myLevels.drafts") : t("myLevels.published")}
+            </button>
+          ))}
+        </div>
+
+        {/* Level list */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={20} className="text-primary animate-spin" />
+            </div>
+          ) : levels.length === 0 ? (
+            <div className="text-center py-12">
+              <FileEdit size={24} className="text-muted-foreground/20 mx-auto mb-2" />
+              <p className="text-[10px] text-muted-foreground/40">{t("myLevels.empty")}</p>
+            </div>
+          ) : (
+            <div className="space-y-2 mt-1">
+              {levels.map((level) => (
+                <button
+                  key={level.id}
+                  onClick={() => onLoad(level.id)}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-border/20 hover:border-primary/30 hover:bg-white/[0.03] transition-all text-left group"
+                >
+                  {/* Thumbnail */}
+                  <div
+                    className="w-16 h-10 rounded border border-border/20 bg-cover bg-center shrink-0"
+                    style={{
+                      backgroundColor: level.bg_color,
+                      backgroundImage: level.thumbnail ? `url(${level.thumbnail})` : undefined,
+                    }}
+                  />
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold text-foreground/80 truncate">{level.name}</span>
+                      {level.published ? (
+                        <span className="text-[7px] px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/20 uppercase tracking-wider flex items-center gap-0.5">
+                          <Globe size={8} /> {t("myLevels.published")}
+                        </span>
+                      ) : (
+                        <span className="text-[7px] px-1.5 py-0.5 rounded-full bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 uppercase tracking-wider flex items-center gap-0.5">
+                          <FileEdit size={8} /> {t("myLevels.draft")}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="text-[8px] text-muted-foreground/40 flex items-center gap-0.5">
+                        <Clock size={8} /> {new Date(level.updated_at).toLocaleDateString()}
+                      </span>
+                      <span className="text-[8px] text-muted-foreground/40">
+                        {level.grid_w}×{level.grid_h}
+                      </span>
+                      {level.published && (
+                        <span className="text-[8px] text-muted-foreground/40">
+                          ▶ {level.plays} ♥ {level.likes}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>

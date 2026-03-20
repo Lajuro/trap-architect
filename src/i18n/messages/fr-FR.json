@@ -349,7 +349,8 @@
       "publish": "Publier",
       "saveDraft": "Sauvegarder le brouillon",
       "saving": "Sauvegarde...",
-      "publishLevel": "Publier le niveau"
+      "publishLevel": "Publier le niveau",
+      "myLevels": "Mes Niveaux"
     },
     "editMenu": {
       "undo": "Annuler",
@@ -428,6 +429,13 @@
       "commandPalette": "Palette de commandes",
       "searchCommand": "Rechercher une commande...",
       "noResults": "Aucune commande trouvée"
+    },
+    "myLevels": {
+      "all": "Tous",
+      "drafts": "Brouillons",
+      "published": "Publiés",
+      "draft": "Brouillon",
+      "empty": "Aucun niveau trouvé."
     },
     "status": {
       "tested": "Niveau testé — prêt à publier",

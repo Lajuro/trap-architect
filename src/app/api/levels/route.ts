@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("levels")
-    .select("*, profiles!inner(nickname, photo_url, creator_rank)", { count: "exact" })
+    .select("*, profiles!author_id(nickname, photo_url, creator_rank)", { count: "exact" })
     .eq("published", true)
     .order(sortCol, { ascending: order })
     .range(offset, offset + limit - 1);

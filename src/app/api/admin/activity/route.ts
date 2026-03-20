@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     queries.push(
       supabase
         .from("levels")
-        .select("id, name, author_id, published, created_at, profiles!inner(nickname)")
+        .select("id, name, author_id, published, created_at, profiles!author_id(nickname)")
         .order("created_at", { ascending: false })
         .limit(limit)
         .then(({ data }) => {

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("collections")
-    .select("*, profiles!inner(nickname)")
+    .select("*, profiles!owner_id(nickname)")
     .order("created_at", { ascending: false })
     .limit(limit);
 

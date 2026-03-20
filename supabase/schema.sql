@@ -424,3 +424,42 @@ create policy "Admins can update any level" on public.levels
   for update using (
     exists (select 1 from public.profiles where id = auth.uid() and creator_rank = 99)
   );
+
+-- ============================================================
+-- Race Rooms: 1v1 versus mode
+-- ============================================================
+create table if not exists public.race_rooms (
+  id uuid primary key default uuid_generate_v4(),
+  code text unique not null,
+  level_id uuid references public.levels(id) on delete cascade not null,
+  host_id uuid references public.profiles(id) on delete cascade not null,
+  guest_id uuid references public.profiles(id) on delete set null,
+  status text not null default 'waiting',
+  winner_id uuid references public.profiles(id) on delete set null,
+  host_time_ms int,
+  guest_time_ms int,
+  host_deaths int,
+  guest_deaths int,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '10 minutes'
+);
+
+create index race_rooms_code_idx on public.race_rooms(code);
+create index race_rooms_status_idx on public.race_rooms(status) where status in ('waiting', 'ready', 'racing');
+
+alter table public.race_rooms enable row level security;
+
+-- Anyone can read rooms they are part of
+create policy "Players can read their rooms"
+  on public.race_rooms for select
+  using (auth.uid() = host_id or auth.uid() = guest_id);
+
+-- Authenticated users can create rooms
+create policy "Authenticated users can create rooms"
+  on public.race_rooms for insert
+  with check (auth.uid() = host_id);
+
+-- Players in a room can update it (join, finish)
+create policy "Players can update their rooms"
+  on public.race_rooms for update
+  using (auth.uid() = host_id or auth.uid() = guest_id);

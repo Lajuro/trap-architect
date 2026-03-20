@@ -4,7 +4,7 @@
 
 type EventCallback = (...args: unknown[]) => void;
 
-class GameEventBus {
+export class GameEventBus {
   private readonly listeners: Map<string, Set<EventCallback>> = new Map();
 
   on(event: string, callback: EventCallback): void {
@@ -28,7 +28,13 @@ class GameEventBus {
   }
 }
 
+/** Default global event bus — used by all non-race game modes */
 export const gameEvents = new GameEventBus();
+
+/** Create an isolated event bus instance (used for race mode split-screen) */
+export function createGameEventBus(): GameEventBus {
+  return new GameEventBus();
+}
 
 // Event names
 export const GAME_EVENTS = {

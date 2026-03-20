@@ -88,3 +88,19 @@ export interface DbLevelPlay {
 export interface DbLevelWithAuthor extends DbLevel {
   profiles: Pick<DbProfile, "nickname" | "photo_url" | "creator_rank">;
 }
+
+export interface DbRaceRoom {
+  id: string;
+  code: string;
+  level_id: string;
+  host_id: string;
+  guest_id: string | null;
+  status: "waiting" | "ready" | "racing" | "finished";
+  winner_id: string | null;
+  host_time_ms: number | null;
+  guest_time_ms: number | null;
+  host_deaths: number | null;
+  guest_deaths: number | null;
+  created_at: string;
+  expires_at: string;
+}

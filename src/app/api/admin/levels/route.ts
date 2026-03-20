@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("levels")
-    .select("id, name, author_id, plays, likes, featured, featured_category, published, created_at, difficulty, avg_rating, rating_count, tags, theme, weekly_challenge_date, profiles!inner(nickname)", { count: "exact" });
+    .select("id, name, author_id, plays, likes, featured, featured_category, published, created_at, difficulty, avg_rating, rating_count, tags, theme, weekly_challenge_date, profiles!author_id(nickname)", { count: "exact" });
 
   if (search) {
     query = query.ilike("name", `%${search}%`);

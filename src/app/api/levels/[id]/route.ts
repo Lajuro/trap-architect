@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { recalcCreatorRank } from "@/lib/rank-check";
 
 /** GET /api/levels/[id] — get a single level with author info */
 export async function GET(
@@ -11,7 +12,7 @@ export async function GET(
 
   const { data, error } = await supabase
     .from("levels")
-    .select("*, profiles!inner(nickname, photo_url, creator_rank)")
+    .select("*, profiles!author_id(nickname, photo_url, creator_rank)")
     .eq("id", id)
     .single();
 
@@ -84,7 +85,25 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ level: data });
+  // Update author's levels_published count and rank if publishing
+  let rankUp = null;
+  if (updates.published === true) {
+    await supabase
+      .from("profiles")
+      .update({
+        levels_published: (await supabase
+          .from("levels")
+          .select("id", { count: "exact" })
+          .eq("author_id", user.id)
+          .eq("published", true)
+          .then((r) => r.count)) ?? 0,
+      })
+      .eq("id", user.id);
+
+    rankUp = await recalcCreatorRank(supabase, user.id);
+  }
+
+  return NextResponse.json({ level: data, rankUp });
 }
 
 /** DELETE /api/levels/[id] — delete a level (author only) */
