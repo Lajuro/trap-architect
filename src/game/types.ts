@@ -215,17 +215,17 @@ export const LEVEL_TAGS = [
 export type LevelTag = (typeof LEVEL_TAGS)[number];
 
 /** Tag display configuration */
-export const TAG_CONFIG: Record<LevelTag, { label: string; color: string }> = {
-  puzzle: { label: "Puzzle", color: "#8b5cf6" },
-  speedrun: { label: "Speedrun", color: "#f59e0b" },
-  troll: { label: "Troll", color: "#ef4444" },
-  precision: { label: "Precisão", color: "#3b82f6" },
-  kaizo: { label: "Kaizo", color: "#dc2626" },
-  easy: { label: "Fácil", color: "#22c55e" },
-  art: { label: "Art", color: "#ec4899" },
-  story: { label: "História", color: "#6366f1" },
-  music: { label: "Música", color: "#14b8a6" },
-  impossible: { label: "Impossível", color: "#991b1b" },
+export const TAG_CONFIG: Record<LevelTag, { labelKey: string; color: string }> = {
+  puzzle: { labelKey: "puzzle", color: "#8b5cf6" },
+  speedrun: { labelKey: "speedrun", color: "#f59e0b" },
+  troll: { labelKey: "troll", color: "#ef4444" },
+  precision: { labelKey: "precision", color: "#3b82f6" },
+  kaizo: { labelKey: "kaizo", color: "#dc2626" },
+  easy: { labelKey: "easy", color: "#22c55e" },
+  art: { labelKey: "art", color: "#ec4899" },
+  story: { labelKey: "story", color: "#6366f1" },
+  music: { labelKey: "music", color: "#14b8a6" },
+  impossible: { labelKey: "impossible", color: "#991b1b" },
 };
 
 /** Available level themes */
@@ -269,6 +269,8 @@ export interface LevelData {
   playerStart: { x: number; y: number };
   // Teleporter pairs (A↔B linked by index)
   teleporterPairs?: { ax: number; ay: number; bx: number; by: number }[];
+  // Teleporter channels keyed by "gx,gy" → channel number (1-8)
+  teleporterChannels?: Record<string, number>;
   // Sign texts keyed by "gx,gy"
   signTexts?: Record<string, string>;
   // Tags (1-3 per level)
@@ -311,6 +313,8 @@ export interface ParsedLevel {
   _checkpointY?: number;
   // Teleporter pairs
   teleporterPairs?: { ax: number; ay: number; bx: number; by: number }[];
+  // Teleporter channels keyed by "gx,gy" → channel number (1-8)
+  teleporterChannels?: Record<string, number>;
   // Sign texts keyed by "gx,gy"
   signTexts?: Record<string, string>;
   // Theme

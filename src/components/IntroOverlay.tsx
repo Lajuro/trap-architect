@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { PixelIcon } from "@/components/ui/PixelIcon";
 
 export default function IntroOverlay({ onComplete }: { onComplete: () => void }) {
+  const tc = useTranslations("common");
   const [phase, setPhase] = useState<"dark" | "title" | "cat" | "done">("dark");
 
   const skip = useCallback(() => {
@@ -52,7 +54,7 @@ export default function IntroOverlay({ onComplete }: { onComplete: () => void })
   if (phase === "done") return null;
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center select-none cursor-pointer">
+    <div className="fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center select-none cursor-pointer" role="presentation" aria-label={tc("introAriaLabel")}>
       {/* Title */}
       <div
         className={`transition-all duration-700 ${
@@ -84,7 +86,7 @@ export default function IntroOverlay({ onComplete }: { onComplete: () => void })
 
       {/* Skip hint */}
       <p className="absolute bottom-8 text-[8px] text-muted-foreground/50 uppercase tracking-wider animate-pulse">
-        Clique para pular
+        {tc("clickToSkip")}
       </p>
     </div>
   );

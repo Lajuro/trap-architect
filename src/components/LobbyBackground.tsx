@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useLocale } from "next-intl";
+import { setGameLocale } from "@/i18n/game";
 
 export default function LobbyBackground({ onReady }: { onReady?: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
+  const locale = useLocale();
 
   useEffect(() => {
+    setGameLocale(locale);
     if (!containerRef.current || gameRef.current) return;
 
     let destroyed = false;

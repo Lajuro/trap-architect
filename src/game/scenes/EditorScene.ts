@@ -22,6 +22,7 @@ import type { EditorTool } from "../constants";
 import { TileType, type EntityType, type LevelData, type TrollTrigger, type LevelTheme } from "../types";
 import { gameEvents } from "../events";
 import { playBGM } from "../audio";
+import { gt } from "@/i18n/game";
 
 // ============================================================
 // Editor Events
@@ -34,6 +35,7 @@ export const EDITOR_EVENTS = {
   TEST_REQUEST: "editor:test_request",
   EXPORT_REQUEST: "editor:export",
   VALIDATION: "editor:validation",
+  TILE_CONFIG: "editor:tile_config", // right-click config modal
 
   // React → EditorScene
   SET_TOOL: "editor:set_tool",
@@ -55,6 +57,7 @@ export const EDITOR_EVENTS = {
   PASTE: "editor:paste",
   CUT: "editor:cut",
   PASTE_PREFAB: "editor:paste_prefab",
+  SET_TELEPORTER_CHANNEL: "editor:set_teleporter_channel",
 } as const;
 
 // ============================================================
@@ -136,6 +139,11 @@ export class EditorScene extends Phaser.Scene {
 
   // Sign texts map for custom signs
   private signTextsMap: Record<string, string> = {};
+
+  // Teleporter channels map: "gx,gy" → channel number (1-8)
+  private teleporterChannelsMap: Record<string, number> = {};
+  // Channel label overlays in editor
+  private channelLabels: Map<string, Phaser.GameObjects.Text> = new Map();
 
   // Theme
   private theme: LevelTheme = "default";
@@ -324,6 +332,12 @@ export class EditorScene extends Phaser.Scene {
         if (!this.ctrlKey.isDown) this.setTool("paint");
       });
 
+      // E = eraser tool
+      const eKey = this.input.keyboard.addKey("E");
+      eKey.on("down", () => {
+        if (!this.ctrlKey.isDown) this.setTool("eraser");
+      });
+
       // [ ] = brush size
       const bracketLeft = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.OPEN_BRACKET);
       bracketLeft.on("down", () => {
@@ -368,8 +382,22 @@ export class EditorScene extends Phaser.Scene {
       }
 
       if (pointer.rightButtonDown()) {
-        // Right-click = erase (always, regardless of tool)
+        // Right-click = configure tile (teleporter, sign) or erase
         const { gx, gy } = this.pointerToGrid(pointer);
+        if (gx < 0 || gx >= this.gridW || gy < 0 || gy >= this.gridH) return;
+        const tile = this.tiles[gy]?.[gx];
+        if (tile === TileType.TELEPORTER_A || tile === TileType.TELEPORTER_B) {
+          const key = `${gx},${gy}`;
+          const currentChannel = this.teleporterChannelsMap[key] ?? 1;
+          gameEvents.emit(EDITOR_EVENTS.TILE_CONFIG, {
+            type: "teleporter",
+            gx,
+            gy,
+            channel: currentChannel,
+          });
+          return;
+        }
+        // Default: erase
         this.eraseTile(gx, gy);
         return;
       }
@@ -389,6 +417,10 @@ export class EditorScene extends Phaser.Scene {
           this.toolStartPoint = { gx, gy };
           this.isDrawing = true;
           break;
+        case "eraser":
+          this.isDrawing = true;
+          this.handleDraw(pointer);
+          break;
         default: // "paint"
           this.isDrawing = true;
           this.handleDraw(pointer);
@@ -402,7 +434,7 @@ export class EditorScene extends Phaser.Scene {
       if (this.currentTool === "line" || this.currentTool === "rect") {
         this.updateToolPreview(pointer);
       } else {
-        // paint tool — continuous draw
+        // paint/eraser tool — continuous draw
         this.handleDraw(pointer);
       }
     });
@@ -442,7 +474,7 @@ export class EditorScene extends Phaser.Scene {
     }).setDepth(100);
 
     // Reset zoom button (positioned in world coords each frame, hidden by default)
-    this.resetZoomText = this.add.text(0, 10, "↺ Resetar", {
+    this.resetZoomText = this.add.text(0, 10, gt("game.editor.resetZoom"), {
       fontSize: "13px",
       color: "#ff8c00",
       backgroundColor: "#00000088",
@@ -588,6 +620,12 @@ export class EditorScene extends Phaser.Scene {
 
     // Import trolls
     this.trolls = data.trolls.map((t) => ({ ...t, triggered: false }));
+
+    // Import sign texts
+    this.signTextsMap = data.signTexts ? { ...data.signTexts } : {};
+
+    // Import teleporter channels
+    this.teleporterChannelsMap = data.teleporterChannels ? { ...data.teleporterChannels } : {};
   }
 
   // ============================================================
@@ -625,6 +663,36 @@ export class EditorScene extends Phaser.Scene {
       this.tileSprites[y] = [];
       for (let x = 0; x < this.gridW; x++) {
         this.tileSprites[y][x] = this.createTileSprite(x, y, this.tiles[y][x]);
+      }
+    }
+    this.refreshChannelLabels();
+  }
+
+  /** Draws channel number labels on all teleporter tiles in the editor */
+  private refreshChannelLabels(): void {
+    for (const label of this.channelLabels.values()) label.destroy();
+    this.channelLabels.clear();
+
+    const CHANNEL_COLORS = [
+      "#ffffff", "#ff4444", "#44ff44", "#4488ff",
+      "#ffff44", "#ff44ff", "#44ffff", "#ff8844",
+    ];
+
+    for (let gy = 0; gy < this.gridH; gy++) {
+      for (let gx = 0; gx < this.gridW; gx++) {
+        const t = this.tiles[gy]?.[gx];
+        if (t !== TileType.TELEPORTER_A && t !== TileType.TELEPORTER_B) continue;
+        const key = `${gx},${gy}`;
+        const ch = this.teleporterChannelsMap[key] ?? 1;
+        const color = CHANNEL_COLORS[(ch - 1) % CHANNEL_COLORS.length];
+        const label = this.add.text(
+          gx * TILE_SIZE + TILE_SIZE - 2,
+          gy * TILE_SIZE + 1,
+          `${ch}`,
+          { fontSize: "10px", fontFamily: "monospace", color, fontStyle: "bold",
+            backgroundColor: "#00000088", padding: { x: 1, y: 0 } },
+        ).setOrigin(1, 0).setDepth(15);
+        this.channelLabels.set(key, label);
       }
     }
   }
@@ -817,14 +885,14 @@ export class EditorScene extends Phaser.Scene {
       return;
     }
 
-    const item = PALETTE_ITEMS.find((p) => p.id === this.selectedPaletteId);
-    if (!item) return;
-
-    // Eraser: remove entity first, then tile
-    if (item.tileType === TileType.AIR) {
+    // Eraser tool: remove entity first, then tile
+    if (this.currentTool === "eraser") {
       this.applyBrush(gx, gy, (tx, ty) => this.eraseTile(tx, ty));
       return;
     }
+
+    const item = PALETTE_ITEMS.find((p) => p.id === this.selectedPaletteId);
+    if (!item) return;
 
     if (item.entityType) {
       this.placeEntity(item.entityType, gx, gy);
@@ -845,6 +913,22 @@ export class EditorScene extends Phaser.Scene {
     // Update data
     targetTiles[gy][gx] = tileType;
 
+    // Clean up channel data when removing a teleporter
+    if (this.activeLayer === "foreground") {
+      const key = `${gx},${gy}`;
+      const wasTeleporter = oldTile === TileType.TELEPORTER_A || oldTile === TileType.TELEPORTER_B;
+      const isTeleporter = tileType === TileType.TELEPORTER_A || tileType === TileType.TELEPORTER_B;
+      if (wasTeleporter && !isTeleporter) {
+        delete this.teleporterChannelsMap[key];
+      }
+      if (isTeleporter && !wasTeleporter) {
+        // New teleporter gets default channel 1
+        if (!(key in this.teleporterChannelsMap)) {
+          this.teleporterChannelsMap[key] = 1;
+        }
+      }
+    }
+
     // Update sprite
     const old = targetSprites[gy]?.[gx];
     if (old) old.destroy();
@@ -858,6 +942,7 @@ export class EditorScene extends Phaser.Scene {
       this.refreshAutoTile(gx, gy + 1);
       this.refreshAutoTile(gx - 1, gy);
       this.refreshAutoTile(gx + 1, gy);
+      this.refreshChannelLabels();
     }
 
     this.emitLevelData();
@@ -954,6 +1039,7 @@ export class EditorScene extends Phaser.Scene {
     // Tool-specific hover colors
     const hoverColors: Record<EditorTool, number> = {
       paint: 0xffff00,
+      eraser: 0xff4444,
       fill: 0x00aaff,
       line: 0xff8800,
       rect: 0x88ff00,
@@ -1231,19 +1317,33 @@ export class EditorScene extends Phaser.Scene {
   }
 
   exportLevelData(): LevelData {
-    // Build teleporter pairs by scanning for A/B tiles
-    const teleporterPairs: Array<{ ax: number; ay: number; bx: number; by: number }> = [];
-    const teleA: Array<{ x: number; y: number }> = [];
-    const teleB: Array<{ x: number; y: number }> = [];
+    // Build teleporter channels (only for tiles that still exist)
+    const teleporterChannels: Record<string, number> = {};
+    const portals: Array<{ x: number; y: number; ch: number }> = [];
     for (let gy = 0; gy < this.gridH; gy++) {
       for (let gx = 0; gx < this.gridW; gx++) {
-        if (this.tiles[gy][gx] === TileType.TELEPORTER_A) teleA.push({ x: gx, y: gy });
-        if (this.tiles[gy][gx] === TileType.TELEPORTER_B) teleB.push({ x: gx, y: gy });
+        const t = this.tiles[gy][gx];
+        if (t === TileType.TELEPORTER_A || t === TileType.TELEPORTER_B) {
+          const key = `${gx},${gy}`;
+          const ch = this.teleporterChannelsMap[key] ?? 1;
+          teleporterChannels[key] = ch;
+          portals.push({ x: gx, y: gy, ch });
+        }
       }
     }
-    const pairCount = Math.min(teleA.length, teleB.length);
-    for (let i = 0; i < pairCount; i++) {
-      teleporterPairs.push({ ax: teleA[i].x, ay: teleA[i].y, bx: teleB[i].x, by: teleB[i].y });
+
+    // Build teleporter pairs from channels
+    const teleporterPairs: Array<{ ax: number; ay: number; bx: number; by: number }> = [];
+    const byChannel = new Map<number, Array<{ x: number; y: number }>>();
+    for (const p of portals) {
+      let arr = byChannel.get(p.ch);
+      if (!arr) { arr = []; byChannel.set(p.ch, arr); }
+      arr.push({ x: p.x, y: p.y });
+    }
+    for (const [, arr] of byChannel) {
+      for (let i = 0; i + 1 < arr.length; i += 2) {
+        teleporterPairs.push({ ax: arr[i].x, ay: arr[i].y, bx: arr[i + 1].x, by: arr[i + 1].y });
+      }
     }
 
     // Build sign texts map
@@ -1276,6 +1376,7 @@ export class EditorScene extends Phaser.Scene {
       movingPlatforms: [],
       playerStart: { x: this.playerStart.gx, y: this.playerStart.gy },
       teleporterPairs,
+      teleporterChannels,
       signTexts,
     };
   }
@@ -1384,6 +1485,14 @@ export class EditorScene extends Phaser.Scene {
 
     register(EDITOR_EVENTS.SET_BRUSH_SIZE, (size: unknown) => {
       this.setBrushSize(size as number);
+    });
+
+    register(EDITOR_EVENTS.SET_TELEPORTER_CHANNEL, (data: unknown) => {
+      const { gx, gy, channel } = data as { gx: number; gy: number; channel: number };
+      const key = `${gx},${gy}`;
+      this.teleporterChannelsMap[key] = channel;
+      this.refreshChannelLabels();
+      this.emitLevelData();
     });
   }
 

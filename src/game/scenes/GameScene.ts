@@ -62,6 +62,7 @@ import { gameEvents, GAME_EVENTS } from "../events";
 import { DEMO_LEVEL } from "../levels/demo";
 import { getCampaignLevel, CAMPAIGN_LEVELS } from "../levels/campaign";
 import { playJump, playDeath, playCoin, playComplete, playSpring, playStomp, playBGM, isSoundEnabled, isMusicEnabled, setMusicEnabled, setSoundEnabled, stopBGM, playPowerUp, playWallJump, playDash, playGravityFlip, playGravityNormalize, playSlideBlock, playFireball, playTeleport, playCannon, playKeyPickup, playLockOpen, playIceBreak, playSlowMo, playBossHit, playTrollSfx } from "../audio";
+import { gt } from "@/i18n/game";
 
 interface PlayerSprite extends Phaser.GameObjects.Image {
   vx: number;
@@ -228,6 +229,9 @@ export class GameScene extends Phaser.Scene {
   private cannonBullets: { x: number; y: number; vx: number; vy: number; sprite: Phaser.GameObjects.Image }[] = [];
   // Teleporter cooldown
   private teleporterCooldown = 0;
+  // Tracks highest Y position (screen-space, lower = higher) since last grounded,
+  // used by teleporters to compute energy-conserving exit velocity.
+  private portalPeakY = 0;
   // Sticky block state
   private stuckToSticky = false;
   private stickyDir: "floor" | "ceiling" | "wall" = "floor";
@@ -339,6 +343,9 @@ export class GameScene extends Phaser.Scene {
 
     // Build tile map
     this.buildTileMap();
+
+    // Derive teleporter pairs from tile grid (always works regardless of level source)
+    this.deriveTeleporterPairs();
 
     // Build background tiles layer
     this.buildBgTileMap();
@@ -616,13 +623,13 @@ export class GameScene extends Phaser.Scene {
 
     // Power-up HUD
     if (this.powered && this.powerType) {
-      const names: Record<string, string> = { mushroom: "Cogumelo", star: "Estrela", fire_flower: "Fogo" };
+      const names: Record<string, string> = { mushroom: gt("game.power.mushroom"), star: gt("game.power.star"), fire_flower: gt("game.power.fire") };
       const secs = Math.ceil(this.powerTimer / 60);
       this.hudPower.setText(`${names[this.powerType] ?? ""} ${secs}s`);
       this.hudPower.setAlpha(this.powerTimer < 120 ? (Math.sin(this.frame * 0.3) * 0.5 + 0.5) : 1);
     } else if (this.slowMoTimer > 0) {
       const secs = Math.ceil(this.slowMoTimer / 60);
-      this.hudPower.setText(`SlowMo ${secs}s`);
+      this.hudPower.setText(`${gt("game.power.slowmo")} ${secs}s`);
       this.hudPower.setColor("#4488FF");
       this.hudPower.setAlpha(this.slowMoTimer < 60 ? (Math.sin(this.frame * 0.3) * 0.5 + 0.5) : 1);
     } else {
@@ -1077,6 +1084,7 @@ export class GameScene extends Phaser.Scene {
     this.player.alive = true;
     this.player.dir = 1;
     this.player.setDepth(50);
+    this.portalPeakY = start.y;
   }
 
   private handleInput(): void {
@@ -1169,9 +1177,9 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Variable jump height
+    // Variable jump height (skip during teleporter momentum to preserve energy)
     const gravUp = this.gravityFlipped ? (this.player.vy > 4) : (this.player.vy < -4);
-    if (!jumpDown && gravUp) {
+    if (!jumpDown && gravUp && this.teleporterCooldown <= 0) {
       this.player.vy = this.gravityFlipped ? 4 : -4;
       this.player.jumpHeld = false;
     }
@@ -1209,6 +1217,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private applyPhysics(): void {
+    // Track peak Y for portal momentum conservation
+    if (this.player.grounded) {
+      this.portalPeakY = this.player.y;
+    } else if (this.gravityFlipped) {
+      if (this.player.y > this.portalPeakY) this.portalPeakY = this.player.y;
+    } else {
+      if (this.player.y < this.portalPeakY) this.portalPeakY = this.player.y;
+    }
+
     // Gravity (supports flipped gravity)
     if (this.gravityFlipped) {
       this.player.vy -= GRAVITY;
@@ -2278,7 +2295,7 @@ export class GameScene extends Phaser.Scene {
           case "gravity_flip":
             this.gravityFlipped = !this.gravityFlipped;
             playGravityFlip();
-            this.showMessage("Gravidade invertida!");
+            this.showMessage(gt("game.gravityFlipped"));
             this.player.setFlipY(this.gravityFlipped);
             break;
           case "sound":
@@ -2294,6 +2311,37 @@ export class GameScene extends Phaser.Scene {
   // ===========================================================
   // Teleporters
   // ===========================================================
+  /** Scan the tile grid for TELEPORTER_A / TELEPORTER_B and build paired links
+   *  using channel metadata when available. Falls back to scan-order pairing. */
+  private deriveTeleporterPairs(): void {
+    const channels = this.level.teleporterChannels;
+    const portals: Array<{ x: number; y: number; ch: number }> = [];
+    for (let gy = 0; gy < this.level.height; gy++) {
+      for (let gx = 0; gx < this.level.width; gx++) {
+        const t = this.level.tiles[gy]?.[gx];
+        if (t === TileType.TELEPORTER_A || t === TileType.TELEPORTER_B) {
+          const key = `${gx},${gy}`;
+          const ch = channels?.[key] ?? 1;
+          portals.push({ x: gx, y: gy, ch });
+        }
+      }
+    }
+    // Group by channel and pair them (first with second in each channel)
+    const byChannel = new Map<number, Array<{ x: number; y: number }>>();
+    for (const p of portals) {
+      let arr = byChannel.get(p.ch);
+      if (!arr) { arr = []; byChannel.set(p.ch, arr); }
+      arr.push({ x: p.x, y: p.y });
+    }
+    const pairs: Array<{ ax: number; ay: number; bx: number; by: number }> = [];
+    for (const [, arr] of byChannel) {
+      for (let i = 0; i + 1 < arr.length; i += 2) {
+        pairs.push({ ax: arr[i].x, ay: arr[i].y, bx: arr[i + 1].x, by: arr[i + 1].y });
+      }
+    }
+    this.level.teleporterPairs = pairs;
+  }
+
   private checkTeleporters(): void {
     if (this.teleporterCooldown > 0) return;
     const pairs = this.level.teleporterPairs;
@@ -2303,20 +2351,59 @@ export class GameScene extends Phaser.Scene {
     const pgy = Math.floor(this.player.y / TILE_SIZE);
 
     for (const pair of pairs) {
+      let destGx: number | undefined;
+      let destGy: number | undefined;
       if (pgx === pair.ax && pgy === pair.ay) {
-        this.player.x = pair.bx * TILE_SIZE + TILE_SIZE / 2;
-        this.player.y = pair.by * TILE_SIZE + TILE_SIZE / 2;
-        this.teleporterCooldown = TELEPORTER_COOLDOWN;
-        playTeleport();
-        return;
+        destGx = pair.bx; destGy = pair.by;
+      } else if (pgx === pair.bx && pgy === pair.by) {
+        destGx = pair.ax; destGy = pair.ay;
       }
-      if (pgx === pair.bx && pgy === pair.by) {
-        this.player.x = pair.ax * TILE_SIZE + TILE_SIZE / 2;
-        this.player.y = pair.ay * TILE_SIZE + TILE_SIZE / 2;
-        this.teleporterCooldown = TELEPORTER_COOLDOWN;
-        playTeleport();
-        return;
+      if (destGx === undefined || destGy === undefined) continue;
+
+      // Determine exit offset based on dominant velocity direction
+      // so momentum is visually preserved (Portal-style)
+      const absVx = Math.abs(this.player.vx);
+      const absVy = Math.abs(this.player.vy);
+      let exitX = destGx * TILE_SIZE + TILE_SIZE / 2;
+      let exitY = destGy * TILE_SIZE + TILE_SIZE / 2;
+
+      if (absVy >= absVx) {
+        // Vertical dominant: place above or below the destination tile
+        if (this.player.vy > 0) {
+          // Falling down → appear above destination
+          exitY = destGy * TILE_SIZE - PLAYER_H / 2 - 1;
+        } else if (this.player.vy < 0) {
+          // Moving up → appear below destination
+          exitY = (destGy + 1) * TILE_SIZE + PLAYER_H / 2 + 1;
+        }
+      } else if (this.player.vx > 0) {
+        // Moving right → appear to the left
+        exitX = destGx * TILE_SIZE - PLAYER_W / 2 - 1;
+      } else if (this.player.vx < 0) {
+        // Moving left → appear to the right
+        exitX = (destGx + 1) * TILE_SIZE + PLAYER_W / 2 + 1;
       }
+
+      // Portal-style energy-conserving momentum
+      if (absVy >= absVx) {
+        // Compute exit velocity from actual fall height so terminal velocity
+        // doesn't eat energy.  v = sqrt(2 * g * h)  (basic kinematics).
+        const fallDist = Math.abs(this.player.y - this.portalPeakY);
+        const energyVy = Math.sqrt(2 * GRAVITY * fallDist);
+        // Use whichever is greater: the energy-based speed or the raw speed
+        const speed = Math.max(energyVy, absVy);
+        this.player.vy = this.player.vy > 0 ? -speed : speed;
+        // Reset peak so consecutive portals track separately
+        this.portalPeakY = exitY;
+      } else {
+        this.player.vx = -this.player.vx;
+      }
+
+      this.player.x = exitX;
+      this.player.y = exitY;
+      this.teleporterCooldown = TELEPORTER_COOLDOWN;
+      playTeleport();
+      return;
     }
   }
 
@@ -2935,6 +3022,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setFlipY(false);
     this.player.alive = true;
     this.player.grounded = false;
+    this.portalPeakY = spawnY;
     this.idleTimer = 0;
     this.idleState = "normal";
     this.idleStateTimer = 0;
@@ -2992,7 +3080,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     const overlay = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20, "NIVEL COMPLETO!", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20, gt("game.levelComplete"), {
         fontFamily: "monospace",
         fontSize: "28px",
         color: "#44ff44",
@@ -3015,7 +3103,7 @@ export class GameScene extends Phaser.Scene {
 
     const elapsedSecs = Math.floor((Date.now() - this.startTime - this.totalPausedMs) / 1000);
     const statsText = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, `Moedas: ${this.coins}  |  Mortes: ${this.deaths}  |  Tempo: ${elapsedSecs}s`, {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, `${gt("game.coins")}: ${this.coins}  |  ${gt("game.deaths")}: ${this.deaths}  |  ${gt("game.time")}: ${elapsedSecs}s`, {
         fontFamily: "monospace",
         fontSize: "14px",
         color: "#ffffff",
@@ -3028,7 +3116,7 @@ export class GameScene extends Phaser.Scene {
     // Show zero-death badge
     const noDeath = this.deaths === 0;
     const badgeText = noDeath
-      ? this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70, "✨ PERFEITO — Zero Mortes! ✨", {
+      ? this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 70, gt("game.perfectNoDeath"), {
           fontFamily: "monospace",
           fontSize: "12px",
           color: "#ffd700",
@@ -3104,7 +3192,7 @@ export class GameScene extends Phaser.Scene {
 
     // Title
     const title = this.add
-      .text(GAME_WIDTH / 2, 60, "CAMPANHA COMPLETA!", {
+      .text(GAME_WIDTH / 2, 60, gt("game.campaignComplete"), {
         fontFamily: "monospace",
         fontSize: "28px",
         color: "#FFD700",
@@ -3127,7 +3215,7 @@ export class GameScene extends Phaser.Scene {
 
     // Stats
     this.add
-      .text(GAME_WIDTH / 2, 140, `x${totalDeaths} Mortes`, {
+      .text(GAME_WIDTH / 2, 140, `x${totalDeaths} ${gt("game.deaths")}`, {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#ffffff",
@@ -3137,7 +3225,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(301);
 
     this.add
-      .text(GAME_WIDTH / 2, 170, `$${totalCoins} Moedas`, {
+      .text(GAME_WIDTH / 2, 170, `$${totalCoins} ${gt("game.coins")}`, {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#ffffff",
@@ -3148,7 +3236,7 @@ export class GameScene extends Phaser.Scene {
 
     // Unlock message
     this.add
-      .text(GAME_WIDTH / 2, 220, "[!] Skin desbloqueada: Gato Dourado!", {
+      .text(GAME_WIDTH / 2, 220, gt("game.skinUnlocked"), {
         fontFamily: "monospace",
         fontSize: "14px",
         color: "#FFD700",
@@ -3159,7 +3247,7 @@ export class GameScene extends Phaser.Scene {
 
     // CTA
     this.add
-      .text(GAME_WIDTH / 2, 270, "Agora e sua vez de criar!", {
+      .text(GAME_WIDTH / 2, 270, gt("game.yourTurnToCreate"), {
         fontFamily: "monospace",
         fontSize: "14px",
         color: "#a3a3a3",
@@ -3173,7 +3261,7 @@ export class GameScene extends Phaser.Scene {
 
     // Buttons
     const menuBtn = this.add
-      .text(GAME_WIDTH / 2 - 100, 340, "Menu", {
+      .text(GAME_WIDTH / 2 - 100, 340, gt("game.menu"), {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#ffffff",
@@ -3197,7 +3285,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     const selectBtn = this.add
-      .text(GAME_WIDTH / 2 + 100, 340, "Fases", {
+      .text(GAME_WIDTH / 2 + 100, 340, gt("game.levels"), {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#ffffff",
@@ -3475,7 +3563,7 @@ export class GameScene extends Phaser.Scene {
           this.gravityFlipped = false;
           this.player.setFlipY(false);
           playGravityNormalize();
-          this.showMessage("Gravidade normalizada!");
+          this.showMessage(gt("game.gravityNormalized"));
           return;
         }
       }
@@ -4045,7 +4133,7 @@ export class GameScene extends Phaser.Scene {
 
     // Title
     const title = this.add
-      .text(panelX, panelY - 140, "|| Pausado", {
+      .text(panelX, panelY - 140, gt("game.paused"), {
         fontFamily: "monospace",
         fontSize: "24px",
         color: "#ffffff",
@@ -4091,15 +4179,15 @@ export class GameScene extends Phaser.Scene {
       return btn;
     };
 
-    const btnContinue = makeBtn(panelY - 60, ">  Continuar", "#4ade80", () => this.resumeGame());
-    const btnRestart = makeBtn(panelY - 15, "R  Reiniciar", "#fbbf24", () => {
+    const btnContinue = makeBtn(panelY - 60, `>  ${gt("game.continue")}`, "#4ade80", () => this.resumeGame());
+    const btnRestart = makeBtn(panelY - 15, `R  ${gt("game.restart")}`, "#fbbf24", () => {
       this.resumeGame();
       this.restartLevel();
     });
 
     // Settings section
     const settingsLabel = this.add
-      .text(panelX, panelY + 30, "*  Configuracoes", {
+      .text(panelX, panelY + 30, `*  ${gt("game.settings")}`, {
         fontFamily: "monospace",
         fontSize: "13px",
         color: "#6366f1",
@@ -4111,7 +4199,7 @@ export class GameScene extends Phaser.Scene {
     // SFX toggle
     let sfxOn = isSoundEnabled();
     const sfxBtn = this.add
-      .text(panelX, panelY + 60, `SFX: ${sfxOn ? "[ON] Ligado" : "[--] Desligado"}`, {
+      .text(panelX, panelY + 60, `SFX: ${sfxOn ? gt("game.sfxOn") : gt("game.sfxOff")}`, {
         fontFamily: "monospace",
         fontSize: "14px",
         color: sfxOn ? "#4ade80" : "#ef4444",
@@ -4126,14 +4214,14 @@ export class GameScene extends Phaser.Scene {
         ev.stopPropagation();
         sfxOn = !sfxOn;
         setSoundEnabled(sfxOn);
-        sfxBtn.setText(`SFX: ${sfxOn ? "[ON] Ligado" : "[--] Desligado"}`);
+        sfxBtn.setText(`SFX: ${sfxOn ? gt("game.sfxOn") : gt("game.sfxOff")}`);
         sfxBtn.setColor(sfxOn ? "#4ade80" : "#ef4444");
       });
 
     // Music toggle
     let musicOn = isMusicEnabled();
     const musicBtn = this.add
-      .text(panelX, panelY + 95, `Musica: ${musicOn ? "[ON] Ligada" : "[--] Desligada"}`, {
+      .text(panelX, panelY + 95, `${gt("game.music")}: ${musicOn ? gt("game.sfxOn") : gt("game.sfxOff")}`, {
         fontFamily: "monospace",
         fontSize: "14px",
         color: musicOn ? "#4ade80" : "#ef4444",
@@ -4152,12 +4240,12 @@ export class GameScene extends Phaser.Scene {
           const m = this.level.music;
           playBGM((m === "easy" || m === "medium" || m === "hard") ? m : "medium");
         }
-        musicBtn.setText(`Musica: ${musicOn ? "[ON] Ligada" : "[--] Desligada"}`);
+        musicBtn.setText(`${gt("game.music")}: ${musicOn ? gt("game.sfxOn") : gt("game.sfxOff")}`);
         musicBtn.setColor(musicOn ? "#4ade80" : "#ef4444");
       });
 
     // Quit button
-    const btnQuit = makeBtn(panelY + 140, "X  Sair", "#ef4444", () => {
+    const btnQuit = makeBtn(panelY + 140, `X  ${gt("game.quit")}`, "#ef4444", () => {
       this.resumeGame();
       stopBGM();
       if (this.levelIndex >= 0) {

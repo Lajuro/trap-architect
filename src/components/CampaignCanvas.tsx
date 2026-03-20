@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useLocale } from "next-intl";
+import { setGameLocale } from "@/i18n/game";
 import { ErrorBoundary, GameErrorFallback } from "./ErrorBoundary";
 
 interface CampaignCanvasInnerProps {
@@ -10,8 +12,10 @@ interface CampaignCanvasInnerProps {
 function CampaignCanvasInner({ startScene }: CampaignCanvasInnerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
+  const locale = useLocale();
 
   useEffect(() => {
+    setGameLocale(locale);
     let mounted = true;
 
     async function initGame() {

@@ -44,11 +44,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext value={{ showToast }}>
       {children}
       {/* Toast container */}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm">
+      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm" aria-live="polite" role="status">
         {toasts.map((toast) => (
           <button
             key={toast.id}
             onClick={() => dismiss(toast.id)}
+            role={toast.type === "error" ? "alert" : "status"}
             className={`px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-left transition-all animate-in slide-in-from-right ${
               toast.type === "error"
                 ? "bg-red-600 text-white"

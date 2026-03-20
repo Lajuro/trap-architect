@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from "../constants";
 import { gameEvents, GAME_EVENTS } from "../events";
 import { CAMPAIGN_LEVELS } from "../levels/campaign";
 import { playBGM } from "../audio";
+import { gt } from "@/i18n/game";
 
 const SAVE_KEY = "trap_architect_progress";
 
@@ -105,7 +106,7 @@ export class LevelSelectScene extends Phaser.Scene {
     // ── Title ──
     const titleY = 26;
     this.add
-      .text(GAME_WIDTH / 2, titleY, "SELECIONE A FASE", {
+      .text(GAME_WIDTH / 2, titleY, gt("game.selectLevel"), {
         fontFamily: "monospace",
         fontSize: "20px",
         color: COL.accentHex,
@@ -194,7 +195,7 @@ export class LevelSelectScene extends Phaser.Scene {
       // Level name
       container.add(
         this.add
-          .text(cx, 46, level.name, {
+          .text(cx, 46, gt(`campaign.levels.${i}.name`), {
             fontFamily: "monospace",
             fontSize: "10px",
             color: isUnlocked ? COL.textPrimary : COL.textDim,
@@ -208,7 +209,7 @@ export class LevelSelectScene extends Phaser.Scene {
       if (level.subtitle) {
         container.add(
           this.add
-            .text(cx, 60, level.subtitle, {
+            .text(cx, 60, gt(`campaign.levels.${i}.subtitle`), {
               fontFamily: "monospace",
               fontSize: "8px",
               color: isUnlocked ? "#8888a0" : COL.textMuted,
@@ -248,7 +249,7 @@ export class LevelSelectScene extends Phaser.Scene {
         // Completed badge
         container.add(
           this.add
-            .text(cx, 100, "\u2713 COMPLETA", {
+            .text(cx, 100, gt("game.levelSelect.completed"), {
               fontFamily: "monospace",
               fontSize: "8px",
               color: COL.completeHex,
@@ -271,7 +272,7 @@ export class LevelSelectScene extends Phaser.Scene {
         // Unlocked but not completed
         container.add(
           this.add
-            .text(cx, 92, "JOGAR", {
+            .text(cx, 92, gt("game.play"), {
               fontFamily: "monospace",
               fontSize: "9px",
               color: COL.accentHex,
@@ -409,7 +410,7 @@ export class LevelSelectScene extends Phaser.Scene {
     roundRect(backGfx, 0, 0, 90, 28, 6, 0x161625, 0x333344);
     backContainer.add(backGfx);
     const backText = this.add
-      .text(45, 14, "\u2190 Menu", {
+      .text(45, 14, gt("game.levelSelect.backMenu"), {
         fontFamily: "monospace",
         fontSize: "11px",
         color: "#8888a0",
@@ -442,8 +443,8 @@ export class LevelSelectScene extends Phaser.Scene {
 
     // ── Hint text (bottom center) ──
     const hintParts = this.maxScroll > 0
-      ? "Scroll para navegar  \u2022  Clique para jogar  \u2022  ESC voltar"
-      : "Clique em uma fase para jogar  \u2022  ESC voltar";
+      ? gt("game.levelSelect.hintScroll")
+      : gt("game.levelSelect.hintNoScroll");
     this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT - 12, hintParts, {
         fontFamily: "monospace",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { gameEvents } from "@/game/events";
 import { EDITOR_EVENTS } from "@/game/scenes/EditorScene";
 import { PALETTE_ITEMS } from "@/game/constants";
@@ -9,12 +10,12 @@ import { loadPrefabs, deletePrefab, type Prefab } from "@/lib/prefabs";
 import { Layers, Skull, Zap, Users, ChevronDown, Loader2, Flower2, PackagePlus, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-const CATEGORY_META: Record<string, { label: string; Icon: LucideIcon; color: string }> = {
-  terrain: { label: "Terreno", Icon: Layers, color: "#4CAF50" },
-  danger: { label: "Perigo", Icon: Skull, color: "#F44336" },
-  interactive: { label: "Interativo", Icon: Zap, color: "#FF9800" },
-  decoration: { label: "Decoração", Icon: Flower2, color: "#AB47BC" },
-  entities: { label: "Entidades", Icon: Users, color: "#2196F3" },
+const CATEGORY_META: Record<string, { Icon: LucideIcon; color: string }> = {
+  terrain: { Icon: Layers, color: "#4CAF50" },
+  danger: { Icon: Skull, color: "#F44336" },
+  interactive: { Icon: Zap, color: "#FF9800" },
+  decoration: { Icon: Flower2, color: "#AB47BC" },
+  entities: { Icon: Users, color: "#2196F3" },
 };
 
 function CollapsibleSection({
@@ -71,6 +72,7 @@ function TileSwatch({
   item: (typeof PALETTE_ITEMS)[number];
   selected: boolean;
 }) {
+  const tp = useTranslations("palette");
   const c = item.color;
   const texKey = PALETTE_TEXTURE_KEY[item.id];
   const dataUrl = texKey ? textureCache[texKey] : null;
@@ -90,23 +92,17 @@ function TileSwatch({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={dataUrl}
-          alt={item.name}
+          alt={tp(`${item.id}.name`)}
           className="absolute inset-0 w-full h-full object-contain"
           style={{ imageRendering: "pixelated" }}
           draggable={false}
         />
       ) : (
-        /* Fallback for eraser (id 0) and invisible block (id 18) */
+        /* Fallback for invisible block (id 18) and items without textures */
         <div
           className="absolute inset-[3px] rounded-sm"
           style={{ backgroundColor: c + "aa" }}
         >
-          {item.id === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-3 h-px bg-white/50 rotate-45 absolute" />
-              <div className="w-3 h-px bg-white/50 -rotate-45 absolute" />
-            </div>
-          )}
           {item.id === 18 && (
             <div className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white/40">?</div>
           )}
@@ -125,6 +121,7 @@ function PaletteButton({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const tp = useTranslations("palette");
   return (
     <button
       onClick={onSelect}
@@ -142,10 +139,10 @@ function PaletteButton({
             selected ? "text-primary" : "text-foreground/80"
           }`}
         >
-          {item.name}
+          {tp(`${item.id}.name`)}
         </p>
         <p className="text-[10px] text-muted-foreground/60 truncate leading-tight">
-          {item.description}
+          {tp(`${item.id}.description`)}
         </p>
       </div>
 
@@ -155,6 +152,8 @@ function PaletteButton({
 }
 
 export function EditorSidebar() {
+  const t = useTranslations("editor");
+  const tp = useTranslations("palette");
   const [selectedId, setSelectedId] = useState(1);
   const [ready, setReady] = useState(false);
   const [prefabs, setPrefabs] = useState<Prefab[]>([]);
@@ -189,7 +188,7 @@ export function EditorSidebar() {
       <div className="w-72 bg-[#0d0d14] border-l border-border/30 flex items-center justify-center">
         <div className="text-center">
           <Loader2 size={24} className="mx-auto mb-3 animate-spin text-primary" />
-          <p className="text-muted-foreground text-sm animate-pulse">Preparando editor...</p>
+          <p className="text-muted-foreground text-sm animate-pulse">{t("preparingEditor")}</p>
         </div>
       </div>
     );
@@ -205,9 +204,9 @@ export function EditorSidebar() {
           <div className="flex items-center gap-3">
             <TileSwatch item={selectedItem} selected />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-primary truncate">{selectedItem.name}</p>
+              <p className="text-sm font-bold text-primary truncate">{tp(`${selectedItem.id}.name`)}</p>
               <p className="text-[10px] text-muted-foreground/70 leading-tight">
-                {selectedItem.description}
+                {tp(`${selectedItem.id}.description`)}
               </p>
             </div>
           </div>
@@ -217,18 +216,18 @@ export function EditorSidebar() {
       {/* Palette label */}
       <div className="px-3 py-2 border-b border-border/20 shrink-0">
         <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">
-          Paleta de blocos
+          {t("blockPalette")}
         </p>
       </div>
 
       {/* Scrollable palette list */}
       <div className="flex-1 overflow-y-auto min-h-0 py-1">
         {Object.entries(categories).map(([cat, items]) => {
-          const meta = CATEGORY_META[cat] || { label: cat, Icon: Layers, color: "#888" };
+          const meta = CATEGORY_META[cat] || { Icon: Layers, color: "#888" };
           return (
             <CollapsibleSection
               key={cat}
-              title={meta.label}
+              title={t(`categories.${cat}`)}
               Icon={meta.Icon}
               color={meta.color}
               count={items.length}
@@ -249,7 +248,7 @@ export function EditorSidebar() {
 
         {/* Prefabs section */}
         <CollapsibleSection
-          title="Prefabs"
+          title={t("prefabsLabel")}
           Icon={PackagePlus}
           color="#10B981"
           count={prefabs.length}
@@ -289,7 +288,7 @@ export function EditorSidebar() {
             ))}
             {prefabs.length === 0 && (
               <p className="text-[10px] text-muted-foreground/50 px-2 py-2">
-                Nenhum prefab salvo
+                {t("noPrefabsSaved")}
               </p>
             )}
           </div>

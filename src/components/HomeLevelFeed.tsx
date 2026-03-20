@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import LevelCard from "./LevelCard";
 import HudPanel from "./ui/HudPanel";
 
@@ -32,21 +33,41 @@ export default function HomeLevelFeed({
   icon?: ReactNode;
 }) {
   const [levels, setLevels] = useState<LevelSummary[]>([]);
+  const [error, setError] = useState(false);
+  const tc = useTranslations("common");
 
   useEffect(() => {
+    setError(false);
     fetch(apiUrl)
       .then((r) => r.json())
       .then((data) => setLevels(data.levels || []))
-      .catch(() => {});
+      .catch(() => setError(true));
   }, [apiUrl]);
 
   return (
-    <section className="max-w-7xl mx-auto px-4 py-8">
+    <section className="max-w-7xl mx-auto px-4 py-8" aria-label={title}>
       <HudPanel>
         <div className="flex items-center gap-2 mb-4">
           {icon}
           <h3 className="text-[11px] font-bold uppercase tracking-wider">{title}</h3>
         </div>
+        {error ? (
+          <div className="text-center py-8">
+            <p className="text-[9px] text-muted-foreground mb-3">{tc("failedToLoadLevels")}</p>
+            <button
+              onClick={() => {
+                setError(false);
+                fetch(apiUrl)
+                  .then((r) => r.json())
+                  .then((data) => setLevels(data.levels || []))
+                  .catch(() => setError(true));
+              }}
+              className="text-[8px] text-primary hover:underline uppercase tracking-wider"
+            >
+              {tc("tryAgain")}
+            </button>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {levels.length === 0
             ? [1, 2, 3].map((i) => (
@@ -84,6 +105,7 @@ export default function HomeLevelFeed({
                 />
               ))}
         </div>
+        )}
       </HudPanel>
     </section>
   );

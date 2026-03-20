@@ -112,7 +112,7 @@ export const EDITOR_MAX_UNDO = 80;
 export const EDITOR_SCROLL_SPEED = 8;
 export const EDITOR_MAX_FILL = 500;
 
-export type EditorTool = "paint" | "fill" | "line" | "rect" | "eyedropper";
+export type EditorTool = "paint" | "eraser" | "fill" | "line" | "rect" | "eyedropper";
 
 // ============================================================
 // Tile Categories
@@ -347,7 +347,6 @@ export const FRAMES: CosmeticFrame[] = [
 // ============================================================
 export const PALETTE_ITEMS: PaletteItem[] = [
   // Terrain
-  { id: 0, name: "Borracha", description: "Apaga qualquer tile ou entidade", category: "terrain", tileType: TileType.AIR, color: "#666666" },
   { id: 1, name: "Chão", description: "Grama na superfície, terra no interior", category: "terrain", tileType: TileType.GROUND_TOP, color: "#228B22" },
   { id: 3, name: "Tijolo", description: "Bloco destrutível clássico", category: "terrain", tileType: TileType.BRICK, color: "#CD853F" },
   { id: 4, name: "Castelo", description: "Parede de pedra — ameias automáticas no topo", category: "terrain", tileType: TileType.CASTLE, color: "#888888" },
@@ -405,8 +404,8 @@ export const PALETTE_ITEMS: PaletteItem[] = [
   { id: 36, name: "Flor de Fogo", description: "Power-up: atira bolas de fogo!", category: "entities", entityType: "fire_flower", color: "#FF6600" },
   // --- New gameplay mechanics ---
   // Interactive
-  { id: 55, name: "Teleportador A", description: "Portal de entrada — par com Teleportador B", category: "interactive", tileType: TileType.TELEPORTER_A, color: "#4488FF" },
-  { id: 56, name: "Teleportador B", description: "Portal de saída — par com Teleportador A", category: "interactive", tileType: TileType.TELEPORTER_B, color: "#FF8844" },
+  { id: 55, name: "Portal A", description: "Portal azul — clique direito para definir canal", category: "interactive", tileType: TileType.TELEPORTER_A, color: "#4488FF" },
+  { id: 56, name: "Portal B", description: "Portal laranja — clique direito para definir canal", category: "interactive", tileType: TileType.TELEPORTER_B, color: "#FF8844" },
   { id: 57, name: "Bloco Pegajoso", description: "Gruda o jogador — pule para se soltar!", category: "interactive", tileType: TileType.STICKY_BLOCK, color: "#CCAA22" },
   { id: 58, name: "Chave Vermelha", description: "Abre fechaduras vermelhas", category: "interactive", tileType: TileType.KEY_RED, color: "#FF4444" },
   { id: 59, name: "Chave Azul", description: "Abre fechaduras azuis", category: "interactive", tileType: TileType.KEY_BLUE, color: "#4444FF" },

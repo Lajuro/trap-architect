@@ -2,6 +2,7 @@ import * as Phaser from "phaser";
 import { GAME_WIDTH, GAME_HEIGHT } from "../constants";
 import { gameEvents, GAME_EVENTS } from "../events";
 import { playBGM } from "../audio";
+import { gt } from "@/i18n/game";
 
 export class MenuScene extends Phaser.Scene {
   private bgElements: { x: number; y: number; size: number; speed: number }[] = [];
@@ -31,7 +32,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Title
     const title = this.add
-      .text(GAME_WIDTH / 2, 100, "TRAP ARCHITECT", {
+      .text(GAME_WIDTH / 2, 100, gt("game.menuTitle"), {
         fontFamily: "monospace",
         fontSize: "36px",
         color: "#ff8c00",
@@ -52,7 +53,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Subtitle
     this.add
-      .text(GAME_WIDTH / 2, 150, "Plataformas impossíveis feitas pela comunidade", {
+      .text(GAME_WIDTH / 2, 150, gt("game.menuSubtitle"), {
         fontFamily: "monospace",
         fontSize: "14px",
         color: "#a3a3a3",
@@ -73,7 +74,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Play button — goes to Level Select
     const playBtn = this.add
-      .text(GAME_WIDTH / 2, 310, ">  JOGAR", {
+      .text(GAME_WIDTH / 2, 310, gt("game.menuPlay"), {
         fontFamily: "monospace",
         fontSize: "20px",
         color: "#ffffff",
@@ -103,7 +104,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Quick play (demo level)
     const quickBtn = this.add
-      .text(GAME_WIDTH / 2, 370, "* Demo Rapida", {
+      .text(GAME_WIDTH / 2, 370, gt("game.menuDemo"), {
         fontFamily: "monospace",
         fontSize: "16px",
         color: "#a3a3a3",

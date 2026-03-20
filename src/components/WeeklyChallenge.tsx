@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import HudPanel from "./ui/HudPanel";
 import HudButton from "./ui/HudButton";
 import { PixelIcon } from "./ui/PixelIcon";
@@ -22,25 +23,40 @@ interface WeeklyLevel {
 
 export default function WeeklyChallenge() {
   const [level, setLevel] = useState<WeeklyLevel | null>(null);
+  const [daysLeft, setDaysLeft] = useState(0);
+  const t = useTranslations("weekly");
+  const tc = useTranslations("common");
+  const td = useTranslations("difficulty");
+
+  const computeDaysLeft = useCallback((challengeDate: string) => {
+    const end = new Date(new Date(challengeDate).getTime() + 7 * 24 * 60 * 60 * 1000);
+    return Math.max(0, Math.ceil((end.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
+  }, []);
 
   useEffect(() => {
     fetch("/api/levels/weekly")
       .then((r) => r.json())
       .then((data) => {
-        if (data.weekly) setLevel(data.weekly);
+        if (data.weekly) {
+          setLevel(data.weekly);
+          setDaysLeft(computeDaysLeft(data.weekly.weekly_challenge_date));
+        }
       })
       .catch(() => {});
-  }, []);
+  }, [computeDaysLeft]);
+
+  // Update countdown every minute
+  useEffect(() => {
+    if (!level) return;
+    const interval = setInterval(() => {
+      setDaysLeft(computeDaysLeft(level.weekly_challenge_date));
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [level, computeDaysLeft]);
 
   if (!level) return null;
 
   const diff = getDifficultyLabel(level.difficulty, level.plays);
-
-  // Calculate days remaining in the week
-  const challengeDate = new Date(level.weekly_challenge_date);
-  const endDate = new Date(challengeDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const now = new Date();
-  const daysLeft = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
 
   return (
     <section className="max-w-7xl mx-auto px-4 py-8">
@@ -48,10 +64,10 @@ export default function WeeklyChallenge() {
         <div className="flex items-center gap-2 mb-4">
           <PixelIcon name="trophy" size={14} color="#FFD700" />
           <h3 className="text-[11px] font-bold uppercase tracking-wider">
-            Desafio da Semana
+            {t("title")}
           </h3>
           <span className="ml-auto text-[8px] text-muted-foreground">
-            {daysLeft} {daysLeft === 1 ? "dia" : "dias"} restantes
+            {t("daysLeft", { count: daysLeft })}
           </span>
         </div>
 
@@ -71,7 +87,7 @@ export default function WeeklyChallenge() {
               />
             )}
             <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-yellow-500/90 text-[7px] font-bold uppercase text-black">
-              2× Moedas
+              {t("doubleCoins")}
             </div>
           </Link>
 
@@ -85,17 +101,17 @@ export default function WeeklyChallenge() {
               <p className="text-[8px] text-muted-foreground truncate">{level.subtitle}</p>
             )}
             <div className="flex items-center gap-3 mt-2 text-[8px] text-muted-foreground">
-              <span>por {level.profiles?.nickname || "Anônimo"}</span>
+              <span>{tc("by")} {level.profiles?.nickname || tc("anonymous")}</span>
               <span className="flex items-center gap-1">
                 <PixelIcon name="play" size={8} color="#ff8c00" /> {level.plays}
               </span>
               <span className="flex items-center gap-1" style={{ color: diff.color }}>
-                <PixelIcon name={diff.icon} size={8} color={diff.color} /> {diff.label}
+                <PixelIcon name={diff.icon} size={8} color={diff.color} /> {td(diff.labelKey)}
               </span>
             </div>
             <div className="mt-3">
               <HudButton href={`/play/${level.id}`} variant="gold" size="small">
-                <PixelIcon name="play" size={10} /> Jogar Desafio
+                <PixelIcon name="play" size={10} /> {t("playChallenge")}
               </HudButton>
             </div>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import HudPanel from "@/components/ui/HudPanel";
 import HudButton from "@/components/ui/HudButton";
@@ -17,6 +18,8 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const t = useTranslations("auth");
+  const tc = useTranslations("common");
   const supabase = createClient();
 
   async function handleLogin(e: React.FormEvent) {
@@ -39,7 +42,7 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
 
     const trimmed = nickname.trim();
     if (trimmed.length < 2 || trimmed.length > 30) {
-      setError("Nickname deve ter entre 2 e 30 caracteres");
+      setError(t("nicknameError"));
       return;
     }
 
@@ -63,7 +66,7 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
     const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
     if (loginError) {
       // Signup succeeded but needs email confirmation
-      setError("Conta criada! Verifique seu e-mail para confirmar.");
+      setError(tc("accountCreatedConfirm"));
       setLoading(false);
       return;
     }
@@ -81,7 +84,7 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-[45] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[45] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={tc("loginOrCreate")}>
       <div className="w-full max-w-sm">
         {/* Cat icon */}
         <div className="text-center mb-4">
@@ -99,7 +102,7 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Entrar
+              {t("tabLogin")}
             </button>
             <button
               onClick={() => { setTab("signup"); setError(null); }}
@@ -109,12 +112,12 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Criar Conta
+              {t("tabSignup")}
             </button>
           </div>
 
           {error && (
-            <div className="bg-red-500/10 border-2 border-red-500/30 text-red-400 px-3 py-2 mb-4 text-[8px]">
+            <div className="bg-red-500/10 border-2 border-red-500/30 text-red-400 px-3 py-2 mb-4 text-[8px]" role="alert">
               {error}
             </div>
           )}
@@ -123,7 +126,7 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
             <form onSubmit={handleLogin} className="space-y-3 mb-4">
               <div>
                 <label htmlFor="login-email" className="block text-[8px] font-bold mb-1 uppercase tracking-wider">
-                  E-mail
+                  {t("email")}
                 </label>
                 <input
                   id="login-email"
@@ -132,12 +135,12 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full border-2 border-border bg-background px-3 py-2 text-[9px] focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="seu@email.com"
+                  placeholder={t("emailPlaceholder")}
                 />
               </div>
               <div>
                 <label htmlFor="login-password" className="block text-[8px] font-bold mb-1 uppercase tracking-wider">
-                  Senha
+                  {t("password")}
                 </label>
                 <input
                   id="login-password"
@@ -151,14 +154,14 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
                 />
               </div>
               <HudButton type="submit" disabled={loading} variant="primary" className="w-full">
-                {loading ? "Entrando..." : "Entrar"}
+                {loading ? t("loggingIn") : t("login")}
               </HudButton>
             </form>
           ) : (
             <form onSubmit={handleSignup} className="space-y-3 mb-4">
               <div>
                 <label htmlFor="signup-nickname" className="block text-[8px] font-bold mb-1 uppercase tracking-wider">
-                  Nickname
+                  {t("nickname")}
                 </label>
                 <input
                   id="signup-nickname"
@@ -174,7 +177,7 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
               </div>
               <div>
                 <label htmlFor="signup-email" className="block text-[8px] font-bold mb-1 uppercase tracking-wider">
-                  E-mail
+                  {t("email")}
                 </label>
                 <input
                   id="signup-email"
@@ -183,12 +186,12 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full border-2 border-border bg-background px-3 py-2 text-[9px] focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="seu@email.com"
+                  placeholder={t("emailPlaceholder")}
                 />
               </div>
               <div>
                 <label htmlFor="signup-password" className="block text-[8px] font-bold mb-1 uppercase tracking-wider">
-                  Senha
+                  {t("password")}
                 </label>
                 <input
                   id="signup-password"
@@ -200,10 +203,10 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
                   className="w-full border-2 border-border bg-background px-3 py-2 text-[9px] focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="------"
                 />
-                <p className="text-[7px] text-muted-foreground mt-1">Minimo 6 caracteres</p>
+                <p className="text-[7px] text-muted-foreground mt-1">{t("passwordHint")}</p>
               </div>
               <HudButton type="submit" disabled={loading} variant="primary" className="w-full">
-                {loading ? "Criando..." : "Criar Conta"}
+                {loading ? t("creatingAccount") : t("signup")}
               </HudButton>
             </form>
           )}
@@ -214,7 +217,7 @@ export default function LoginOverlay({ onSuccess }: LoginOverlayProps) {
               <div className="w-full border-t-2 border-border" />
             </div>
             <div className="relative flex justify-center text-[7px] uppercase tracking-wider">
-              <span className="bg-card px-2 text-muted-foreground">ou continue com</span>
+              <span className="bg-card px-2 text-muted-foreground">{t("orContinueWith")}</span>
             </div>
           </div>
 

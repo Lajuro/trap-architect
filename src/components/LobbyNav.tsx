@@ -1,27 +1,30 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
+import { usePathname } from "@/i18n/navigation";
 import { useGameShell } from "@/components/GameShellContext";
 import PixelIcon from "@/components/ui/PixelIcon";
 import type { PixelIconName } from "@/components/ui/PixelIcon";
 import { playUIClick, playUIHover } from "@/game/audio";
+import LocaleSwitcher from "@/components/LocaleSwitcher";
 
 interface NavTab {
   href: string;
-  label: string;
+  labelKey: string;
   icon: PixelIconName;
   match?: string[];
 }
 
 const TABS: NavTab[] = [
-  { href: "/", label: "JOGAR", icon: "play", match: ["/", "/play"] },
-  { href: "/browse", label: "COMUNIDADE", icon: "browse", match: ["/browse", "/collections"] },
-  { href: "/shop", label: "LOJA", icon: "shop", match: ["/shop"] },
-  { href: "/profile", label: "PERFIL", icon: "profile", match: ["/profile", "/settings"] },
+  { href: "/", labelKey: "play", icon: "play", match: ["/", "/play"] },
+  { href: "/browse", labelKey: "community", icon: "browse", match: ["/browse", "/collections"] },
+  { href: "/shop", labelKey: "shop", icon: "shop", match: ["/shop"] },
+  { href: "/profile", labelKey: "profile", icon: "profile", match: ["/profile", "/settings"] },
 ];
 
 export default function LobbyNav() {
+  const t = useTranslations("nav");
   const pathname = usePathname();
   const { coins, user } = useGameShell();
 
@@ -54,6 +57,7 @@ export default function LobbyNav() {
                 href={tab.href}
                 onClick={() => playUIClick()}
                 onMouseEnter={() => playUIHover()}
+                aria-current={active ? "page" : undefined}
                 className={`
                   relative flex items-center gap-1.5 px-3 py-1.5
                   text-[8px] font-bold uppercase tracking-wider
@@ -69,7 +73,7 @@ export default function LobbyNav() {
                   size={12}
                   color={active ? "#ff8c00" : undefined}
                 />
-                <span className="hidden md:inline">{tab.label}</span>
+                <span className="hidden md:inline">{t(tab.labelKey)}</span>
 
                 {/* Active indicator */}
                 {active && (
@@ -96,6 +100,9 @@ export default function LobbyNav() {
             <PixelIcon name="coin" size={12} />
             <span>{coins}</span>
           </Link>
+
+          {/* Locale */}
+          <LocaleSwitcher />
 
           {/* Settings */}
           <Link

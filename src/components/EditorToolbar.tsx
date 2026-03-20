@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { gameEvents, GAME_EVENTS } from "@/game/events";
 import { EDITOR_EVENTS } from "@/game/scenes/EditorScene";
@@ -31,6 +32,7 @@ import {
   Save,
   Tag,
   Paintbrush,
+  Eraser,
   Layers,
   Copy,
   Clipboard,
@@ -45,7 +47,9 @@ import {
 import type { EditorTool } from "@/game/constants";
 
 export function EditorToolbar() {
-  const [levelName, setLevelName] = useState("Meu Nivel");
+  const t = useTranslations("editor");
+  const ttags = useTranslations("tags");
+  const [levelName, setLevelName] = useState(t("defaultLevelName"));
   const [bgColor, setBgColor] = useState("#5c94fc");
   const [music, setMusic] = useState("easy");
   const [gridW, setGridW] = useState(100);
@@ -164,22 +168,22 @@ export function EditorToolbar() {
       try {
         data = JSON.parse(text) as LevelData;
       } catch {
-        alert("Arquivo JSON invalido — nao foi possivel ler o arquivo.");
+        alert(t("import.invalidJson"));
         return;
       }
       if (!data.tiles || !data.gridW || !data.gridH || !data.name) {
-        alert("Formato invalido — o arquivo nao contem dados de nivel validos.");
+        alert(t("import.invalidFormat"));
         return;
       }
       try {
         gameEvents.emit(EDITOR_EVENTS.IMPORT_LEVEL, data);
       } catch (err) {
-        console.error("Erro ao importar nivel:", err);
-        alert("Erro ao importar o nivel no editor.");
+        console.error("Error importing level:", err);
+        alert(t("import.importError"));
       }
     };
     input.click();
-  }, []);
+  }, [t]);
 
   const handlePublish = useCallback(() => {
     setPublishMsg(null);
@@ -218,22 +222,22 @@ export function EditorToolbar() {
         });
         if (res.ok) {
           const { rankUp: ru } = await res.json();
-          setPublishMsg("Nivel publicado com sucesso!");
+          setPublishMsg(t("publish.success"));
           if (ru) checkRankUp(ru.oldRank, ru.newRank);
         } else if (res.status === 401) {
-          setPublishMsg("Faca login para publicar.");
+          setPublishMsg(t("publish.notLoggedIn"));
         } else {
           const { error } = await res.json();
-          setPublishMsg(error || "Erro ao publicar.");
+          setPublishMsg(error || t("publish.error"));
         }
       } catch {
-        setPublishMsg("Erro de conexao.");
+        setPublishMsg(t("publish.connectionError"));
       }
       setPublishing(false);
     };
     gameEvents.on(EDITOR_EVENTS.EXPORT_REQUEST, handler);
     gameEvents.emit(EDITOR_EVENTS.EXPORT_LEVEL);
-  }, [checkRankUp, selectedTags, theme]);
+  }, [checkRankUp, selectedTags, theme, t]);
 
   const handleSaveDraft = useCallback(() => {
     setPublishMsg(null);
@@ -271,21 +275,21 @@ export function EditorToolbar() {
           }),
         });
         if (res.ok) {
-          setPublishMsg("Rascunho salvo com sucesso!");
+          setPublishMsg(t("publish.draftSaved"));
         } else if (res.status === 401) {
-          setPublishMsg("Faca login para salvar.");
+          setPublishMsg(t("publish.loginToSave"));
         } else {
           const { error } = await res.json();
-          setPublishMsg(error || "Erro ao salvar rascunho.");
+          setPublishMsg(error || t("publish.draftError"));
         }
       } catch {
-        setPublishMsg("Erro de conexao.");
+        setPublishMsg(t("publish.connectionError"));
       }
       setSaving(false);
     };
     gameEvents.on(EDITOR_EVENTS.EXPORT_REQUEST, handler);
     gameEvents.emit(EDITOR_EVENTS.EXPORT_LEVEL);
-  }, []);
+  }, [t]);
 
   const handleTestPlay = useCallback(() => {
     const handler = (data: unknown) => {
@@ -329,27 +333,28 @@ export function EditorToolbar() {
   };
 
   const allCommands: CommandDef[] = [
-    { id: "save", group: "Arquivo", label: "Salvar rascunho", shortcut: "Ctrl+S", icon: Save, action: handleSaveDraft },
-    { id: "publish", group: "Arquivo", label: "Publicar nivel", shortcut: "Ctrl+Shift+P", icon: Rocket, action: handlePublish },
-    { id: "export", group: "Arquivo", label: "Exportar JSON", shortcut: "Ctrl+E", icon: Download, action: handleExport },
-    { id: "import", group: "Arquivo", label: "Importar JSON", icon: Upload, action: handleImport },
-    { id: "undo", group: "Editar", label: "Desfazer", shortcut: "Ctrl+Z", icon: Undo2, action: () => gameEvents.emit(EDITOR_EVENTS.UNDO) },
-    { id: "redo", group: "Editar", label: "Refazer", shortcut: "Ctrl+Y", icon: Redo2, action: () => gameEvents.emit(EDITOR_EVENTS.REDO) },
-    { id: "copy", group: "Editar", label: "Copiar selecao", shortcut: "Ctrl+C", icon: Copy, action: () => gameEvents.emit(EDITOR_EVENTS.COPY) },
-    { id: "cut", group: "Editar", label: "Recortar selecao", shortcut: "Ctrl+X", icon: Scissors, action: () => gameEvents.emit(EDITOR_EVENTS.CUT) },
-    { id: "paste", group: "Editar", label: "Colar", shortcut: "Ctrl+V", icon: Clipboard, action: () => gameEvents.emit(EDITOR_EVENTS.PASTE) },
-    { id: "paint", group: "Ferramenta", label: "Pincel", shortcut: "B", icon: Paintbrush, action: () => gameEvents.emit(EDITOR_EVENTS.SET_TOOL, "paint") },
-    { id: "fill", group: "Ferramenta", label: "Preencher", shortcut: "F", icon: PaintBucket, action: () => gameEvents.emit(EDITOR_EVENTS.SET_TOOL, "fill") },
-    { id: "line", group: "Ferramenta", label: "Linha", shortcut: "I", icon: Minus, action: () => gameEvents.emit(EDITOR_EVENTS.SET_TOOL, "line") },
-    { id: "rect", group: "Ferramenta", label: "Retangulo", shortcut: "R", icon: Square, action: () => gameEvents.emit(EDITOR_EVENTS.SET_TOOL, "rect") },
-    { id: "eyedropper", group: "Ferramenta", label: "Conta-gotas", shortcut: "P", icon: Pipette, action: () => gameEvents.emit(EDITOR_EVENTS.SET_TOOL, "eyedropper") },
-    { id: "layer", group: "Visualizar", label: "Alternar camada (FG/BG)", shortcut: "L", icon: Layers, action: () => {
+    { id: "save", group: t("menus.file"), label: t("fileMenu.saveDraft"), shortcut: "Ctrl+S", icon: Save, action: handleSaveDraft },
+    { id: "publish", group: t("menus.file"), label: t("fileMenu.publishLevel"), shortcut: "Ctrl+Shift+P", icon: Rocket, action: handlePublish },
+    { id: "export", group: t("menus.file"), label: t("fileMenu.export"), shortcut: "Ctrl+E", icon: Download, action: handleExport },
+    { id: "import", group: t("menus.file"), label: t("fileMenu.import"), icon: Upload, action: handleImport },
+    { id: "undo", group: t("menus.edit"), label: t("editMenu.undo"), shortcut: "Ctrl+Z", icon: Undo2, action: () => gameEvents.emit(EDITOR_EVENTS.UNDO) },
+    { id: "redo", group: t("menus.edit"), label: t("editMenu.redo"), shortcut: "Ctrl+Y", icon: Redo2, action: () => gameEvents.emit(EDITOR_EVENTS.REDO) },
+    { id: "copy", group: t("menus.edit"), label: t("editMenu.copySelection"), shortcut: "Ctrl+C", icon: Copy, action: () => gameEvents.emit(EDITOR_EVENTS.COPY) },
+    { id: "cut", group: t("menus.edit"), label: t("editMenu.cutSelection"), shortcut: "Ctrl+X", icon: Scissors, action: () => gameEvents.emit(EDITOR_EVENTS.CUT) },
+    { id: "paste", group: t("menus.edit"), label: t("editMenu.paste"), shortcut: "Ctrl+V", icon: Clipboard, action: () => gameEvents.emit(EDITOR_EVENTS.PASTE) },
+    { id: "paint", group: t("commands.tool"), label: t("tools.paint"), shortcut: "B", icon: Paintbrush, action: () => gameEvents.emit(EDITOR_EVENTS.SET_TOOL, "paint") },
+    { id: "eraser", group: t("commands.tool"), label: t("tools.eraser"), shortcut: "E", icon: Eraser, action: () => gameEvents.emit(EDITOR_EVENTS.SET_TOOL, "eraser") },
+    { id: "fill", group: t("commands.tool"), label: t("tools.fill"), shortcut: "F", icon: PaintBucket, action: () => gameEvents.emit(EDITOR_EVENTS.SET_TOOL, "fill") },
+    { id: "line", group: t("commands.tool"), label: t("tools.line"), shortcut: "I", icon: Minus, action: () => gameEvents.emit(EDITOR_EVENTS.SET_TOOL, "line") },
+    { id: "rect", group: t("commands.tool"), label: t("tools.rect"), shortcut: "R", icon: Square, action: () => gameEvents.emit(EDITOR_EVENTS.SET_TOOL, "rect") },
+    { id: "eyedropper", group: t("commands.tool"), label: t("tools.eyedropper"), shortcut: "P", icon: Pipette, action: () => gameEvents.emit(EDITOR_EVENTS.SET_TOOL, "eyedropper") },
+    { id: "layer", group: t("commands.view"), label: t("commands.toggleLayer"), shortcut: "L", icon: Layers, action: () => {
       const next = activeLayer === "foreground" ? "background" : "foreground";
       setActiveLayer(next);
       gameEvents.emit(EDITOR_EVENTS.SET_LAYER, next);
     }},
-    { id: "test", group: "Acao", label: "Testar nivel", shortcut: "T", icon: Play, action: handleTestPlay },
-    { id: "config", group: "Acao", label: "Configuracoes do nivel", icon: Settings, action: () => { closeAllMenus(); setConfigOpen(true); } },
+    { id: "test", group: t("commands.action"), label: t("actionMenu.test"), shortcut: "T", icon: Play, action: handleTestPlay },
+    { id: "config", group: t("commands.action"), label: t("config.title"), icon: Settings, action: () => { closeAllMenus(); setConfigOpen(true); } },
   ];
 
   return (
@@ -360,13 +365,13 @@ export function EditorToolbar() {
           {/* Undo / Redo */}
           <ToolbarIconBtn
             icon={Undo2}
-            tooltip="Desfazer"
+            tooltip={t("editMenu.undo")}
             shortcut="Ctrl+Z"
             onClick={() => gameEvents.emit(EDITOR_EVENTS.UNDO)}
           />
           <ToolbarIconBtn
             icon={Redo2}
-            tooltip="Refazer"
+            tooltip={t("editMenu.redo")}
             shortcut="Ctrl+Y"
             onClick={() => gameEvents.emit(EDITOR_EVENTS.REDO)}
           />
@@ -377,23 +382,25 @@ export function EditorToolbar() {
           <div ref={fileMenuRef} className="relative">
             <button
               onClick={() => { setFileMenuOpen(!fileMenuOpen); setEditMenuOpen(false); setConfigOpen(false); }}
+              aria-haspopup="true"
+              aria-expanded={fileMenuOpen}
               className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all ${
                 fileMenuOpen ? "bg-white/10 text-foreground" : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/5"
               }`}
             >
-              Arquivo <ChevronDown size={10} className={`transition-transform duration-200 ${fileMenuOpen ? "rotate-180" : ""}`} />
+              {t("menus.file")} <ChevronDown size={10} className={`transition-transform duration-200 ${fileMenuOpen ? "rotate-180" : ""}`} />
             </button>
             {fileMenuOpen && (
               <div className="absolute left-0 top-full mt-1 w-56 bg-[#12121a] border border-border/30 rounded-lg shadow-2xl py-1 z-50 animate-slide-up">
-                <DropdownItem icon={saving ? Loader2 : Save} label={saving ? "Salvando..." : "Salvar rascunho"} shortcut="Ctrl+S" onClick={() => { handleSaveDraft(); setFileMenuOpen(false); }} disabled={saving || publishing || !isLoggedIn} iconClassName={saving ? "animate-spin" : undefined} />
-                <DropdownItem icon={publishing ? Loader2 : Rocket} label={publishing ? "Publicando..." : "Publicar"} shortcut="Ctrl+Shift+P" onClick={() => { handlePublish(); setFileMenuOpen(false); }} disabled={publishing || saving || !tested || !isLoggedIn} iconClassName={publishing ? "animate-spin" : undefined} />
+                <DropdownItem icon={saving ? Loader2 : Save} label={saving ? t("fileMenu.saving") : t("fileMenu.saveDraft")} shortcut="Ctrl+S" onClick={() => { handleSaveDraft(); setFileMenuOpen(false); }} disabled={saving || publishing || !isLoggedIn} iconClassName={saving ? "animate-spin" : undefined} />
+                <DropdownItem icon={publishing ? Loader2 : Rocket} label={publishing ? t("publish.publishing") : t("fileMenu.publish")} shortcut="Ctrl+Shift+P" onClick={() => { handlePublish(); setFileMenuOpen(false); }} disabled={publishing || saving || !tested || !isLoggedIn} iconClassName={publishing ? "animate-spin" : undefined} />
                 <div className="border-t border-border/20 my-1 mx-2" />
-                <DropdownItem icon={Download} label="Exportar JSON" shortcut="Ctrl+E" onClick={() => { handleExport(); setFileMenuOpen(false); }} />
-                <DropdownItem icon={Upload} label="Importar JSON" onClick={() => { handleImport(); setFileMenuOpen(false); }} />
+                <DropdownItem icon={Download} label={t("fileMenu.export")} shortcut="Ctrl+E" onClick={() => { handleExport(); setFileMenuOpen(false); }} />
+                <DropdownItem icon={Upload} label={t("fileMenu.import")} onClick={() => { handleImport(); setFileMenuOpen(false); }} />
                 {!isLoggedIn && (
                   <>
                     <div className="border-t border-border/20 my-1 mx-2" />
-                    <DropdownItem icon={Lock} label="Login para publicar" onClick={() => { window.location.href = "/login"; }} />
+                    <DropdownItem icon={Lock} label={t("publish.loginRequired")} onClick={() => { window.location.href = "/login"; }} />
                   </>
                 )}
               </div>
@@ -403,20 +410,22 @@ export function EditorToolbar() {
           <div ref={editMenuRef} className="relative">
             <button
               onClick={() => { setEditMenuOpen(!editMenuOpen); setFileMenuOpen(false); setConfigOpen(false); }}
+              aria-haspopup="true"
+              aria-expanded={editMenuOpen}
               className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all ${
                 editMenuOpen ? "bg-white/10 text-foreground" : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-white/5"
               }`}
             >
-              Editar <ChevronDown size={10} className={`transition-transform duration-200 ${editMenuOpen ? "rotate-180" : ""}`} />
+              {t("menus.edit")} <ChevronDown size={10} className={`transition-transform duration-200 ${editMenuOpen ? "rotate-180" : ""}`} />
             </button>
             {editMenuOpen && (
               <div className="absolute left-0 top-full mt-1 w-52 bg-[#12121a] border border-border/30 rounded-lg shadow-2xl py-1 z-50 animate-slide-up">
-                <DropdownItem icon={Undo2} label="Desfazer" shortcut="Ctrl+Z" onClick={() => { gameEvents.emit(EDITOR_EVENTS.UNDO); setEditMenuOpen(false); }} />
-                <DropdownItem icon={Redo2} label="Refazer" shortcut="Ctrl+Y" onClick={() => { gameEvents.emit(EDITOR_EVENTS.REDO); setEditMenuOpen(false); }} />
+                <DropdownItem icon={Undo2} label={t("editMenu.undo")} shortcut="Ctrl+Z" onClick={() => { gameEvents.emit(EDITOR_EVENTS.UNDO); setEditMenuOpen(false); }} />
+                <DropdownItem icon={Redo2} label={t("editMenu.redo")} shortcut="Ctrl+Y" onClick={() => { gameEvents.emit(EDITOR_EVENTS.REDO); setEditMenuOpen(false); }} />
                 <div className="border-t border-border/20 my-1 mx-2" />
-                <DropdownItem icon={Copy} label="Copiar" shortcut="Ctrl+C" onClick={() => { gameEvents.emit(EDITOR_EVENTS.COPY); setEditMenuOpen(false); }} />
-                <DropdownItem icon={Scissors} label="Recortar" shortcut="Ctrl+X" onClick={() => { gameEvents.emit(EDITOR_EVENTS.CUT); setEditMenuOpen(false); }} />
-                <DropdownItem icon={Clipboard} label="Colar" shortcut="Ctrl+V" onClick={() => { gameEvents.emit(EDITOR_EVENTS.PASTE); setEditMenuOpen(false); }} />
+                <DropdownItem icon={Copy} label={t("editMenu.copy")} shortcut="Ctrl+C" onClick={() => { gameEvents.emit(EDITOR_EVENTS.COPY); setEditMenuOpen(false); }} />
+                <DropdownItem icon={Scissors} label={t("editMenu.cut")} shortcut="Ctrl+X" onClick={() => { gameEvents.emit(EDITOR_EVENTS.CUT); setEditMenuOpen(false); }} />
+                <DropdownItem icon={Clipboard} label={t("editMenu.paste")} shortcut="Ctrl+V" onClick={() => { gameEvents.emit(EDITOR_EVENTS.PASTE); setEditMenuOpen(false); }} />
               </div>
             )}
           </div>
@@ -425,11 +434,12 @@ export function EditorToolbar() {
 
           {/* Drawing tools */}
           {([
-            { tool: "paint" as EditorTool, icon: Paintbrush, label: "Pincel", shortcut: "B" },
-            { tool: "fill" as EditorTool, icon: PaintBucket, label: "Preencher", shortcut: "F" },
-            { tool: "line" as EditorTool, icon: Minus, label: "Linha", shortcut: "I" },
-            { tool: "rect" as EditorTool, icon: Square, label: "Retangulo", shortcut: "R" },
-            { tool: "eyedropper" as EditorTool, icon: Pipette, label: "Conta-gotas", shortcut: "P" },
+            { tool: "paint" as EditorTool, icon: Paintbrush, label: t("tools.paint"), shortcut: "B" },
+            { tool: "eraser" as EditorTool, icon: Eraser, label: t("tools.eraser"), shortcut: "E" },
+            { tool: "fill" as EditorTool, icon: PaintBucket, label: t("tools.fill"), shortcut: "F" },
+            { tool: "line" as EditorTool, icon: Minus, label: t("tools.line"), shortcut: "I" },
+            { tool: "rect" as EditorTool, icon: Square, label: t("tools.rect"), shortcut: "R" },
+            { tool: "eyedropper" as EditorTool, icon: Pipette, label: t("tools.eyedropper"), shortcut: "P" },
           ]).map(({ tool, icon, label, shortcut }) => (
             <ToolbarIconBtn
               key={tool}
@@ -442,7 +452,7 @@ export function EditorToolbar() {
           ))}
 
           {/* Brush size */}
-          {(currentTool === "paint" || currentTool === "line") && (
+          {(currentTool === "paint" || currentTool === "eraser" || currentTool === "line") && (
             <div className="flex items-center gap-0.5 ml-0.5">
               {[1, 2, 3].map((s) => (
                 <button
@@ -453,7 +463,7 @@ export function EditorToolbar() {
                       ? "bg-primary/20 text-primary border border-primary/50"
                       : "text-muted-foreground/40 hover:text-muted-foreground/60 border border-transparent"
                   }`}
-                  title={`Tamanho ${s} ([ / ])`}
+                  title={`${t("brushSize")} ${s} ([ / ])`}
                 >
                   {s}
                 </button>
@@ -475,7 +485,7 @@ export function EditorToolbar() {
                 ? "border-purple-500 bg-purple-500/10 text-purple-400"
                 : "border-border/30 text-muted-foreground/60 hover:border-primary/30"
             }`}
-            title="Alternar camada (L)"
+            title={`${t("layer.toggle")} (L)`}
           >
             <Layers size={12} />
             {activeLayer === "foreground" ? "FG" : "BG"}
@@ -486,7 +496,7 @@ export function EditorToolbar() {
         <div className="flex-1 min-w-0 flex justify-center">
           {publishMsg && (
             <span className={`text-[10px] animate-pop-in ${
-              publishMsg.includes("sucesso") ? "text-green-400" : "text-muted-foreground/60"
+              publishMsg === t("publish.success") || publishMsg === t("publish.draftSaved") ? "text-green-400" : "text-muted-foreground/60"
             }`}>
               {publishMsg}
             </span>
@@ -506,7 +516,7 @@ export function EditorToolbar() {
           {/* Tested badge */}
           <div
             className="flex items-center px-1"
-            title={tested ? "Nivel testado — pronto para publicar" : "Teste o nivel antes de publicar"}
+            title={tested ? t("status.tested") : t("status.notTested")}
           >
             {tested ? (
               <CheckCircle size={13} className="text-green-500" />
@@ -520,7 +530,7 @@ export function EditorToolbar() {
           {/* Test Play */}
           <ToolbarIconBtn
             icon={Play}
-            tooltip="Testar"
+            tooltip={t("actionMenu.test")}
             shortcut="T"
             onClick={handleTestPlay}
             variant="success"
@@ -532,7 +542,7 @@ export function EditorToolbar() {
           <div ref={configRef} className="relative">
             <ToolbarIconBtn
               icon={Settings}
-              tooltip="Configuracoes"
+              tooltip={t("actionMenu.config")}
               onClick={() => {
                 setConfigOpen(!configOpen);
                 setFileMenuOpen(false);
@@ -543,7 +553,7 @@ export function EditorToolbar() {
             {configOpen && (
               <div className="absolute right-0 top-full mt-1 w-80 bg-[#12121a] border border-border/30 rounded-lg shadow-2xl p-4 z-50 animate-slide-up">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-bold text-foreground/80">Configuracoes do Nivel</p>
+                  <p className="text-xs font-bold text-foreground/80">{t("config.title")}</p>
                   <button onClick={() => setConfigOpen(false)} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors">
                     <X size={14} />
                   </button>
@@ -553,7 +563,7 @@ export function EditorToolbar() {
                   {/* Level Name */}
                   <div>
                     <label className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider mb-1 block">
-                      Nome
+                      {t("config.name")}
                     </label>
                     <input
                       type="text"
@@ -563,7 +573,7 @@ export function EditorToolbar() {
                         gameEvents.emit(EDITOR_EVENTS.SET_LEVEL_META, { name: e.target.value });
                       }}
                       className="w-full bg-white/5 border border-border/30 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/30"
-                      placeholder="Nome do nivel"
+                      placeholder={t("config.namePlaceholder")}
                     />
                   </div>
 
@@ -571,7 +581,7 @@ export function EditorToolbar() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider mb-1 flex items-center gap-1 ">
-                        <Palette size={10} /> Cor de fundo
+                        <Palette size={10} /> {t("config.bgColor")}
                       </label>
                       <div className="flex items-center gap-2">
                         <input
@@ -588,7 +598,7 @@ export function EditorToolbar() {
                     </div>
                     <div>
                       <label className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider mb-1 flex items-center gap-1">
-                        <Music size={10} /> Musica
+                        <Music size={10} /> {t("config.music")}
                       </label>
                       <select
                         value={music}
@@ -598,10 +608,10 @@ export function EditorToolbar() {
                         }}
                         className="w-full bg-white/5 border border-border/30 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
                       >
-                        <option value="easy">Calmo</option>
-                        <option value="medium">Padrao</option>
-                        <option value="hard">Intenso</option>
-                        <option value="none">Nenhuma</option>
+                        <option value="easy">{t("config.musicOptions.calm")}</option>
+                        <option value="medium">{t("config.musicOptions.default")}</option>
+                        <option value="hard">{t("config.musicOptions.intense")}</option>
+                        <option value="none">{t("config.musicOptions.none")}</option>
                       </select>
                     </div>
                   </div>
@@ -609,11 +619,11 @@ export function EditorToolbar() {
                   {/* Grid Size */}
                   <div>
                     <label className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Ruler size={10} /> Tamanho
+                      <Ruler size={10} /> {t("config.size")}
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-[10px] text-muted-foreground/40 mb-0.5 block">Largura</label>
+                        <label className="text-[10px] text-muted-foreground/40 mb-0.5 block">{t("config.width")}</label>
                         <input
                           type="number"
                           value={gridW}
@@ -628,7 +638,7 @@ export function EditorToolbar() {
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] text-muted-foreground/40 mb-0.5 block">Altura</label>
+                        <label className="text-[10px] text-muted-foreground/40 mb-0.5 block">{t("config.height")}</label>
                         <input
                           type="number"
                           value={gridH}
@@ -651,20 +661,20 @@ export function EditorToolbar() {
                   {/* Theme Selector */}
                   <div className="border-t border-border/20 pt-3">
                     <label className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Paintbrush size={10} /> Tema
+                      <Paintbrush size={10} /> {t("config.theme")}
                     </label>
                     <div className="grid grid-cols-3 gap-1.5">
-                      {LEVEL_THEMES.map((t) => {
-                        const palette = THEME_PALETTES[t];
+                      {LEVEL_THEMES.map((th) => {
+                        const palette = THEME_PALETTES[th];
                         return (
                           <button
-                            key={t}
+                            key={th}
                             onClick={() => {
-                              setTheme(t);
-                              gameEvents.emit(EDITOR_EVENTS.SET_LEVEL_META, { theme: t });
+                              setTheme(th);
+                              gameEvents.emit(EDITOR_EVENTS.SET_LEVEL_META, { theme: th });
                             }}
                             className={`text-[9px] px-2 py-1.5 rounded border transition-all ${
-                              theme === t
+                              theme === th
                                 ? "border-primary bg-primary/10 text-foreground"
                                 : "border-border/30 text-muted-foreground/60 hover:border-primary/30"
                             }`}
@@ -694,7 +704,7 @@ export function EditorToolbar() {
                             key={tag}
                             onClick={() => {
                               if (isSelected) {
-                                setSelectedTags(selectedTags.filter((t) => t !== tag));
+                                setSelectedTags(selectedTags.filter((st) => st !== tag));
                               } else if (selectedTags.length < 3) {
                                 setSelectedTags([...selectedTags, tag]);
                               }
@@ -710,7 +720,7 @@ export function EditorToolbar() {
                               color: isSelected ? cfg.color : undefined,
                             }}
                           >
-                            {cfg.label}
+                            {ttags(cfg.labelKey)}
                           </button>
                         );
                       })}
@@ -720,18 +730,18 @@ export function EditorToolbar() {
                   {/* Troll Triggers */}
                   <div className="border-t border-border/20 pt-3">
                     <label className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider mb-1.5 block">
-                      Trolls ({trolls.length})
+                      {t("trolls.title")} ({trolls.length})
                     </label>
                     {trolls.length > 0 && (
                       <div className="space-y-1 mb-2 max-h-32 overflow-y-auto">
-                        {trolls.map((t, i) => (
+                        {trolls.map((tr, i) => (
                           <div
                             key={i}
                             className="flex items-center justify-between bg-white/[0.03] rounded px-2 py-1 text-[10px] group"
                           >
                             <span className="text-muted-foreground">
-                              <span className="text-purple-400">x:{t.triggerX}</span>{" "}
-                              <span className="text-muted-foreground/50">{t.action}</span>
+                              <span className="text-purple-400">x:{tr.triggerX}</span>{" "}
+                              <span className="text-muted-foreground/50">{tr.action}</span>
                             </span>
                             <button
                               onClick={() => gameEvents.emit(EDITOR_EVENTS.REMOVE_TROLL, i)}
@@ -755,7 +765,7 @@ export function EditorToolbar() {
                       }}
                       className="w-full flex items-center justify-center gap-1 text-[10px] bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-lg px-2 py-1.5 hover:bg-purple-500/20 transition-all"
                     >
-                      <Plus size={10} /> Adicionar Troll
+                      <Plus size={10} /> {t("trolls.add")}
                     </button>
                   </div>
                 </div>
@@ -766,7 +776,7 @@ export function EditorToolbar() {
           {/* Command Palette trigger */}
           <button
             onClick={() => setCommandPaletteOpen(true)}
-            title="Paleta de comandos (Ctrl+K)"
+            title={`${t("commands.commandPalette")} (Ctrl+K)`}
             className="flex items-center gap-1.5 px-1.5 py-1 rounded-md text-muted-foreground/40 hover:text-muted-foreground/60 hover:bg-white/5 transition-all"
           >
             <Search size={13} />
@@ -895,6 +905,7 @@ function CommandPalette({
   commands: CommandDef[];
   onClose: () => void;
 }) {
+  const t = useTranslations("editor");
   const [query, setQuery] = useState("");
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -956,7 +967,7 @@ function CommandPalette({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Paleta de comandos"
+      aria-label={t("commands.commandPalette")}
       className="fixed inset-0 z-200 flex items-start justify-center pt-[15vh] bg-black/60 backdrop-blur-sm"
       onClick={onClose}
       onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
@@ -975,7 +986,7 @@ function CommandPalette({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Buscar comando..."
+            placeholder={t("commands.searchCommand")}
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none"
           />
           <kbd className="text-[9px] font-mono text-muted-foreground/30 bg-white/5 px-1.5 py-0.5 rounded border border-border/20">
@@ -1019,7 +1030,7 @@ function CommandPalette({
           ))}
           {filtered.length === 0 && (
             <p className="text-[11px] text-muted-foreground/30 text-center py-6">
-              Nenhum comando encontrado
+              {t("commands.noResults")}
             </p>
           )}
         </div>

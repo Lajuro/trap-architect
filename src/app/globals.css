@@ -21,6 +21,9 @@
   --color-hud-success: #22C55E;
   --color-hud-danger: #EF4444;
   --color-hud-ribbon: #FF69B4;
+  --color-editor-bg: #0a0a0f;
+  --color-editor-surface: #111118;
+  --color-editor-canvas: #08080e;
   --radius-sm: 0px;
   --radius-md: 0px;
   --radius-lg: 2px;
@@ -175,4 +178,9 @@ canvas {
 
 .animate-slide-up {
   animation: slide-up 0.25s ease-out forwards;
+}
+
+/* Reusable shadow glow for primary accent */
+.shadow-glow-primary {
+  box-shadow: 0 0 8px rgba(255, 140, 0, 0.2);
 }

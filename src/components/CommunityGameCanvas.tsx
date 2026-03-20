@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useLocale } from "next-intl";
+import { setGameLocale } from "@/i18n/game";
 import type { ParsedLevel } from "@/game/types";
 import { ErrorBoundary, GameErrorFallback } from "./ErrorBoundary";
 
@@ -11,8 +13,10 @@ interface CommunityGameCanvasProps {
 function CommunityGameCanvasInner({ level }: CommunityGameCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
+  const locale = useLocale();
 
   useEffect(() => {
+    setGameLocale(locale);
     let mounted = true;
 
     async function initGame() {

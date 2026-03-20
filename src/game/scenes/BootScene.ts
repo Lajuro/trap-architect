@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from "../constants";
 import { populateTextureCache } from "../texture-cache";
+import { gt } from "@/i18n/game";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -17,7 +18,7 @@ export class BootScene extends Phaser.Scene {
     progressBox.fillStyle(0x222222, 0.8);
     progressBox.fillRect(width / 2 - 160, height / 2 - 15, 320, 30);
 
-    const loadingText = this.add.text(width / 2, height / 2 - 40, "Carregando...", {
+    const loadingText = this.add.text(width / 2, height / 2 - 40, gt("game.loading"), {
       fontFamily: "monospace",
       fontSize: "16px",
       color: "#ffffff",
