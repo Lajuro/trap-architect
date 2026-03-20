@@ -105,8 +105,8 @@ export function createNotFoundGame(parent: HTMLElement): Phaser.Game {
 export function createLobbyGame(parent: HTMLElement): Phaser.Game {
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
-    width: GAME_WIDTH,
-    height: GAME_HEIGHT,
+    width: parent.clientWidth,
+    height: parent.clientHeight,
     parent,
     transparent: true,
     pixelArt: true,
@@ -115,8 +115,8 @@ export function createLobbyGame(parent: HTMLElement): Phaser.Game {
       forceSetTimeOut: false,
     },
     scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
+      mode: Phaser.Scale.RESIZE,
+      autoCenter: Phaser.Scale.NO_CENTER,
     },
     scene: [LobbyScene],
   };

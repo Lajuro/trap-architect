@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
 import { gameEvents, GAME_EVENTS } from "../events";
-import { GAME_WIDTH, GAME_HEIGHT } from "../constants";
+// GAME_WIDTH/GAME_HEIGHT no longer imported — lobby uses dynamic this.W / this.H
 
 // ============================================================
 // Animation states for the lobby mascot
@@ -37,8 +37,6 @@ const RANDOM_ANIMS: LobbyAnimState[] = [
 const CAT_SCALE = 3;
 const CAT_W = 22;
 const CAT_H = 28;
-const CAT_HOME_X = GAME_WIDTH / 2;
-const CAT_BASE_Y = GAME_HEIGHT - 36;
 
 // ============================================================
 // Lobby Scene — animated background with expressive mascot
@@ -55,6 +53,10 @@ export class LobbyScene extends Phaser.Scene {
     alpha: number;
     graphics: Phaser.GameObjects.Graphics;
   }[] = [];
+
+  // Background elements (redrawn on resize)
+  private bgGfx!: Phaser.GameObjects.Graphics;
+  private gridGfx!: Phaser.GameObjects.Graphics;
 
   // Character sprites
   private cat!: Phaser.GameObjects.Image;
@@ -609,24 +611,21 @@ export class LobbyScene extends Phaser.Scene {
   // SCENE LIFECYCLE
   // ============================================================
 
+  // Dynamic layout helpers
+  private get W(): number { return this.scale.width; }
+  private get H(): number { return this.scale.height; }
+  private get catHomeX(): number { return this.W / 2; }
+  private get catBaseY(): number { return this.H - 36; }
+
   create(): void {
     this.stopped = false;
     this.frame = 0;
 
     // Dark background
-    const bg = this.add.graphics();
-    bg.fillStyle(0x0a0a0a, 1);
-    bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
+    this.bgGfx = this.add.graphics();
     // Subtle grid lines
-    const grid = this.add.graphics();
-    grid.lineStyle(1, 0x1a1a2e, 0.15);
-    for (let x = 0; x < GAME_WIDTH; x += 32) {
-      grid.lineBetween(x, 0, x, GAME_HEIGHT);
-    }
-    for (let y = 0; y < GAME_HEIGHT; y += 32) {
-      grid.lineBetween(0, y, GAME_WIDTH, y);
-    }
+    this.gridGfx = this.add.graphics();
+    this.drawBackground();
 
     // Floating particles
     for (let i = 0; i < 20; i++) {
@@ -641,7 +640,7 @@ export class LobbyScene extends Phaser.Scene {
     this.shadow.setDepth(4);
 
     // Main character sprite (3× scale, anchor at feet)
-    this.cat = this.add.image(CAT_HOME_X, CAT_BASE_Y, "lobby_idle");
+    this.cat = this.add.image(this.catHomeX, this.catBaseY, "lobby_idle");
     this.cat.setOrigin(0.5, 1);
     this.cat.setScale(CAT_SCALE);
     this.cat.setDepth(5);
@@ -650,7 +649,7 @@ export class LobbyScene extends Phaser.Scene {
     this.drawShadow(1);
 
     // Held item sprite (hidden by default)
-    this.heldItem = this.add.image(CAT_HOME_X, CAT_BASE_Y - CAT_H * CAT_SCALE - 8, "lobby_item_coin");
+    this.heldItem = this.add.image(this.catHomeX, this.catBaseY - CAT_H * CAT_SCALE - 8, "lobby_item_coin");
     this.heldItem.setOrigin(0.5, 1);
     this.heldItem.setScale(CAT_SCALE);
     this.heldItem.setDepth(6);
@@ -663,6 +662,9 @@ export class LobbyScene extends Phaser.Scene {
     // Init state
     this.animState = "idle";
     this.idleCooldown = Phaser.Math.Between(90, 180);
+
+    // Redraw on resize
+    this.scale.on("resize", this.handleResize, this);
 
     // Auto-pause when tab not visible
     this.game.events.on("hidden", () => {
@@ -679,6 +681,35 @@ export class LobbyScene extends Phaser.Scene {
   // PARTICLES
   // ============================================================
 
+  private drawBackground(): void {
+    const w = this.W;
+    const h = this.H;
+    this.bgGfx.clear();
+    this.bgGfx.fillStyle(0x0a0a0a, 1);
+    this.bgGfx.fillRect(0, 0, w, h);
+
+    this.gridGfx.clear();
+    this.gridGfx.lineStyle(1, 0x1a1a2e, 0.15);
+    for (let x = 0; x < w; x += 32) {
+      this.gridGfx.lineBetween(x, 0, x, h);
+    }
+    for (let y = 0; y < h; y += 32) {
+      this.gridGfx.lineBetween(0, y, w, y);
+    }
+  }
+
+  private handleResize(): void {
+    this.drawBackground();
+    // Reposition cat & items to new center/bottom
+    if (this.cat) {
+      this.cat.x = this.catHomeX;
+      this.cat.y = this.catBaseY;
+    }
+    if (this.heldItem) {
+      this.heldItem.x = this.catHomeX;
+    }
+  }
+
   private spawnParticle(): void {
     const size = Phaser.Math.Between(4, 12);
     const g = this.add.graphics();
@@ -688,8 +719,8 @@ export class LobbyScene extends Phaser.Scene {
     g.fillRect(-size / 2, -size / 2, size, size);
 
     const particle = {
-      x: Phaser.Math.Between(0, GAME_WIDTH),
-      y: Phaser.Math.Between(GAME_HEIGHT, GAME_HEIGHT + 200),
+      x: Phaser.Math.Between(0, this.W),
+      y: Phaser.Math.Between(this.H, this.H + 200),
       size,
       speed: Phaser.Math.FloatBetween(0.2, 0.8),
       rotation: Phaser.Math.FloatBetween(0, Math.PI * 2),
@@ -713,7 +744,7 @@ export class LobbyScene extends Phaser.Scene {
     this.shadow.fillStyle(0x000000, 0.25);
     const sw = 24 * CAT_SCALE;
     const sh = 4 * CAT_SCALE * scaleY;
-    this.shadow.fillEllipse(this.cat.x, CAT_BASE_Y + 2, sw, sh);
+    this.shadow.fillEllipse(this.cat.x, this.catBaseY + 2, sw, sh);
   }
 
   // ============================================================
@@ -739,8 +770,8 @@ export class LobbyScene extends Phaser.Scene {
       p.graphics.y = p.y;
       p.graphics.rotation = p.rotation;
       if (p.y < -20) {
-        p.y = GAME_HEIGHT + Phaser.Math.Between(10, 100);
-        p.x = Phaser.Math.Between(0, GAME_WIDTH);
+        p.y = this.H + Phaser.Math.Between(10, 100);
+        p.x = Phaser.Math.Between(0, this.W);
       }
     }
 
@@ -883,11 +914,11 @@ export class LobbyScene extends Phaser.Scene {
     this.cat.setTexture(cycle === 0 ? "lobby_wave1" : "lobby_wave2");
     // Little body bounce
     const bounce = Math.sin(this.animTimer * 0.4) * 2;
-    this.cat.y = CAT_BASE_Y - bounce;
+    this.cat.y = this.catBaseY - bounce;
     this.cat.setScale(CAT_SCALE);
 
     if (this.animTimer >= 60) {
-      this.cat.y = CAT_BASE_Y;
+      this.cat.y = this.catBaseY;
       this.returnToIdle();
     }
   }
@@ -897,7 +928,7 @@ export class LobbyScene extends Phaser.Scene {
     // Rapid alternation + random x offset for jitter
     const jitter = this.animTimer % 4 < 2 ? "lobby_shiver1" : "lobby_shiver2";
     this.cat.setTexture(jitter);
-    this.cat.x = CAT_HOME_X + (this.animTimer % 2 === 0 ? 1 : -1) * 2;
+    this.cat.x = this.catHomeX + (this.animTimer % 2 === 0 ? 1 : -1) * 2;
     this.cat.setScale(CAT_SCALE);
 
     // Draw sweat/cold drops
@@ -910,7 +941,7 @@ export class LobbyScene extends Phaser.Scene {
     }
 
     if (this.animTimer >= 75) {
-      this.cat.x = CAT_HOME_X;
+      this.cat.x = this.catHomeX;
       this.returnToIdle();
     }
   }
@@ -952,20 +983,20 @@ export class LobbyScene extends Phaser.Scene {
       // Going up
       const t = this.animTimer / half;
       const jumpHeight = 40;
-      this.cat.y = CAT_BASE_Y - Math.sin(t * Math.PI) * jumpHeight;
+      this.cat.y = this.catBaseY - Math.sin(t * Math.PI) * jumpHeight;
       this.cat.setTexture("lobby_jump");
       this.cat.setScale(CAT_SCALE * 0.95, CAT_SCALE * 1.08);
     } else {
       // Landing squash
       const t = (this.animTimer - half) / half;
-      this.cat.y = CAT_BASE_Y;
+      this.cat.y = this.catBaseY;
       this.cat.setTexture("lobby_land");
       const squashAmount = Math.max(0, 1 - t) * 0.15;
       this.cat.setScale(CAT_SCALE * (1 + squashAmount), CAT_SCALE * (1 - squashAmount));
     }
 
     if (this.animTimer >= total) {
-      this.cat.y = CAT_BASE_Y;
+      this.cat.y = this.catBaseY;
       this.cat.setScale(CAT_SCALE);
       this.returnToIdle();
     }
@@ -1056,8 +1087,8 @@ export class LobbyScene extends Phaser.Scene {
     this.heldItem.setVisible(true);
 
     // Reached home position
-    if (this.cat.x >= CAT_HOME_X) {
-      this.cat.x = CAT_HOME_X;
+    if (this.cat.x >= this.catHomeX) {
+      this.cat.x = this.catHomeX;
       this.startAnim("show_item");
     }
   }
@@ -1072,16 +1103,16 @@ export class LobbyScene extends Phaser.Scene {
     if (this.animTimer < 15) {
       // Little hop up
       const t = this.animTimer / 15;
-      this.cat.y = CAT_BASE_Y - Math.sin(t * Math.PI) * 20;
+      this.cat.y = this.catBaseY - Math.sin(t * Math.PI) * 20;
     } else if (this.animTimer < 25) {
-      this.cat.y = CAT_BASE_Y;
+      this.cat.y = this.catBaseY;
       // Squash on land
       const t = (this.animTimer - 15) / 10;
       const squash = Math.max(0, 1 - t) * 0.1;
       this.cat.setScale(CAT_SCALE * (1 + squash), CAT_SCALE * (1 - squash));
     } else {
       // Stand proud displaying item
-      this.cat.y = CAT_BASE_Y;
+      this.cat.y = this.catBaseY;
       this.cat.setScale(CAT_SCALE);
       // Item bobs slightly
       const bob = Math.sin(this.animTimer * 0.2) * 3;
