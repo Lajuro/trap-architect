@@ -1,0 +1,790 @@
+{
+  "meta": {
+    "title": "Trap Architect — Crea niveles imposibles",
+    "titleTemplate": "%s — Trap Architect",
+    "description": "¡Crea, comparte y juega niveles imposibles! Un plataformero troll donde la comunidad es el arquitecto de la diversión.",
+    "ogTitle": "Trap Architect — Crea niveles imposibles",
+    "ogDescription": "Un plataformero troll donde la comunidad es el arquitecto de la diversión. Construye trampas diabólicas y desafía al mundo.",
+    "twitterDescription": "¡Crea, comparte y juega niveles imposibles!",
+    "keywords": "trap architect, troll platformer, level editor, cat mario, community levels, juego de plataformas"
+  },
+  "common": {
+    "loading": "Cargando",
+    "loadingGame": "Cargando el juego",
+    "loadingEllipsis": "Cargando...",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "back": "Volver",
+    "tryAgain": "Reintentar",
+    "by": "por",
+    "anonymous": "Anónimo",
+    "loadMore": "Cargar Más",
+    "create": "Crear",
+    "creating": "Creando...",
+    "clickToSkip": "Haz clic para saltar",
+    "introAriaLabel": "Animación de introducción — haz clic o pulsa cualquier tecla para saltar",
+    "loadingAriaLabel": "Cargando el juego",
+    "failedToLoadLevels": "Error al cargar niveles.",
+    "loginOrCreate": "Iniciar sesión o crear cuenta",
+    "accountCreatedConfirm": "¡Cuenta creada! Revisa tu correo para confirmar.",
+    "or": "o",
+    "yes": "Sí",
+    "no": "No",
+    "none": "Ninguno",
+    "all": "Todos",
+    "equipped": "Equipado",
+    "equip": "Equipar",
+    "buy": "Comprar",
+    "levels": "Niveles",
+    "plays": "Partidas",
+    "likes": "Likes",
+    "coins": "Monedas",
+    "deaths": "Muertes",
+    "time": "Tiempo"
+  },
+  "nav": {
+    "play": "JUGAR",
+    "community": "COMUNIDAD",
+    "shop": "TIENDA",
+    "profile": "PERFIL"
+  },
+  "menu": {
+    "campaign": "Campaña",
+    "campaignSub": "10 niveles originales",
+    "quickDemo": "Demo Rápida",
+    "quickDemoSub": "Prueba el juego",
+    "editor": "Editor",
+    "editorSub": "Crear niveles",
+    "communityLevels": "Comunidad",
+    "communityLevelsSub": "Explorar niveles",
+    "tagline": "Crea. Comparte. Muere de risa."
+  },
+  "auth": {
+    "login": "Iniciar Sesión",
+    "signup": "Crear Cuenta",
+    "loginSubtitle": "Inicia sesión para crear y compartir niveles",
+    "signupSubtitle": "Crea tu cuenta y empieza a construir trampas",
+    "email": "Correo",
+    "emailPlaceholder": "tu@correo.com",
+    "password": "Contraseña",
+    "passwordPlaceholder": "------",
+    "passwordHint": "Mínimo 6 caracteres",
+    "nickname": "Apodo",
+    "nicknamePlaceholder": "TrollMaster2000",
+    "nicknameError": "El apodo debe tener entre 2 y 30 caracteres",
+    "loggingIn": "Iniciando sesión...",
+    "creatingAccount": "Creando...",
+    "orContinueWith": "o continúa con",
+    "noAccount": "¿No tienes cuenta?",
+    "hasAccount": "¿Ya tienes cuenta?",
+    "guestPlay": "Jugar como Invitado",
+    "guestNote": "Progreso guardado localmente",
+    "tabLogin": "Iniciar Sesión",
+    "tabSignup": "Crear Cuenta"
+  },
+  "browse": {
+    "tabLevels": "Niveles",
+    "tabCollections": "Colecciones",
+    "searchPlaceholder": "Buscar niveles...",
+    "sortRecent": "Recientes",
+    "sortMostPlayed": "Más Jugados",
+    "sortMostLiked": "Más Gustados",
+    "sortHardest": "Más Difíciles",
+    "allTags": "Todas las Etiquetas",
+    "noLevelsFound": "No se encontraron niveles",
+    "failedToLoad": "Error al cargar niveles."
+  },
+  "collections": {
+    "title": "Colecciones",
+    "newCollection": "Nueva Colección",
+    "createCollection": "Crear Colección",
+    "collectionNamePlaceholder": "Nombre de la colección",
+    "collectionDescPlaceholder": "Descripción (opcional)",
+    "backToCollections": "← Volver a Colecciones",
+    "collectionNotFound": "Colección no encontrada",
+    "loadError": "Error al cargar colección",
+    "createError": "Error al crear colección",
+    "connectionError": "Error de conexión",
+    "levelCount": "{count} niveles",
+    "emptyCollection": "Aún no hay niveles en esta colección.",
+    "addLevelsHint": "Añade niveles desde las páginas de nivel",
+    "noCollectionsYet": "Aún no hay colecciones",
+    "noCollectionsDescription": "¡Crea una colección para organizar tus niveles favoritos!",
+    "loadingCollections": "Cargando colecciones...",
+    "notFound": "No encontrada",
+    "noCollections": "No se encontraron colecciones.",
+    "myCollections": "Mis Colecciones",
+    "publicCollections": "Colecciones Públicas"
+  },
+  "profile": {
+    "title": "Mi Perfil",
+    "info": "Información",
+    "rank": "Rango",
+    "profileUpdated": "¡Perfil actualizado!",
+    "saveError": "Error al guardar",
+    "createLevel": "Crear Nivel",
+    "campaignBtn": "Campaña",
+    "shopBtn": "Tienda",
+    "configBtn": "Ajustes",
+    "logout": "Cerrar Sesión",
+    "achievements": "Logros",
+    "newAchievements": "¡Nuevos logros desbloqueados!"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "audio": "Audio",
+    "soundEffects": "Efectos de Sonido",
+    "activeSkin": "Skin Activa",
+    "buySkins": "Compra más skins en la",
+    "activeTitle": "Título Activo",
+    "unlockTitles": "Desbloquea más títulos con logros y en la",
+    "shop": "Tienda",
+    "data": "Datos",
+    "resetProgress": "Reiniciar Progreso",
+    "resetConfirm": "¿Estás seguro? El progreso de la campaña se borrará permanentemente.",
+    "resetDone": "¡Progreso de campaña reiniciado!",
+    "resetDescription": "Reiniciar el progreso de la campaña borrará los niveles desbloqueados y los tiempos guardados localmente.",
+    "language": "Idioma"
+  },
+  "shop": {
+    "title": "Tienda",
+    "subtitle": "Gana monedas cuando otros juegan tus niveles.",
+    "tabSkins": "Skins",
+    "tabTrails": "Estelas",
+    "tabDeaths": "Efectos",
+    "tabFrames": "Marcos",
+    "purchased": "¡Artículo comprado!",
+    "purchaseError": "Error al comprar",
+    "equippedMsg": "¡Equipado!"
+  },
+  "admin": {
+    "title": "Curación de Niveles",
+    "subtitle": "Destaca niveles y define categorías de Developer's Choice.",
+    "featured": "Destacado",
+    "unfeatured": "Quitar",
+    "highlight": "Destacar",
+    "noCategory": "Sin categoría",
+    "noLevels": "No se encontraron niveles publicados.",
+    "reports": "Reportes Pendientes",
+    "noReports": "No hay reportes pendientes.",
+    "dismiss": "Descartar",
+    "hide": "Ocultar",
+    "reportedBy": "Reportado por",
+    "levelRemoved": "Nivel eliminado",
+    "confirmHide": "¿Estás seguro de que quieres ocultar este nivel?",
+    "categories": {
+      "weekLevel": "Nivel de la Semana",
+      "classics": "Clásicos",
+      "mostTroll": "Más Troll",
+      "creativeDesign": "Diseño Creativo"
+    },
+    "reasons": {
+      "offensive": "Contenido ofensivo",
+      "impossible": "Imposible",
+      "spam": "Spam",
+      "bug": "Bug",
+      "other": "Otro"
+    }
+  },
+  "editor": {
+    "lobby": "Lobby",
+    "editorLabel": "Editor",
+    "defaultLevelName": "Mi Nivel",
+    "createLevelTitle": "Crear Nivel",
+    "createLevelDesc": "Usa el editor visual para crear niveles con trampas, enemigos y trolleos. ¡Publica y desafía a la comunidad!",
+    "categories": {
+      "terrain": "Terreno",
+      "danger": "Peligro",
+      "interactive": "Interactivo",
+      "decoration": "Decoración",
+      "entities": "Entidades"
+    },
+    "preparingEditor": "Preparando editor...",
+    "tools": {
+      "paint": "Pincel",
+      "eraser": "Borrador",
+      "fill": "Rellenar",
+      "line": "Línea",
+      "rect": "Rectángulo",
+      "eyedropper": "Cuentagotas"
+    },
+    "menus": {
+      "file": "Archivo",
+      "edit": "Editar",
+      "actions": "Acciones"
+    },
+    "fileMenu": {
+      "new": "Nuevo Nivel",
+      "save": "Guardar Local",
+      "load": "Cargar Local",
+      "import": "Importar JSON",
+      "export": "Exportar JSON",
+      "publish": "Publicar",
+      "saveDraft": "Guardar borrador",
+      "saving": "Guardando...",
+      "publishLevel": "Publicar nivel"
+    },
+    "editMenu": {
+      "undo": "Deshacer",
+      "redo": "Rehacer",
+      "clear": "Borrar Todo",
+      "clearConfirm": "¿Borrar todo el nivel? Esta acción no se puede deshacer.",
+      "copy": "Copiar",
+      "cut": "Cortar",
+      "paste": "Pegar",
+      "copySelection": "Copiar selección",
+      "cutSelection": "Cortar selección"
+    },
+    "actionMenu": {
+      "test": "Probar Nivel",
+      "stopTest": "Detener Prueba",
+      "config": "Ajustes"
+    },
+    "brushSize": "Tamaño",
+    "config": {
+      "title": "Ajustes del Nivel",
+      "name": "Nombre",
+      "namePlaceholder": "Nombre del nivel",
+      "bgColor": "Color de fondo",
+      "music": "Música",
+      "musicOptions": {
+        "calm": "Tranquilo",
+        "default": "Normal",
+        "intense": "Intenso",
+        "none": "Ninguno"
+      },
+      "width": "Ancho",
+      "height": "Alto",
+      "theme": "Tema",
+      "size": "Tamaño"
+    },
+    "publish": {
+      "notLoggedIn": "Inicia sesión para publicar niveles",
+      "noFlag": "Añade al menos una bandera al nivel",
+      "noPlayer": "Añade la posición inicial del jugador",
+      "publishing": "Publicando...",
+      "success": "¡Nivel publicado con éxito!",
+      "error": "Error al publicar",
+      "saved": "¡Guardado!",
+      "loaded": "¡Cargado!",
+      "exported": "¡JSON copiado!",
+      "imported": "¡Nivel importado!",
+      "importError": "JSON inválido",
+      "cleared": "¡Nivel borrado!",
+      "connectionError": "Error de conexión.",
+      "draftSaved": "¡Borrador guardado con éxito!",
+      "loginToSave": "Inicia sesión para guardar.",
+      "draftError": "Error al guardar borrador.",
+      "loginRequired": "Inicia sesión para publicar"
+    },
+    "trolls": {
+      "title": "Trolleos",
+      "add": "Añadir Trolleo",
+      "triggerX": "Posición X",
+      "action": "Acción",
+      "message": "Mensaje",
+      "duration": "Duración",
+      "entityType": "Tipo",
+      "spawnX": "Spawn X",
+      "spawnY": "Spawn Y"
+    },
+    "import": {
+      "invalidJson": "Archivo JSON inválido — no se pudo leer.",
+      "invalidFormat": "Formato inválido — el archivo no contiene datos de nivel válidos.",
+      "importError": "Error al importar el nivel en el editor."
+    },
+    "commands": {
+      "tool": "Herramienta",
+      "view": "Vista",
+      "action": "Acción",
+      "toggleLayer": "Alternar capa (FG/BG)",
+      "commandPalette": "Paleta de comandos",
+      "searchCommand": "Buscar comando...",
+      "noResults": "No se encontraron comandos"
+    },
+    "status": {
+      "tested": "Nivel probado — listo para publicar",
+      "notTested": "Prueba el nivel antes de publicar"
+    },
+    "layer": {
+      "toggle": "Alternar capa"
+    },
+    "blockPalette": "Paleta de bloques",
+    "prefabsLabel": "Prefabs",
+    "noPrefabsSaved": "No hay prefabs guardados"
+  },
+  "game": {
+    "levelComplete": "¡NIVEL COMPLETADO!",
+    "stats": "Monedas: {coins}  |  Muertes: {deaths}  |  Tiempo: {time}s",
+    "perfectBadge": "✨ ¡PERFECTO — Cero Muertes! ✨",
+    "campaignComplete": "¡CAMPAÑA COMPLETADA!",
+    "deathsLabel": "x{count} Muertes",
+    "coinsLabel": "${count} Monedas",
+    "skinUnlocked": "[!] Skin desbloqueada: ¡Gato Dorado!",
+    "createCTA": "¡Ahora es tu turno de crear!",
+    "menuBtn": "Menú",
+    "levelsBtn": "Niveles",
+    "pause": {
+      "title": "|| Pausado",
+      "continue": ">  Continuar",
+      "restart": "R  Reiniciar",
+      "settings": "*  Ajustes",
+      "sfxOn": "SFX: [ON] Activado",
+      "sfxOff": "SFX: [--] Desactivado",
+      "musicOn": "Música: [ON] Activada",
+      "musicOff": "Música: [--] Desactivada",
+      "quit": "X  Salir"
+    },
+    "powerups": {
+      "mushroom": "Champiñón",
+      "star": "Estrella",
+      "fire_flower": "Fuego"
+    },
+    "slowMo": "SlowMo",
+    "gravityFlipped": "¡Gravedad invertida!",
+    "gravityNormal": "¡Gravedad normalizada!",
+    "loading": "Cargando...",
+    "coins": "Monedas",
+    "deaths": "Muertes",
+    "time": "Tiempo",
+    "perfectNoDeath": "✨ ¡PERFECTO — Cero Muertes! ✨",
+    "yourTurnToCreate": "¡Ahora es tu turno de crear!",
+    "menu": "Menú",
+    "levels": "Niveles",
+    "gravityNormalized": "¡Gravedad normalizada!",
+    "paused": "|| Pausado",
+    "continue": "Continuar",
+    "restart": "Reiniciar",
+    "settings": "Ajustes",
+    "sfxOn": "[ON] Activado",
+    "sfxOff": "[--] Desactivado",
+    "music": "Música",
+    "quit": "Salir",
+    "power": {
+      "mushroom": "Champiñón",
+      "star": "Estrella",
+      "fire": "Fuego",
+      "slowmo": "SlowMo"
+    },
+    "editor": {
+      "resetZoom": "↺ Reiniciar"
+    },
+    "selectLevel": "SELECCIONA UN NIVEL",
+    "play": "JUGAR",
+    "menuTitle": "TRAP ARCHITECT",
+    "menuSubtitle": "Plataformas imposibles hechas por la comunidad",
+    "menuPlay": ">  JUGAR",
+    "menuDemo": "* Demo Rápida",
+    "levelSelect": {
+      "completed": "\u2713 COMPLETADO",
+      "backMenu": "\u2190 Menú",
+      "hintScroll": "Scroll para navegar  \u2022  Clic para jugar  \u2022  ESC volver",
+      "hintNoScroll": "Haz clic en un nivel para jugar  \u2022  ESC volver"
+    }
+  },
+  "campaign": {
+    "levels": {
+      "0": {
+        "name": "Mi Nivel",
+        "subtitle": "El Castillo Sombrío"
+      },
+      "1": {
+        "name": "Nivel 1",
+        "subtitle": "Parece Fácil, ¿No?"
+      },
+      "2": {
+        "name": "Nivel 2",
+        "subtitle": "Confía en Mí"
+      },
+      "3": {
+        "name": "Nivel 3",
+        "subtitle": "Sube y Baja"
+      },
+      "4": {
+        "name": "Nivel 4",
+        "subtitle": "Hielo y Fuego"
+      },
+      "5": {
+        "name": "Nivel 5",
+        "subtitle": "Gravedad Loca"
+      },
+      "6": {
+        "name": "Nivel 6",
+        "subtitle": "Falsa Esperanza"
+      },
+      "7": {
+        "name": "Nivel 7",
+        "subtitle": "La Fábrica"
+      },
+      "8": {
+        "name": "Nivel 8",
+        "subtitle": "Castillo de Sombras"
+      },
+      "9": {
+        "name": "Nivel 9",
+        "subtitle": "Sin Piedad"
+      },
+      "10": {
+        "name": "Nivel 10",
+        "subtitle": "El Arquitecto Final"
+      }
+    },
+    "trolls": {
+      "0": [
+        "Bienvenido al Castillo Sombrío... ¡cuidado!",
+        "¿Checkpoint? No te emociones tanto...",
+        "¿Sigues vivo? ¡Impresionante!",
+        "¡La bandera! ¿Será real?"
+      ],
+      "1": [
+        "¿Parece fácil? Hmm... ¡ya veremos!",
+        "El suelo parece raro aquí...",
+        "¡Mira! ¡La bandera! ¡Por fin!",
+        "...¡era FALSA! ¡Jajaja! ¡Sigue adelante!",
+        "Esta sí es de verdad... ¿o no?"
+      ],
+      "2": [
+        "Confía en mí... ¡es totalmente seguro!",
+        "Cuidado con la arena... ¡no todo es sólido!",
+        "Tranquilo... ¡confía!",
+        "¡Casi! ¡Confía un poquito más!"
+      ],
+      "3": [
+        "¡Usa los muelles y trampolines! ¡Sube y baja!",
+        "¡Coge el power-up! ¡Lo necesitarás!",
+        "¡El secreto es el timing de los saltos!",
+        "¡Casi! ¡Un último súper salto!"
+      ],
+      "4": [
+        "¡Hielo! ¡Vas a resbalaaar!",
+        "¡Cinta + Hielo = Diversión... o muerte!",
+        "Cuidado con el agua... ¿resbalaste?",
+        "¿Del hielo al fuego? ¡Buena suerte!"
+      ],
+      "5": [
+        "¿Arriba o abajo? ¡Buena suerte!",
+        "¡GRAVEDAD INVERTIDA! ¡Cuidado con el techo!",
+        "¿¡Otra vez?! ¡JAJAJA!",
+        "Los bloques temporales desaparecen... ¡y vuelven!",
+        "Sigue recto... ¡si la gravedad te deja!"
+      ],
+      "6": [
+        "¡La bandera está ahí! ¡Ve!",
+        "¡FELICIDADES! Gan... ¡espera, es falsa!",
+        "¡La siguiente es real! ¡Confía!",
+        "...¡falsa otra vez! ¡Jajaja!",
+        "¡Juroooo que esta es la verdadera!",
+        "...¡mentíííí! ¡Jajajajaja! 😈",
+        "OK ahora en serio... la cuarta es real...",
+        "¡CUATRO FALSAS! ¡No te rindas!",
+        "¿Esta será real? Hmm..."
+      ],
+      "7": [
+        "¡Bienvenido a la Fábrica del Caos!",
+        "¡Cintas! ¡Intenta caminar contra ellas!",
+        "¡Cuidado con los cañones! ¡BOOM!",
+        "¡Bloques pegajosos! ¡Salta para soltarte!",
+        "¡El viento empuja! ¡Cuidado!",
+        "¡Casi! ¡La fábrica va a explotar!"
+      ],
+      "8": [
+        "Bienvenido al Castillo de Sombras... ¡encuentra las llaves!",
+        "Las llaves abren los caminos... ¡si las encuentras!",
+        "Bloques invisibles pueden ayudar... ¡o no!",
+        "El castillo está temblando...",
+        "La salida está cerca... ¡confía!"
+      ],
+      "9": [
+        "Sin piedad. Buena suerte. La necesitarás.",
+        "¡GRAVEDAD! ¡Cuidado con el techo!",
+        "¿¡OTRA VEZ?! ¡JAJAJA!",
+        "¿¡Sigues vivo?! ¿¡CÓMO?!",
+        "Ríndete. En serio. Ríndete."
+      ],
+      "10": [
+        "La prueba final. El Arquitecto te observa.",
+        "¿Checkpoint? No te emociones tanto...",
+        "¡GRAVEDAD! ¡Pégate al techo!",
+        "¿Sigues vivo? ¡Impresionante!",
+        "La bandera... ¿será real?",
+        "¡Una estrella! ¡Corre! ¡CORRE!",
+        "El Arquitecto se ríe de tu dolor... ¡jajaja!",
+        "¿Será la verdadera esta vez?!"
+      ]
+    },
+    "demo": {
+      "name": "Nivel 1 — Parece Fácil, ¿No?",
+      "subtitle": "Introducción",
+      "trollMessage": "¡Cuidado con los pinchos!"
+    }
+  },
+  "achievements": {
+    "first_death": { "name": "Primera Muerte", "description": "Muere por primera vez" },
+    "100_deaths": { "name": "Persistente", "description": "Muere 100 veces" },
+    "1000_deaths": { "name": "Inmortal al Revés", "description": "Muere 1.000 veces" },
+    "first_clear": { "name": "Primer Nivel", "description": "Completa 1 nivel" },
+    "10_clears": { "name": "Explorador", "description": "Completa 10 niveles" },
+    "50_clears": { "name": "Veterano", "description": "Completa 50 niveles" },
+    "100_clears": { "name": "Legendario", "description": "Completa 100 niveles" },
+    "first_publish": { "name": "Creador", "description": "Publica 1 nivel" },
+    "10_publish": { "name": "Arquitecto", "description": "Publica 10 niveles" },
+    "speedster": { "name": "Velocista", "description": "Completa un nivel en menos de 10 segundos" },
+    "no_death_run": { "name": "Perfecto", "description": "Completa un nivel sin morir" },
+    "1000_coins": { "name": "Rico", "description": "Recoge 1.000 monedas" },
+    "campaign_done": { "name": "Héroe de Campaña", "description": "Completa todos los niveles de campaña" },
+    "liked_100": { "name": "Popular", "description": "Recibe 100 likes en tus niveles" },
+    "devs_choice": { "name": "Elección del Dev", "description": "Recibe un Dev's Choice" }
+  },
+  "cosmetics": {
+    "skins": {
+      "default": "Gato Clásico",
+      "ninja": "Gato Ninja",
+      "pixel": "Gato Pixel",
+      "ghost": "Gato Fantasma",
+      "golden": "Gato Dorado",
+      "troll": "Gato Troll",
+      "ice": "Gato Hielo",
+      "lava": "Gato Lava"
+    },
+    "trails": {
+      "trail_none": "Ninguno",
+      "trail_fire": "Fuego",
+      "trail_ice": "Hielo",
+      "trail_stars": "Estrellas",
+      "trail_rainbow": "Arcoíris"
+    },
+    "deathEffects": {
+      "death_default": "Normal",
+      "death_pixelate": "Pixelado",
+      "death_ghost": "Fantasma",
+      "death_confetti": "Confeti",
+      "death_shatter": "Romper"
+    },
+    "frames": {
+      "frame_none": "Ninguno",
+      "frame_gold": "Dorado",
+      "frame_diamond": "Diamante",
+      "frame_troll": "Troll",
+      "frame_fire": "Fuego"
+    }
+  },
+  "ranks": {
+    "0": "Jugador",
+    "1": "Creador Novato",
+    "2": "Constructor",
+    "3": "Arquitecto",
+    "4": "Maestro Troll",
+    "5": "Leyenda",
+    "99": "Admin"
+  },
+  "ranksLib": {
+    "0": "Novato",
+    "1": "Constructor",
+    "2": "Arquitecto",
+    "3": "Maestro",
+    "4": "Leyenda",
+    "99": "Admin"
+  },
+  "difficulty": {
+    "new": "Nuevo",
+    "easy": "Fácil",
+    "medium": "Medio",
+    "hard": "Difícil",
+    "extreme": "Extremo"
+  },
+  "themes": {
+    "default": "Clásico",
+    "snow": "Nieve",
+    "inferno": "Infierno",
+    "neon": "Neón",
+    "retro": "Retro",
+    "underwater": "Submarino"
+  },
+  "titles": {
+    "novato": { "name": "Novato", "unlock": "Predeterminado (gratis)" },
+    "mestre_trolls": { "name": "Maestro de Trolls", "unlock": "Publica 20 niveles con etiqueta troll" },
+    "velocista": { "name": "Velocista", "unlock": "Logro: Velocista" },
+    "sobrevivente": { "name": "Superviviente", "unlock": "Logro: Inmortal al Revés" },
+    "arquiteto_supremo": { "name": "Arquitecto Supremo", "unlock": "Rango Arquitecto" },
+    "lenda_viva": { "name": "Leyenda Viviente", "unlock": "Rango Leyenda" },
+    "colecionador": { "name": "Coleccionista", "unlock": "Desbloquea 15+ cosméticos" },
+    "desafiante": { "name": "Retador", "unlock": "Completa 10 desafíos semanales" },
+    "explorador": { "name": "Explorador", "unlock": "Compra en la tienda" },
+    "heroi": { "name": "Héroe", "unlock": "Compra en la tienda" },
+    "lendario": { "name": "Legendario", "unlock": "Compra en la tienda" }
+  },
+  "prefabs": {
+    "prefab_platform": "Plataforma",
+    "prefab_spike_pit": "Pozo de Pinchos",
+    "prefab_cannon_tower": "Torre de Cañones",
+    "prefab_lava_bridge": "Puente de Lava"
+  },
+  "palette": {
+    "0": { "name": "Borrador", "description": "Borra cualquier tile o entidad" },
+    "1": { "name": "Suelo", "description": "Hierba en superficie, tierra interior" },
+    "3": { "name": "Ladrillo", "description": "Bloque destruible clásico" },
+    "4": { "name": "Castillo", "description": "Muro de piedra — almenas automáticas" },
+    "5": { "name": "Bloque Usado", "description": "Bloque ya activado — decorativo" },
+    "6": { "name": "Tubería", "description": "Tubería verde — forma automática" },
+    "10": { "name": "Hielo", "description": "Superficie resbaladiza — ¡auto-tile!" },
+    "11": { "name": "Nube", "description": "Plataforma de nube — solo decoración" },
+    "41": { "name": "Arena", "description": "Terreno arenoso — auto-tile" },
+    "42": { "name": "Nieve", "description": "Terreno helado — auto-tile" },
+    "43": { "name": "Madera", "description": "Tablas de madera — sólido decorativo" },
+    "44": { "name": "Piedra Musgosa", "description": "Piedra antigua cubierta de musgo" },
+    "45": { "name": "Metal", "description": "Panel industrial metálico con remaches" },
+    "12": { "name": "Pincho", "description": "¡Muerte instantánea al tocarlo!" },
+    "13": { "name": "Pincho Oculto", "description": "Parece hierba, pero mata — ¡troll!" },
+    "14": { "name": "Lava", "description": "¡Mar de fuego — derrite todo!" },
+    "15": { "name": "Suelo Falso", "description": "¡Se derrumba al pisarlo — sorpresa!" },
+    "16": { "name": "Bloque ?", "description": "Libera monedas o sorpresas al golpearlo" },
+    "17": { "name": "Bloque Troll !", "description": "Parece un ?, ¡pero trollea al jugador!" },
+    "18": { "name": "Invisible", "description": "Bloque invisible — solo aparece al golpearlo" },
+    "19": { "name": "Muelle", "description": "¡Lanza al jugador hacia arriba!" },
+    "20": { "name": "Trampolín", "description": "¡Súper salto — alcanza alturas extremas!" },
+    "21": { "name": "Plataforma", "description": "Semi-sólida — salta desde abajo" },
+    "22": { "name": "Cinta ←", "description": "Mueve al jugador a la izquierda" },
+    "23": { "name": "Cinta →", "description": "Mueve al jugador a la derecha" },
+    "24": { "name": "Checkpoint", "description": "Punto de reaparición — guarda progreso" },
+    "33": { "name": "Bloque Power-Up", "description": "Libera champiñón, estrella o flor" },
+    "37": { "name": "Bloque Deslizante", "description": "Se desliza al activarse" },
+    "38": { "name": "Bloque Temporal", "description": "Aparece y desaparece en ciclos" },
+    "39": { "name": "Zona de Gravedad", "description": "¡Invierte la gravedad del jugador!" },
+    "54": { "name": "Normalizar Gravedad", "description": "¡Restaura la gravedad normal!" },
+    "40": { "name": "Plataforma Móvil", "description": "Plataforma que se mueve automáticamente" },
+    "46": { "name": "Rejilla", "description": "Plataforma metálica semi-sólida" },
+    "47": { "name": "Agua", "description": "Ralentiza al jugador — auto-tile" },
+    "48": { "name": "Valla", "description": "Valla de madera — decorativa" },
+    "49": { "name": "Antorcha", "description": "Antorcha llameante — decorativa animada" },
+    "50": { "name": "Cadena", "description": "Cadena metálica colgante — decorativa" },
+    "51": { "name": "Cartel", "description": "Cartel de madera — decorativo" },
+    "52": { "name": "Cristal", "description": "Gema brillante — sólido con brillo" },
+    "53": { "name": "Champiñón", "description": "Bloque de champiñón rojo con lunares" },
+    "25": { "name": "Jugador", "description": "Posición inicial del gato héroe" },
+    "26": { "name": "Moneda", "description": "¡Coleccionable brillante — puntos extra!" },
+    "27": { "name": "Goomba", "description": "Enemigo patrullero — va y viene" },
+    "28": { "name": "Goomba Rápido", "description": "¡Goomba turbo — mucho más rápido!" },
+    "29": { "name": "Spiny", "description": "¡Enemigo con pinchos — no saltes encima!" },
+    "30": { "name": "Volador", "description": "Enemigo flotante — sube y baja" },
+    "31": { "name": "Bandera", "description": "OBLIGATORIA — marca el objetivo del nivel" },
+    "32": { "name": "Bandera Falsa", "description": "¡Parece victoria, pero es trolleo puro!" },
+    "34": { "name": "Champiñón (ítem)", "description": "Power-up: velocidad y resistencia a 1 golpe" },
+    "35": { "name": "Estrella", "description": "¡Power-up: invencibilidad temporal!" },
+    "36": { "name": "Flor de Fuego", "description": "¡Power-up: dispara bolas de fuego!" },
+    "55": { "name": "Teletransportador A", "description": "Portal de entrada — par con Teletransportador B" },
+    "56": { "name": "Teletransportador B", "description": "Portal de salida — par con Teletransportador A" },
+    "57": { "name": "Bloque Pegajoso", "description": "¡Pega al jugador — salta para soltarte!" },
+    "58": { "name": "Llave Roja", "description": "Abre cerraduras rojas" },
+    "59": { "name": "Llave Azul", "description": "Abre cerraduras azules" },
+    "60": { "name": "Llave Verde", "description": "Abre cerraduras verdes" },
+    "61": { "name": "Cerradura Roja", "description": "Bloque que abre con llave roja" },
+    "62": { "name": "Cerradura Azul", "description": "Bloque que abre con llave azul" },
+    "63": { "name": "Cerradura Verde", "description": "Bloque que abre con llave verde" },
+    "64": { "name": "Hielo Rompible", "description": "Se rompe con bola de fuego o 3 saltos" },
+    "65": { "name": "Espejo", "description": "¡Refleja bolas de fuego!" },
+    "66": { "name": "Viento ↑", "description": "Corriente de aire ascendente" },
+    "67": { "name": "Viento ↓", "description": "Corriente de aire descendente" },
+    "68": { "name": "Viento ←", "description": "Corriente de aire a la izquierda" },
+    "69": { "name": "Viento →", "description": "Corriente de aire a la derecha" },
+    "70": { "name": "Cañón ←", "description": "¡Dispara proyectiles a la izquierda!" },
+    "71": { "name": "Cañón →", "description": "¡Dispara proyectiles a la derecha!" },
+    "72": { "name": "Cañón ↑", "description": "¡Dispara proyectiles hacia arriba!" },
+    "73": { "name": "Cañón ↓", "description": "¡Dispara proyectiles hacia abajo!" },
+    "74": { "name": "Fantasma", "description": "¡Se mueve cuando no miras! ¡Boo!" },
+    "75": { "name": "Tirador", "description": "Enemigo fijo que dispara proyectiles" },
+    "76": { "name": "Goomba Gigante", "description": "¡Mini-jefe! ¡3 saltos para derrotar!" },
+    "77": { "name": "Sierra Circular", "description": "¡Corta todo en su camino! ¡Indestructible!" },
+    "78": { "name": "Cámara Lenta", "description": "¡Power-up: cámara lenta por 3 segundos!" },
+    "79": { "name": "Cartel Personalizado", "description": "Cartel con texto del creador" }
+  },
+  "error": {
+    "title": "[!] Error Interno",
+    "description": "Algo salió mal en el servidor. Inténtalo de nuevo.",
+    "retry": "Reintentar",
+    "home": "Inicio"
+  },
+  "notFound": {
+    "title": "[?] Página No Encontrada",
+    "description": "El nivel que buscas puede haber sido eliminado o nunca existió.",
+    "browseLevels": "Explorar Niveles",
+    "home": "Inicio"
+  },
+  "errorBoundary": {
+    "title": "Algo salió mal",
+    "description": "Ocurrió un error inesperado.",
+    "reload": "Recargar",
+    "goHome": "Ir al Inicio",
+    "details": "Detalles del error",
+    "gameCrash": "El juego falló",
+    "clickToRestart": "Haz clic para reiniciar"
+  },
+  "rankUp": {
+    "title": "¡Subida de Rango!",
+    "message": "¡Felicidades! Has alcanzado {rank}",
+    "cta": "¡Sigue creando y compartiendo niveles increíbles!",
+    "closeLabel": "Cerrar notificación"
+  },
+  "weekly": {
+    "title": "Desafío Semanal",
+    "daysLeft": "{count} día(s) restantes",
+    "doubleCoins": "2× Monedas",
+    "playChallenge": "Jugar Desafío"
+  },
+  "creator": {
+    "notFound": "Creador no encontrado — Trap Architect",
+    "notFoundShort": "Creador no encontrado",
+    "loadError": "Error al cargar perfil",
+    "loadingProfile": "Cargando perfil...",
+    "backToBrowse": "Volver a Explorar",
+    "memberSince": "Miembro desde {date}",
+    "levelsOf": "Niveles de {nickname}",
+    "noLevelsYet": "Este creador aún no ha publicado ningún nivel.",
+    "metaDesc": "{rank} · {levels} niveles · {plays} partidas"
+  },
+  "communityPlay": {
+    "notFound": "Nivel no encontrado",
+    "loadError": "Error al cargar nivel",
+    "loadingLevel": "Cargando nivel...",
+    "backToBrowse": "← Volver a Explorar",
+    "brandName": "Trap Architect",
+    "browse": "Explorar",
+    "controlMove": "Mover",
+    "controlJump": "Saltar",
+    "controlMenu": "Menú",
+    "play": "Jugar",
+    "report": "Reportar",
+    "rate": "Valorar",
+    "reportLevel": "Reportar Nivel",
+    "reportReasons": {
+      "offensive": "Contenido ofensivo",
+      "impossible": "Imposible de completar",
+      "spam": "Spam / Nivel vacío",
+      "bug": "Bug / Nivel roto",
+      "other": "Otro"
+    },
+    "reportDescPlaceholder": "Detalles adicionales (opcional)",
+    "submitting": "Enviando...",
+    "submit": "Enviar",
+    "reportSent": "¡Reporte enviado!",
+    "alreadyReported": "Ya reportaste este nivel.",
+    "loginToReport": "Inicia sesión para reportar.",
+    "reportError": "Error al enviar reporte.",
+    "connectionError": "Error de conexión.",
+    "leaderboard": "Mejores Partidas",
+    "player": "Jugador"
+  },
+  "tags": {
+    "puzzle": "Puzzle",
+    "speedrun": "Speedrun",
+    "troll": "Troll",
+    "precision": "Precisión",
+    "kaizo": "Kaizo",
+    "easy": "Fácil",
+    "art": "Arte",
+    "story": "Historia",
+    "music": "Música",
+    "impossible": "Imposible"
+  }
+}

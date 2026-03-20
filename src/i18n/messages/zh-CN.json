@@ -1,0 +1,790 @@
+{
+  "meta": {
+    "title": "Trap Architect — 创造不可能的关卡",
+    "titleTemplate": "%s — Trap Architect",
+    "description": "创造、分享和挑战不可能的关卡！一个由社区设计乐趣的恶搞平台跳跃游戏。",
+    "ogTitle": "Trap Architect — 创造不可能的关卡",
+    "ogDescription": "由社区设计乐趣的恶搞平台跳跃游戏。设计恶魔般的陷阱，挑战全世界。",
+    "twitterDescription": "创造、分享和挑战不可能的关卡！",
+    "keywords": "trap architect, troll platformer, level editor, cat mario, community levels, 平台跳跃游戏"
+  },
+  "common": {
+    "loading": "加载中",
+    "loadingGame": "加载游戏中",
+    "loadingEllipsis": "加载中...",
+    "save": "保存",
+    "saving": "保存中...",
+    "cancel": "取消",
+    "close": "关闭",
+    "back": "返回",
+    "tryAgain": "重试",
+    "by": "作者：",
+    "anonymous": "匿名",
+    "loadMore": "加载更多",
+    "create": "创建",
+    "creating": "创建中...",
+    "clickToSkip": "点击跳过",
+    "introAriaLabel": "开场动画 — 点击或按任意键跳过",
+    "loadingAriaLabel": "正在加载游戏",
+    "failedToLoadLevels": "加载关卡失败。",
+    "loginOrCreate": "登录或创建账号",
+    "accountCreatedConfirm": "账号已创建！请查看确认邮件。",
+    "or": "或",
+    "yes": "是",
+    "no": "否",
+    "none": "无",
+    "all": "全部",
+    "equipped": "已装备",
+    "equip": "装备",
+    "buy": "购买",
+    "levels": "关卡",
+    "plays": "游玩次数",
+    "likes": "点赞",
+    "coins": "金币",
+    "deaths": "死亡",
+    "time": "时间"
+  },
+  "nav": {
+    "play": "开始",
+    "community": "社区",
+    "shop": "商店",
+    "profile": "个人资料"
+  },
+  "menu": {
+    "campaign": "战役",
+    "campaignSub": "原创10关",
+    "quickDemo": "快速试玩",
+    "quickDemoSub": "体验游戏",
+    "editor": "编辑器",
+    "editorSub": "创建关卡",
+    "communityLevels": "社区",
+    "communityLevelsSub": "探索关卡",
+    "tagline": "创造。分享。笑到死。"
+  },
+  "auth": {
+    "login": "登录",
+    "signup": "创建账号",
+    "loginSubtitle": "登录以创建和分享关卡",
+    "signupSubtitle": "创建账号开始设计陷阱",
+    "email": "邮箱",
+    "emailPlaceholder": "you@email.com",
+    "password": "密码",
+    "passwordPlaceholder": "------",
+    "passwordHint": "至少6个字符",
+    "nickname": "昵称",
+    "nicknamePlaceholder": "TrollMaster2000",
+    "nicknameError": "昵称需要2到30个字符",
+    "loggingIn": "登录中...",
+    "creatingAccount": "创建中...",
+    "orContinueWith": "或使用以下方式继续",
+    "noAccount": "没有账号？",
+    "hasAccount": "已有账号？",
+    "guestPlay": "游客模式",
+    "guestNote": "进度将保存在本地",
+    "tabLogin": "登录",
+    "tabSignup": "注册"
+  },
+  "browse": {
+    "tabLevels": "关卡",
+    "tabCollections": "合集",
+    "searchPlaceholder": "搜索关卡...",
+    "sortRecent": "最新",
+    "sortMostPlayed": "最多游玩",
+    "sortMostLiked": "最多点赞",
+    "sortHardest": "最难",
+    "allTags": "所有标签",
+    "noLevelsFound": "未找到关卡",
+    "failedToLoad": "加载关卡失败。"
+  },
+  "collections": {
+    "title": "合集",
+    "newCollection": "新合集",
+    "createCollection": "创建合集",
+    "collectionNamePlaceholder": "合集名称",
+    "collectionDescPlaceholder": "描述（可选）",
+    "backToCollections": "← 返回合集",
+    "collectionNotFound": "未找到合集",
+    "loadError": "加载合集出错",
+    "createError": "创建合集出错",
+    "connectionError": "连接错误",
+    "levelCount": "{count} 个关卡",
+    "emptyCollection": "这个合集还没有关卡。",
+    "addLevelsHint": "从关卡页面添加关卡",
+    "noCollectionsYet": "还没有合集",
+    "noCollectionsDescription": "创建合集来整理你喜欢的关卡！",
+    "loadingCollections": "加载合集中...",
+    "notFound": "未找到",
+    "noCollections": "未找到合集。",
+    "myCollections": "我的合集",
+    "publicCollections": "公开合集"
+  },
+  "profile": {
+    "title": "我的资料",
+    "info": "信息",
+    "rank": "等级",
+    "profileUpdated": "资料已更新！",
+    "saveError": "保存出错",
+    "createLevel": "创建关卡",
+    "campaignBtn": "战役",
+    "shopBtn": "商店",
+    "configBtn": "设置",
+    "logout": "退出",
+    "achievements": "成就",
+    "newAchievements": "新成就已解锁！"
+  },
+  "settings": {
+    "title": "设置",
+    "audio": "音频",
+    "soundEffects": "音效",
+    "activeSkin": "当前皮肤",
+    "buySkins": "在商店购买皮肤",
+    "activeTitle": "当前称号",
+    "unlockTitles": "通过成就或商店解锁称号",
+    "shop": "商店",
+    "data": "数据",
+    "resetProgress": "重置进度",
+    "resetConfirm": "确定吗？这将永久删除你的战役进度。",
+    "resetDone": "战役进度已重置！",
+    "resetDescription": "重置进度将删除已解锁的关卡和本地保存的时间。",
+    "language": "语言"
+  },
+  "shop": {
+    "title": "商店",
+    "subtitle": "当其他玩家游玩你的关卡时，你可以获得金币。",
+    "tabSkins": "皮肤",
+    "tabTrails": "拖尾",
+    "tabDeaths": "特效",
+    "tabFrames": "边框",
+    "purchased": "物品已购买！",
+    "purchaseError": "购买出错",
+    "equippedMsg": "已装备！"
+  },
+  "admin": {
+    "title": "关卡管理",
+    "subtitle": "推荐关卡并设置Developer's Choice分类。",
+    "featured": "已推荐",
+    "unfeatured": "取消推荐",
+    "highlight": "推荐",
+    "noCategory": "无分类",
+    "noLevels": "未找到已发布的关卡。",
+    "reports": "待处理举报",
+    "noReports": "没有待处理的举报。",
+    "dismiss": "驳回",
+    "hide": "隐藏",
+    "reportedBy": "举报人",
+    "levelRemoved": "关卡已移除",
+    "confirmHide": "确定要隐藏此关卡吗？",
+    "categories": {
+      "weekLevel": "本周关卡",
+      "classics": "经典",
+      "mostTroll": "最恶搞",
+      "creativeDesign": "创意设计"
+    },
+    "reasons": {
+      "offensive": "不当内容",
+      "impossible": "不可能通关",
+      "spam": "垃圾信息",
+      "bug": "漏洞",
+      "other": "其他"
+    }
+  },
+  "editor": {
+    "lobby": "大厅",
+    "editorLabel": "编辑器",
+    "defaultLevelName": "我的关卡",
+    "createLevelTitle": "创建关卡",
+    "createLevelDesc": "使用可视化编辑器创建包含陷阱、敌人和恶搞元素的关卡。发布后让社区来挑战！",
+    "categories": {
+      "terrain": "地形",
+      "danger": "危险",
+      "interactive": "互动",
+      "decoration": "装饰",
+      "entities": "实体"
+    },
+    "preparingEditor": "准备编辑器中...",
+    "tools": {
+      "paint": "画笔",
+      "eraser": "橡皮擦",
+      "fill": "填充",
+      "line": "直线",
+      "rect": "矩形",
+      "eyedropper": "吸管"
+    },
+    "menus": {
+      "file": "文件",
+      "edit": "编辑",
+      "actions": "操作"
+    },
+    "fileMenu": {
+      "new": "新建关卡",
+      "save": "本地保存",
+      "load": "本地加载",
+      "import": "导入JSON",
+      "export": "导出JSON",
+      "publish": "发布",
+      "saveDraft": "保存草稿",
+      "saving": "保存中...",
+      "publishLevel": "发布关卡"
+    },
+    "editMenu": {
+      "undo": "撤销",
+      "redo": "重做",
+      "clear": "全部清除",
+      "clearConfirm": "确定要清除整个关卡吗？此操作不可撤销。",
+      "copy": "复制",
+      "cut": "剪切",
+      "paste": "粘贴",
+      "copySelection": "复制选区",
+      "cutSelection": "剪切选区"
+    },
+    "actionMenu": {
+      "test": "测试关卡",
+      "stopTest": "停止测试",
+      "config": "设置"
+    },
+    "brushSize": "大小",
+    "config": {
+      "title": "关卡设置",
+      "name": "名称",
+      "namePlaceholder": "关卡名称",
+      "bgColor": "背景色",
+      "music": "音乐",
+      "musicOptions": {
+        "calm": "平静",
+        "default": "默认",
+        "intense": "激烈",
+        "none": "无"
+      },
+      "width": "宽度",
+      "height": "高度",
+      "theme": "主题",
+      "size": "大小"
+    },
+    "publish": {
+      "notLoggedIn": "请登录后发布关卡",
+      "noFlag": "请在关卡中至少添加一面旗帜",
+      "noPlayer": "请添加玩家起始位置",
+      "publishing": "发布中...",
+      "success": "关卡发布成功！",
+      "error": "发布出错",
+      "saved": "已保存！",
+      "loaded": "已加载！",
+      "exported": "JSON已复制！",
+      "imported": "关卡已导入！",
+      "importError": "无效JSON",
+      "cleared": "关卡已清除！",
+      "connectionError": "连接错误。",
+      "draftSaved": "草稿已保存！",
+      "loginToSave": "请登录后保存。",
+      "draftError": "保存草稿出错。",
+      "loginRequired": "发布需要登录"
+    },
+    "trolls": {
+      "title": "恶搞",
+      "add": "添加恶搞",
+      "triggerX": "触发X",
+      "action": "动作",
+      "message": "消息",
+      "duration": "持续时间",
+      "entityType": "类型",
+      "spawnX": "生成X",
+      "spawnY": "生成Y"
+    },
+    "import": {
+      "invalidJson": "无效的JSON文件 — 无法读取文件。",
+      "invalidFormat": "无效的格式 — 文件不包含有效的关卡数据。",
+      "importError": "导入关卡到编辑器时出错。"
+    },
+    "commands": {
+      "tool": "工具",
+      "view": "查看",
+      "action": "操作",
+      "toggleLayer": "切换图层 (FG/BG)",
+      "commandPalette": "命令面板",
+      "searchCommand": "搜索命令...",
+      "noResults": "未找到命令"
+    },
+    "status": {
+      "tested": "测试通过 — 可以发布",
+      "notTested": "发布前请先测试关卡"
+    },
+    "layer": {
+      "toggle": "切换图层"
+    },
+    "blockPalette": "方块面板",
+    "prefabsLabel": "预制件",
+    "noPrefabsSaved": "没有保存的预制件"
+  },
+  "game": {
+    "levelComplete": "关卡完成！",
+    "stats": "金币: {coins}  |  死亡: {deaths}  |  时间: {time}秒",
+    "perfectBadge": "✨ 完美通关 — 零死亡！ ✨",
+    "campaignComplete": "战役通关！",
+    "deathsLabel": "x{count} 死亡",
+    "coinsLabel": "${count} 金币",
+    "skinUnlocked": "[!] 皮肤解锁：金色猫咪！",
+    "createCTA": "现在轮到你来创造了！",
+    "menuBtn": "菜单",
+    "levelsBtn": "关卡",
+    "pause": {
+      "title": "|| 暂停",
+      "continue": ">  继续",
+      "restart": "R  重新开始",
+      "settings": "*  设置",
+      "sfxOn": "音效: [ON] 开",
+      "sfxOff": "音效: [--] 关",
+      "musicOn": "音乐: [ON] 开",
+      "musicOff": "音乐: [--] 关",
+      "quit": "X  退出"
+    },
+    "powerups": {
+      "mushroom": "蘑菇",
+      "star": "星星",
+      "fire_flower": "火焰花"
+    },
+    "slowMo": "慢动作",
+    "gravityFlipped": "重力反转！",
+    "gravityNormal": "重力恢复！",
+    "loading": "加载中...",
+    "coins": "金币",
+    "deaths": "死亡",
+    "time": "时间",
+    "perfectNoDeath": "✨ 完美通关 — 零死亡！ ✨",
+    "yourTurnToCreate": "现在轮到你来创造了！",
+    "menu": "菜单",
+    "levels": "关卡",
+    "gravityNormalized": "重力恢复！",
+    "paused": "|| 暂停",
+    "continue": "继续",
+    "restart": "重新开始",
+    "settings": "设置",
+    "sfxOn": "[ON] 开",
+    "sfxOff": "[--] 关",
+    "music": "音乐",
+    "quit": "退出",
+    "power": {
+      "mushroom": "蘑菇",
+      "star": "星星",
+      "fire": "火焰花",
+      "slowmo": "慢动作"
+    },
+    "editor": {
+      "resetZoom": "↺ 重置"
+    },
+    "selectLevel": "选择关卡",
+    "play": "开始",
+    "menuTitle": "TRAP ARCHITECT",
+    "menuSubtitle": "社区设计的不可能平台跳跃",
+    "menuPlay": ">  开始",
+    "menuDemo": "* 快速试玩",
+    "levelSelect": {
+      "completed": "\u2713 已完成",
+      "backMenu": "\u2190 菜单",
+      "hintScroll": "滚动浏览  \u2022  点击游玩  \u2022  ESC返回",
+      "hintNoScroll": "点击关卡游玩  \u2022  ESC返回"
+    }
+  },
+  "campaign": {
+    "levels": {
+      "0": {
+        "name": "我的关卡",
+        "subtitle": "暗黑城堡"
+      },
+      "1": {
+        "name": "第1关",
+        "subtitle": "看起来很简单？"
+      },
+      "2": {
+        "name": "第2关",
+        "subtitle": "相信我"
+      },
+      "3": {
+        "name": "第3关",
+        "subtitle": "上上下下"
+      },
+      "4": {
+        "name": "第4关",
+        "subtitle": "冰与火"
+      },
+      "5": {
+        "name": "第5关",
+        "subtitle": "疯狂重力"
+      },
+      "6": {
+        "name": "第6关",
+        "subtitle": "虚假的希望"
+      },
+      "7": {
+        "name": "第7关",
+        "subtitle": "工厂"
+      },
+      "8": {
+        "name": "第8关",
+        "subtitle": "暗影城堡"
+      },
+      "9": {
+        "name": "第9关",
+        "subtitle": "绝不留情"
+      },
+      "10": {
+        "name": "第10关",
+        "subtitle": "终极建筑师"
+      }
+    },
+    "trolls": {
+      "0": [
+        "欢迎来到暗黑城堡...小心！",
+        "检查点？别高兴太早...",
+        "你还活着？厉害！",
+        "旗子！是真的吗？"
+      ],
+      "1": [
+        "看起来很简单？嗯...看看吧！",
+        "地面好像不对劲...",
+        "看！旗子！终于！",
+        "...是假的！哈哈哈！继续！",
+        "这个是真的...对吧？"
+      ],
+      "2": [
+        "相信我...完全安全！",
+        "小心沙子...不是所有都是实心的！",
+        "你很好...相信我！",
+        "快到了...再坚持一下！"
+      ],
+      "3": [
+        "用弹簧和蹦床！上上下下！",
+        "拿到道具！你会需要的！",
+        "秘诀是跳跃的时机！",
+        "快了！最后一个超级跳！"
+      ],
+      "4": [
+        "冰！滑溜溜！",
+        "传送带+冰=好玩...或者死！",
+        "小心水...滑倒了？",
+        "从冰到火？祝你好运！"
+      ],
+      "5": [
+        "上还是下？祝你好运！",
+        "重力反转！小心天花板！",
+        "又来？！哈哈哈！",
+        "限时方块消失...又出现！",
+        "直走...如果重力允许的话！"
+      ],
+      "6": [
+        "旗子就在那里！冲！",
+        "恭喜！你赢...等等，是假的！",
+        "下一个是真的！相信我！",
+        "...又是假的！哈哈哈！",
+        "这次绝对是真的！",
+        "...我骗你的！哈哈哈哈！😈",
+        "好吧这次真的...第四个是真的...",
+        "四个假的！别放弃！",
+        "这个是真的？嗯..."
+      ],
+      "7": [
+        "欢迎来到混乱工厂！",
+        "传送带！试着逆行！",
+        "小心大炮！砰！",
+        "粘性方块！跳跃脱逃！",
+        "风在推你！小心！",
+        "快了！工厂要炸了！"
+      ],
+      "8": [
+        "欢迎来到暗影城堡...找到钥匙！",
+        "钥匙开路...如果你找得到！",
+        "隐形方块也许能帮你...也许不能！",
+        "城堡在震动...",
+        "出口就在附近...相信我！"
+      ],
+      "9": [
+        "绝不留情。祝你好运。你会需要的。",
+        "重力！小心天花板！",
+        "又来？！哈哈哈！",
+        "你还活着？！怎么做到的？！",
+        "放弃吧。真的。放弃吧。"
+      ],
+      "10": [
+        "最终考验。建筑师在看着你。",
+        "检查点？别高兴太早...",
+        "重力！贴紧天花板！",
+        "你还活着？厉害！",
+        "旗子...是真的吗？",
+        "星星！跑！快跑！",
+        "建筑师在嘲笑你的痛苦...哈哈哈！",
+        "这次是真的？！"
+      ]
+    },
+    "demo": {
+      "name": "第1关 — 看起来很简单？",
+      "subtitle": "新手引导",
+      "trollMessage": "小心尖刺！"
+    }
+  },
+  "achievements": {
+    "first_death": { "name": "初次阵亡", "description": "第一次死亡" },
+    "100_deaths": { "name": "坚韧不拔", "description": "死亡100次" },
+    "1000_deaths": { "name": "不死之身", "description": "死亡1,000次" },
+    "first_clear": { "name": "初次通关", "description": "通关1个关卡" },
+    "10_clears": { "name": "探索者", "description": "通关10个关卡" },
+    "50_clears": { "name": "老手", "description": "通关50个关卡" },
+    "100_clears": { "name": "传奇", "description": "通关100个关卡" },
+    "first_publish": { "name": "创作者", "description": "发布1个关卡" },
+    "10_publish": { "name": "建筑师", "description": "发布10个关卡" },
+    "speedster": { "name": "闪电侠", "description": "10秒内通关" },
+    "no_death_run": { "name": "完美通关", "description": "零死亡通关" },
+    "1000_coins": { "name": "大富翁", "description": "收集1,000金币" },
+    "campaign_done": { "name": "战役英雄", "description": "通关所有战役关卡" },
+    "liked_100": { "name": "人气王", "description": "关卡获得100个点赞" },
+    "devs_choice": { "name": "开发者之选", "description": "获得Dev's Choice" }
+  },
+  "cosmetics": {
+    "skins": {
+      "default": "经典猫咪",
+      "ninja": "忍者猫",
+      "pixel": "像素猫",
+      "ghost": "幽灵猫",
+      "golden": "金色猫咪",
+      "troll": "恶搞猫",
+      "ice": "冰冻猫",
+      "lava": "熔岩猫"
+    },
+    "trails": {
+      "trail_none": "无",
+      "trail_fire": "火焰",
+      "trail_ice": "冰霜",
+      "trail_stars": "星星",
+      "trail_rainbow": "彩虹"
+    },
+    "deathEffects": {
+      "death_default": "默认",
+      "death_pixelate": "像素化",
+      "death_ghost": "幽灵",
+      "death_confetti": "彩纸",
+      "death_shatter": "碎裂"
+    },
+    "frames": {
+      "frame_none": "无",
+      "frame_gold": "金色",
+      "frame_diamond": "钻石",
+      "frame_troll": "恶搞",
+      "frame_fire": "火焰"
+    }
+  },
+  "ranks": {
+    "0": "玩家",
+    "1": "新手创作者",
+    "2": "建造者",
+    "3": "建筑师",
+    "4": "恶搞大师",
+    "5": "传奇",
+    "99": "管理员"
+  },
+  "ranksLib": {
+    "0": "新人",
+    "1": "建造者",
+    "2": "建筑师",
+    "3": "大师",
+    "4": "传奇",
+    "99": "管理员"
+  },
+  "difficulty": {
+    "new": "新增",
+    "easy": "简单",
+    "medium": "普通",
+    "hard": "困难",
+    "extreme": "极限"
+  },
+  "themes": {
+    "default": "经典",
+    "snow": "雪地",
+    "inferno": "炼狱",
+    "neon": "霓虹",
+    "retro": "复古",
+    "underwater": "水下"
+  },
+  "titles": {
+    "novato": { "name": "新人", "unlock": "默认（免费）" },
+    "mestre_trolls": { "name": "恶搞大师", "unlock": "发布20个有恶搞标签的关卡" },
+    "velocista": { "name": "闪电侠", "unlock": "成就：闪电侠" },
+    "sobrevivente": { "name": "幸存者", "unlock": "成就：不死之身" },
+    "arquiteto_supremo": { "name": "至高建筑师", "unlock": "达到建筑师等级" },
+    "lenda_viva": { "name": "活着的传奇", "unlock": "达到传奇等级" },
+    "colecionador": { "name": "收藏家", "unlock": "解锁15个以上装饰品" },
+    "desafiante": { "name": "挑战者", "unlock": "完成10次周挑战" },
+    "explorador": { "name": "探索者", "unlock": "在商店购买" },
+    "heroi": { "name": "英雄", "unlock": "在商店购买" },
+    "lendario": { "name": "传说", "unlock": "在商店购买" }
+  },
+  "prefabs": {
+    "prefab_platform": "平台",
+    "prefab_spike_pit": "尖刺坑",
+    "prefab_cannon_tower": "大炮塔",
+    "prefab_lava_bridge": "熔岩桥"
+  },
+  "palette": {
+    "0": { "name": "橡皮擦", "description": "擦除方块或实体" },
+    "1": { "name": "地面", "description": "表面是草地，内部是泥土" },
+    "3": { "name": "砖块", "description": "经典可破坏方块" },
+    "4": { "name": "城墙", "description": "石墙 — 顶部自动生成城垛" },
+    "5": { "name": "已用方块", "description": "已激活的方块 — 装饰用" },
+    "6": { "name": "管道", "description": "绿色管道 — 自动形状检测" },
+    "10": { "name": "冰", "description": "滑溜的表面 — 自动贴图！" },
+    "11": { "name": "云", "description": "云朵平台 — 仅装饰" },
+    "41": { "name": "沙子", "description": "沙地 — 自动贴图" },
+    "42": { "name": "雪", "description": "冰冻地形 — 自动贴图" },
+    "43": { "name": "木材", "description": "木板 — 装饰性实心方块" },
+    "44": { "name": "苔石", "description": "覆盖苔藓的古老石头" },
+    "45": { "name": "金属", "description": "带铆钉的工业金属面板" },
+    "12": { "name": "尖刺", "description": "碰到就死！" },
+    "13": { "name": "隐藏尖刺", "description": "看起来像草但会杀你 — 恶搞！" },
+    "14": { "name": "熔岩", "description": "火海 — 融化一切！" },
+    "15": { "name": "假地面", "description": "踩上去就塌 — 惊喜！" },
+    "16": { "name": "？方块", "description": "敲击获得金币或惊喜" },
+    "17": { "name": "恶搞！方块", "description": "看起来像？但是恶搞！" },
+    "18": { "name": "隐形方块", "description": "透明方块 — 敲击后出现" },
+    "19": { "name": "弹簧", "description": "把玩家弹上去！" },
+    "20": { "name": "蹦床", "description": "超级跳跃 — 极限高度！" },
+    "21": { "name": "单向平台", "description": "半固体 — 可从下方跳上" },
+    "22": { "name": "传送带 ←", "description": "向左移动玩家" },
+    "23": { "name": "传送带 →", "description": "向右移动玩家" },
+    "24": { "name": "检查点", "description": "复活点 — 保存进度" },
+    "33": { "name": "道具方块", "description": "释放蘑菇、星星、火焰花" },
+    "37": { "name": "滑动方块", "description": "激活后滑到新位置" },
+    "38": { "name": "限时方块", "description": "周期性出现和消失" },
+    "39": { "name": "重力区域", "description": "反转玩家重力！" },
+    "54": { "name": "重力恢复", "description": "恢复正常重力！" },
+    "40": { "name": "移动平台", "description": "自动移动的平台" },
+    "46": { "name": "栅格", "description": "半固体金属平台" },
+    "47": { "name": "水", "description": "减慢玩家速度 — 自动贴图" },
+    "48": { "name": "围栏", "description": "木栅栏 — 装饰，无碰撞" },
+    "49": { "name": "火把", "description": "燃烧的火把 — 动画装饰" },
+    "50": { "name": "锁链", "description": "悬挂的金属链条 — 装饰" },
+    "51": { "name": "路牌", "description": "木质路牌 — 装饰" },
+    "52": { "name": "水晶", "description": "闪亮的宝石 — 发光实心方块" },
+    "53": { "name": "蘑菇方块", "description": "带斑点的红色蘑菇方块" },
+    "25": { "name": "玩家", "description": "英雄猫咪的起始位置" },
+    "26": { "name": "金币", "description": "闪亮的收集品 — 奖励分数！" },
+    "27": { "name": "栗子怪", "description": "巡逻的敌人 — 左右走动" },
+    "28": { "name": "快速栗子怪", "description": "涡轮栗子怪 — 更快！" },
+    "29": { "name": "刺猬", "description": "带刺的敌人 — 别踩！" },
+    "30": { "name": "飞行者", "description": "飞行的敌人 — 上下移动" },
+    "31": { "name": "旗帜", "description": "必需 — 标记关卡终点" },
+    "32": { "name": "假旗帜", "description": "看起来像胜利但是纯恶搞！" },
+    "34": { "name": "蘑菇（道具）", "description": "道具：加速和1次免伤" },
+    "35": { "name": "星星", "description": "道具：暂时无敌！" },
+    "36": { "name": "火焰花", "description": "道具：发射火球！" },
+    "55": { "name": "传送门A", "description": "入口传送门 — 与传送门B配对" },
+    "56": { "name": "传送门B", "description": "出口传送门 — 与传送门A配对" },
+    "57": { "name": "粘性方块", "description": "粘住玩家 — 跳跃脱逃！" },
+    "58": { "name": "红钥匙", "description": "打开红色锁" },
+    "59": { "name": "蓝钥匙", "description": "打开蓝色锁" },
+    "60": { "name": "绿钥匙", "description": "打开绿色锁" },
+    "61": { "name": "红锁", "description": "需要红钥匙打开的方块" },
+    "62": { "name": "蓝锁", "description": "需要蓝钥匙打开的方块" },
+    "63": { "name": "绿锁", "description": "需要绿钥匙打开的方块" },
+    "64": { "name": "碎冰", "description": "火球或3次跳跃打碎" },
+    "65": { "name": "镜子", "description": "反射火球！" },
+    "66": { "name": "风 ↑", "description": "向上的气流" },
+    "67": { "name": "风 ↓", "description": "向下的气流" },
+    "68": { "name": "风 ←", "description": "向左的气流" },
+    "69": { "name": "风 →", "description": "向右的气流" },
+    "70": { "name": "大炮 ←", "description": "向左发射弹丸！" },
+    "71": { "name": "大炮 →", "description": "向右发射弹丸！" },
+    "72": { "name": "大炮 ↑", "description": "向上发射弹丸！" },
+    "73": { "name": "大炮 ↓", "description": "向下发射弹丸！" },
+    "74": { "name": "幽灵", "description": "不看就动！嘘！" },
+    "75": { "name": "射手", "description": "固定射击的敌人" },
+    "76": { "name": "大型栗子怪", "description": "小Boss！跳3次打败！" },
+    "77": { "name": "圆锯", "description": "切碎路上的一切！不可摧毁！" },
+    "78": { "name": "慢动作", "description": "道具：3秒慢动作！" },
+    "79": { "name": "自定义路牌", "description": "带有创作者文字的路牌" }
+  },
+  "error": {
+    "title": "[!] 内部错误",
+    "description": "服务器发生错误。请稍后重试。",
+    "retry": "重试",
+    "home": "首页"
+  },
+  "notFound": {
+    "title": "[?] 页面未找到",
+    "description": "你要找的关卡可能已被删除或不存在。",
+    "browseLevels": "浏览关卡",
+    "home": "首页"
+  },
+  "errorBoundary": {
+    "title": "出了点问题",
+    "description": "发生了意外错误。",
+    "reload": "重新加载",
+    "goHome": "返回首页",
+    "details": "错误详情",
+    "gameCrash": "游戏崩溃了",
+    "clickToRestart": "点击重新开始"
+  },
+  "rankUp": {
+    "title": "等级提升！",
+    "message": "恭喜！你达到了{rank}",
+    "cta": "继续创造和分享精彩的关卡！",
+    "closeLabel": "关闭通知"
+  },
+  "weekly": {
+    "title": "周挑战",
+    "daysLeft": "剩余{count}天",
+    "doubleCoins": "2×金币",
+    "playChallenge": "挑战"
+  },
+  "creator": {
+    "notFound": "未找到创作者 — Trap Architect",
+    "notFoundShort": "未找到创作者",
+    "loadError": "加载资料出错",
+    "loadingProfile": "加载资料中...",
+    "backToBrowse": "返回浏览",
+    "memberSince": "加入于 {date}",
+    "levelsOf": "{nickname}的关卡",
+    "noLevelsYet": "该创作者还没有发布关卡。",
+    "metaDesc": "{rank} · {levels}个关卡 · {plays}次游玩"
+  },
+  "communityPlay": {
+    "notFound": "未找到关卡",
+    "loadError": "加载关卡出错",
+    "loadingLevel": "加载关卡中...",
+    "backToBrowse": "← 返回浏览",
+    "brandName": "Trap Architect",
+    "browse": "浏览",
+    "controlMove": "移动",
+    "controlJump": "跳跃",
+    "controlMenu": "菜单",
+    "play": "开始",
+    "report": "举报",
+    "rate": "评分",
+    "reportLevel": "举报关卡",
+    "reportReasons": {
+      "offensive": "不当内容",
+      "impossible": "不可能通关",
+      "spam": "垃圾 / 空关卡",
+      "bug": "漏洞 / 损坏的关卡",
+      "other": "其他"
+    },
+    "reportDescPlaceholder": "补充说明（可选）",
+    "submitting": "提交中...",
+    "submit": "提交",
+    "reportSent": "举报已提交！",
+    "alreadyReported": "你已经举报过这个关卡。",
+    "loginToReport": "请登录后举报。",
+    "reportError": "提交举报出错。",
+    "connectionError": "连接错误。",
+    "leaderboard": "排行榜",
+    "player": "玩家"
+  },
+  "tags": {
+    "puzzle": "解谜",
+    "speedrun": "速通",
+    "troll": "恶搞",
+    "precision": "精准",
+    "kaizo": "改造",
+    "easy": "简单",
+    "art": "艺术",
+    "story": "剧情",
+    "music": "音乐",
+    "impossible": "不可能"
+  }
+}

@@ -1,0 +1,790 @@
+{
+  "meta": {
+    "title": "Trap Architect — 不可能なレベルを作ろう",
+    "titleTemplate": "%s — Trap Architect",
+    "description": "不可能なレベルを作成、共有、プレイしよう！コミュニティが楽しさの設計者となるトロールプラットフォーマー。",
+    "ogTitle": "Trap Architect — 不可能なレベルを作ろう",
+    "ogDescription": "コミュニティが楽しさの設計者となるトロールプラットフォーマー。悪魔的なトラップを作って世界に挑戦しよう。",
+    "twitterDescription": "不可能なレベルを作成、共有、プレイしよう！",
+    "keywords": "trap architect, troll platformer, level editor, cat mario, community levels, プラットフォームゲーム"
+  },
+  "common": {
+    "loading": "読み込み中",
+    "loadingGame": "ゲームを読み込み中",
+    "loadingEllipsis": "読み込み中...",
+    "save": "保存",
+    "saving": "保存中...",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "back": "戻る",
+    "tryAgain": "再試行",
+    "by": "作者：",
+    "anonymous": "匿名",
+    "loadMore": "もっと見る",
+    "create": "作成",
+    "creating": "作成中...",
+    "clickToSkip": "クリックでスキップ",
+    "introAriaLabel": "イントロアニメーション — クリックまたは任意のキーでスキップ",
+    "loadingAriaLabel": "ゲームを読み込み中",
+    "failedToLoadLevels": "レベルの読み込みに失敗しました。",
+    "loginOrCreate": "ログインまたはアカウント作成",
+    "accountCreatedConfirm": "アカウントが作成されました！確認メールをご確認ください。",
+    "or": "または",
+    "yes": "はい",
+    "no": "いいえ",
+    "none": "なし",
+    "all": "すべて",
+    "equipped": "装備中",
+    "equip": "装備",
+    "buy": "購入",
+    "levels": "レベル",
+    "plays": "プレイ回数",
+    "likes": "いいね",
+    "coins": "コイン",
+    "deaths": "死亡",
+    "time": "時間"
+  },
+  "nav": {
+    "play": "プレイ",
+    "community": "コミュニティ",
+    "shop": "ショップ",
+    "profile": "プロフィール"
+  },
+  "menu": {
+    "campaign": "キャンペーン",
+    "campaignSub": "オリジナル10ステージ",
+    "quickDemo": "クイックデモ",
+    "quickDemoSub": "ゲームを試す",
+    "editor": "エディター",
+    "editorSub": "レベルを作成",
+    "communityLevels": "コミュニティ",
+    "communityLevelsSub": "レベルを探索",
+    "tagline": "作れ。共有しろ。笑い死ね。"
+  },
+  "auth": {
+    "login": "ログイン",
+    "signup": "アカウント作成",
+    "loginSubtitle": "レベルを作成・共有するにはログインしてください",
+    "signupSubtitle": "アカウントを作成してトラップ作りを始めよう",
+    "email": "メール",
+    "emailPlaceholder": "you@email.com",
+    "password": "パスワード",
+    "passwordPlaceholder": "------",
+    "passwordHint": "6文字以上",
+    "nickname": "ニックネーム",
+    "nicknamePlaceholder": "TrollMaster2000",
+    "nicknameError": "ニックネームは2〜30文字にしてください",
+    "loggingIn": "ログイン中...",
+    "creatingAccount": "作成中...",
+    "orContinueWith": "または次で続行",
+    "noAccount": "アカウントをお持ちでないですか？",
+    "hasAccount": "すでにアカウントをお持ちですか？",
+    "guestPlay": "ゲストとしてプレイ",
+    "guestNote": "進行状況はローカルに保存されます",
+    "tabLogin": "ログイン",
+    "tabSignup": "アカウント作成"
+  },
+  "browse": {
+    "tabLevels": "レベル",
+    "tabCollections": "コレクション",
+    "searchPlaceholder": "レベルを検索...",
+    "sortRecent": "新着順",
+    "sortMostPlayed": "プレイ数順",
+    "sortMostLiked": "いいね順",
+    "sortHardest": "難易度順",
+    "allTags": "すべてのタグ",
+    "noLevelsFound": "レベルが見つかりません",
+    "failedToLoad": "レベルの読み込みに失敗しました。"
+  },
+  "collections": {
+    "title": "コレクション",
+    "newCollection": "新しいコレクション",
+    "createCollection": "コレクション作成",
+    "collectionNamePlaceholder": "コレクション名",
+    "collectionDescPlaceholder": "説明（任意）",
+    "backToCollections": "← コレクションに戻る",
+    "collectionNotFound": "コレクションが見つかりません",
+    "loadError": "コレクションの読み込みエラー",
+    "createError": "コレクションの作成エラー",
+    "connectionError": "接続エラー",
+    "levelCount": "{count} レベル",
+    "emptyCollection": "このコレクションにはまだレベルがありません。",
+    "addLevelsHint": "レベルページからレベルを追加してください",
+    "noCollectionsYet": "まだコレクションがありません",
+    "noCollectionsDescription": "お気に入りのレベルを整理するコレクションを作りましょう！",
+    "loadingCollections": "コレクションを読み込み中...",
+    "notFound": "見つかりません",
+    "noCollections": "コレクションが見つかりません。",
+    "myCollections": "マイコレクション",
+    "publicCollections": "公開コレクション"
+  },
+  "profile": {
+    "title": "マイプロフィール",
+    "info": "情報",
+    "rank": "ランク",
+    "profileUpdated": "プロフィールを更新しました！",
+    "saveError": "保存エラー",
+    "createLevel": "レベル作成",
+    "campaignBtn": "キャンペーン",
+    "shopBtn": "ショップ",
+    "configBtn": "設定",
+    "logout": "ログアウト",
+    "achievements": "実績",
+    "newAchievements": "新しい実績がアンロックされました！"
+  },
+  "settings": {
+    "title": "設定",
+    "audio": "オーディオ",
+    "soundEffects": "効果音",
+    "activeSkin": "アクティブスキン",
+    "buySkins": "ショップでスキンを購入",
+    "activeTitle": "アクティブタイトル",
+    "unlockTitles": "実績やショップでタイトルをアンロック",
+    "shop": "ショップ",
+    "data": "データ",
+    "resetProgress": "進行状況をリセット",
+    "resetConfirm": "よろしいですか？キャンペーンの進行状況が完全に削除されます。",
+    "resetDone": "キャンペーンの進行状況をリセットしました！",
+    "resetDescription": "進行状況のリセットにより、アンロック済みレベルとローカル保存のタイムが削除されます。",
+    "language": "言語"
+  },
+  "shop": {
+    "title": "ショップ",
+    "subtitle": "他のプレイヤーがあなたのレベルをプレイするとコインが獲得できます。",
+    "tabSkins": "スキン",
+    "tabTrails": "トレイル",
+    "tabDeaths": "エフェクト",
+    "tabFrames": "フレーム",
+    "purchased": "アイテムを購入しました！",
+    "purchaseError": "購入エラー",
+    "equippedMsg": "装備しました！"
+  },
+  "admin": {
+    "title": "レベルキュレーション",
+    "subtitle": "レベルを特集し、Developer's Choiceカテゴリーを設定します。",
+    "featured": "特集",
+    "unfeatured": "解除",
+    "highlight": "特集する",
+    "noCategory": "カテゴリーなし",
+    "noLevels": "公開済みレベルが見つかりません。",
+    "reports": "保留中のレポート",
+    "noReports": "保留中のレポートはありません。",
+    "dismiss": "却下",
+    "hide": "非表示",
+    "reportedBy": "報告者",
+    "levelRemoved": "レベルが削除されました",
+    "confirmHide": "このレベルを非表示にしますか？",
+    "categories": {
+      "weekLevel": "今週のレベル",
+      "classics": "クラシック",
+      "mostTroll": "最もトロール",
+      "creativeDesign": "クリエイティブデザイン"
+    },
+    "reasons": {
+      "offensive": "不適切なコンテンツ",
+      "impossible": "不可能",
+      "spam": "スパム",
+      "bug": "バグ",
+      "other": "その他"
+    }
+  },
+  "editor": {
+    "lobby": "ロビー",
+    "editorLabel": "エディター",
+    "defaultLevelName": "マイレベル",
+    "createLevelTitle": "レベル作成",
+    "createLevelDesc": "ビジュアルエディターでトラップ、敵、トロールのあるレベルを作成しましょう。公開してコミュニティに挑戦！",
+    "categories": {
+      "terrain": "地形",
+      "danger": "危険",
+      "interactive": "インタラクティブ",
+      "decoration": "装飾",
+      "entities": "エンティティ"
+    },
+    "preparingEditor": "エディターを準備中...",
+    "tools": {
+      "paint": "ブラシ",
+      "eraser": "消しゴム",
+      "fill": "塗りつぶし",
+      "line": "ライン",
+      "rect": "矩形",
+      "eyedropper": "スポイト"
+    },
+    "menus": {
+      "file": "ファイル",
+      "edit": "編集",
+      "actions": "アクション"
+    },
+    "fileMenu": {
+      "new": "新しいレベル",
+      "save": "ローカル保存",
+      "load": "ローカル読込",
+      "import": "JSONインポート",
+      "export": "JSONエクスポート",
+      "publish": "公開",
+      "saveDraft": "下書きを保存",
+      "saving": "保存中...",
+      "publishLevel": "レベルを公開"
+    },
+    "editMenu": {
+      "undo": "元に戻す",
+      "redo": "やり直し",
+      "clear": "すべてクリア",
+      "clearConfirm": "レベル全体をクリアしますか？この操作は取り消せません。",
+      "copy": "コピー",
+      "cut": "切り取り",
+      "paste": "貼り付け",
+      "copySelection": "選択範囲をコピー",
+      "cutSelection": "選択範囲を切り取り"
+    },
+    "actionMenu": {
+      "test": "レベルテスト",
+      "stopTest": "テスト停止",
+      "config": "設定"
+    },
+    "brushSize": "サイズ",
+    "config": {
+      "title": "レベル設定",
+      "name": "名前",
+      "namePlaceholder": "レベル名",
+      "bgColor": "背景色",
+      "music": "音楽",
+      "musicOptions": {
+        "calm": "穏やか",
+        "default": "デフォルト",
+        "intense": "激しい",
+        "none": "なし"
+      },
+      "width": "幅",
+      "height": "高さ",
+      "theme": "テーマ",
+      "size": "サイズ"
+    },
+    "publish": {
+      "notLoggedIn": "レベルを公開するにはログインしてください",
+      "noFlag": "レベルにフラグを1つ以上追加してください",
+      "noPlayer": "プレイヤーの開始位置を追加してください",
+      "publishing": "公開中...",
+      "success": "レベルが正常に公開されました！",
+      "error": "公開エラー",
+      "saved": "保存しました！",
+      "loaded": "読み込みました！",
+      "exported": "JSONをコピーしました！",
+      "imported": "レベルをインポートしました！",
+      "importError": "無効なJSON",
+      "cleared": "レベルをクリアしました！",
+      "connectionError": "接続エラー。",
+      "draftSaved": "下書きを保存しました！",
+      "loginToSave": "保存するにはログインしてください。",
+      "draftError": "下書きの保存エラー。",
+      "loginRequired": "公開にはログインが必要です"
+    },
+    "trolls": {
+      "title": "トロール",
+      "add": "トロール追加",
+      "triggerX": "トリガーX",
+      "action": "アクション",
+      "message": "メッセージ",
+      "duration": "持続時間",
+      "entityType": "タイプ",
+      "spawnX": "スポーンX",
+      "spawnY": "スポーンY"
+    },
+    "import": {
+      "invalidJson": "無効なJSONファイル — ファイルを読み取れませんでした。",
+      "invalidFormat": "無効な形式 — ファイルに有効なレベルデータが含まれていません。",
+      "importError": "エディターにレベルをインポートする際にエラーが発生しました。"
+    },
+    "commands": {
+      "tool": "ツール",
+      "view": "表示",
+      "action": "アクション",
+      "toggleLayer": "レイヤー切替 (FG/BG)",
+      "commandPalette": "コマンドパレット",
+      "searchCommand": "コマンドを検索...",
+      "noResults": "コマンドが見つかりません"
+    },
+    "status": {
+      "tested": "テスト完了 — 公開可能です",
+      "notTested": "公開前にレベルをテストしてください"
+    },
+    "layer": {
+      "toggle": "レイヤー切替"
+    },
+    "blockPalette": "ブロックパレット",
+    "prefabsLabel": "プリファブ",
+    "noPrefabsSaved": "保存されたプリファブはありません"
+  },
+  "game": {
+    "levelComplete": "レベルクリア！",
+    "stats": "コイン: {coins}  |  死亡: {deaths}  |  時間: {time}秒",
+    "perfectBadge": "✨ パーフェクト — ノーデス！ ✨",
+    "campaignComplete": "キャンペーンクリア！",
+    "deathsLabel": "x{count} 死亡",
+    "coinsLabel": "${count} コイン",
+    "skinUnlocked": "[!] スキン解放: ゴールデンキャット！",
+    "createCTA": "今度はあなたが作る番です！",
+    "menuBtn": "メニュー",
+    "levelsBtn": "レベル",
+    "pause": {
+      "title": "|| 一時停止",
+      "continue": ">  続行",
+      "restart": "R  リスタート",
+      "settings": "*  設定",
+      "sfxOn": "SFX: [ON] オン",
+      "sfxOff": "SFX: [--] オフ",
+      "musicOn": "音楽: [ON] オン",
+      "musicOff": "音楽: [--] オフ",
+      "quit": "X  終了"
+    },
+    "powerups": {
+      "mushroom": "キノコ",
+      "star": "スター",
+      "fire_flower": "ファイア"
+    },
+    "slowMo": "スローモ",
+    "gravityFlipped": "重力反転！",
+    "gravityNormal": "重力正常化！",
+    "loading": "読み込み中...",
+    "coins": "コイン",
+    "deaths": "死亡",
+    "time": "時間",
+    "perfectNoDeath": "✨ パーフェクト — ノーデス！ ✨",
+    "yourTurnToCreate": "今度はあなたが作る番です！",
+    "menu": "メニュー",
+    "levels": "レベル",
+    "gravityNormalized": "重力正常化！",
+    "paused": "|| 一時停止",
+    "continue": "続行",
+    "restart": "リスタート",
+    "settings": "設定",
+    "sfxOn": "[ON] オン",
+    "sfxOff": "[--] オフ",
+    "music": "音楽",
+    "quit": "終了",
+    "power": {
+      "mushroom": "キノコ",
+      "star": "スター",
+      "fire": "ファイア",
+      "slowmo": "スローモ"
+    },
+    "editor": {
+      "resetZoom": "↺ リセット"
+    },
+    "selectLevel": "レベルを選択",
+    "play": "プレイ",
+    "menuTitle": "TRAP ARCHITECT",
+    "menuSubtitle": "コミュニティが作った不可能なプラットフォーム",
+    "menuPlay": ">  プレイ",
+    "menuDemo": "* クイックデモ",
+    "levelSelect": {
+      "completed": "\u2713 クリア済み",
+      "backMenu": "\u2190 メニュー",
+      "hintScroll": "スクロールで移動  \u2022  クリックでプレイ  \u2022  ESCで戻る",
+      "hintNoScroll": "レベルをクリックでプレイ  \u2022  ESCで戻る"
+    }
+  },
+  "campaign": {
+    "levels": {
+      "0": {
+        "name": "マイレベル",
+        "subtitle": "暗黒の城"
+      },
+      "1": {
+        "name": "レベル1",
+        "subtitle": "簡単そうでしょ？"
+      },
+      "2": {
+        "name": "レベル2",
+        "subtitle": "信じて"
+      },
+      "3": {
+        "name": "レベル3",
+        "subtitle": "上がったり下がったり"
+      },
+      "4": {
+        "name": "レベル4",
+        "subtitle": "氷と炎"
+      },
+      "5": {
+        "name": "レベル5",
+        "subtitle": "狂った重力"
+      },
+      "6": {
+        "name": "レベル6",
+        "subtitle": "偽りの希望"
+      },
+      "7": {
+        "name": "レベル7",
+        "subtitle": "工場"
+      },
+      "8": {
+        "name": "レベル8",
+        "subtitle": "影の城"
+      },
+      "9": {
+        "name": "レベル9",
+        "subtitle": "容赦なし"
+      },
+      "10": {
+        "name": "レベル10",
+        "subtitle": "最終建築家"
+      }
+    },
+    "trolls": {
+      "0": [
+        "暗黒の城へようこそ...気をつけて！",
+        "チェックポイント？ぬか喜びしないで...",
+        "まだ生きてるの？すごいね！",
+        "旗だ！本物かな？"
+      ],
+      "1": [
+        "簡単そう？ふーむ...どうかな！",
+        "地面がおかしいぞ...",
+        "見て！旗だ！やっと！",
+        "...ニセモノだった！ハハハ！進め！",
+        "これは本物...だよね？"
+      ],
+      "2": [
+        "信じて...完全に安全だよ！",
+        "砂に気をつけて...全部固体じゃないよ！",
+        "大丈夫...信じて！",
+        "もうすぐ...もうちょっと信じて！"
+      ],
+      "3": [
+        "バネとトランポリンを使って！上へ下へ！",
+        "パワーアップを取って！必要になるよ！",
+        "秘訣はジャンプのタイミング！",
+        "もうすぐ！最後のスーパージャンプ！"
+      ],
+      "4": [
+        "氷だ！滑るぞおお！",
+        "ベルト＋氷＝楽しい...か死か！",
+        "水に気をつけて...滑った？",
+        "氷から炎へ？幸運を！"
+      ],
+      "5": [
+        "上か下か？幸運を！",
+        "重力反転！天井に気をつけて！",
+        "また？！ハハハ！",
+        "時限ブロックが消えて...戻る！",
+        "まっすぐ進め...重力が許せばね！"
+      ],
+      "6": [
+        "旗はそこだ！行け！",
+        "おめでとう！勝...待って、ニセモノだ！",
+        "次のは本物！信じて！",
+        "...またニセモノ！ハハハ！",
+        "今度こそ本物だって！",
+        "...嘘ついた！ハハハハハ！😈",
+        "OK今度はマジで...4番目は本物...",
+        "4つもニセモノ！諦めるな！",
+        "これは本物？うーん..."
+      ],
+      "7": [
+        "カオス工場へようこそ！",
+        "ベルトコンベア！逆走してみて！",
+        "大砲に気をつけて！ドカーン！",
+        "粘着ブロック！ジャンプで脱出！",
+        "風が押してくる！注意！",
+        "もうすぐ！工場が爆発するぞ！"
+      ],
+      "8": [
+        "影の城へようこそ...鍵を見つけて！",
+        "鍵が道を開く...見つけられれば！",
+        "透明ブロックが助けてくれるかも...くれないかも！",
+        "城が揺れている...",
+        "出口は近い...信じて！"
+      ],
+      "9": [
+        "容赦なし。幸運を。必要になるぞ。",
+        "重力！天井に気をつけて！",
+        "また！？ハハハ！",
+        "まだ生きてる？！どうやって？！",
+        "諦めろ。マジで。諦めろ。"
+      ],
+      "10": [
+        "最終試練。建築家が見ている。",
+        "チェックポイント？ぬか喜びしないで...",
+        "重力！天井に張り付け！",
+        "まだ生きてるの？すごいね！",
+        "旗...本物かな？",
+        "スターだ！走れ！走れ！",
+        "建築家がお前の苦しみを笑う...ハハハ！",
+        "今度こそ本物？！"
+      ]
+    },
+    "demo": {
+      "name": "レベル1 — 簡単そうでしょ？",
+      "subtitle": "イントロダクション",
+      "trollMessage": "トゲに気をつけて！"
+    }
+  },
+  "achievements": {
+    "first_death": { "name": "初めての死", "description": "初めて死ぬ" },
+    "100_deaths": { "name": "粘り強い", "description": "100回死ぬ" },
+    "1000_deaths": { "name": "逆不死身", "description": "1,000回死ぬ" },
+    "first_clear": { "name": "初クリア", "description": "1レベルクリア" },
+    "10_clears": { "name": "探検家", "description": "10レベルクリア" },
+    "50_clears": { "name": "ベテラン", "description": "50レベルクリア" },
+    "100_clears": { "name": "レジェンド", "description": "100レベルクリア" },
+    "first_publish": { "name": "クリエイター", "description": "1レベル公開" },
+    "10_publish": { "name": "アーキテクト", "description": "10レベル公開" },
+    "speedster": { "name": "スピードスター", "description": "10秒以内にレベルをクリア" },
+    "no_death_run": { "name": "パーフェクト", "description": "ノーデスでレベルをクリア" },
+    "1000_coins": { "name": "大金持ち", "description": "1,000コインを集める" },
+    "campaign_done": { "name": "キャンペーンヒーロー", "description": "キャンペーンの全レベルをクリア" },
+    "liked_100": { "name": "人気者", "description": "レベルで100いいねを獲得" },
+    "devs_choice": { "name": "開発者チョイス", "description": "Dev's Choiceを受賞" }
+  },
+  "cosmetics": {
+    "skins": {
+      "default": "クラシックキャット",
+      "ninja": "忍者キャット",
+      "pixel": "ピクセルキャット",
+      "ghost": "ゴーストキャット",
+      "golden": "ゴールデンキャット",
+      "troll": "トロールキャット",
+      "ice": "アイスキャット",
+      "lava": "ラバキャット"
+    },
+    "trails": {
+      "trail_none": "なし",
+      "trail_fire": "ファイア",
+      "trail_ice": "アイス",
+      "trail_stars": "スター",
+      "trail_rainbow": "レインボー"
+    },
+    "deathEffects": {
+      "death_default": "デフォルト",
+      "death_pixelate": "ピクセル化",
+      "death_ghost": "ゴースト",
+      "death_confetti": "紙吹雪",
+      "death_shatter": "粉砕"
+    },
+    "frames": {
+      "frame_none": "なし",
+      "frame_gold": "ゴールド",
+      "frame_diamond": "ダイアモンド",
+      "frame_troll": "トロール",
+      "frame_fire": "ファイア"
+    }
+  },
+  "ranks": {
+    "0": "プレイヤー",
+    "1": "新米クリエイター",
+    "2": "ビルダー",
+    "3": "アーキテクト",
+    "4": "トロールマスター",
+    "5": "レジェンド",
+    "99": "管理者"
+  },
+  "ranksLib": {
+    "0": "新人",
+    "1": "ビルダー",
+    "2": "アーキテクト",
+    "3": "マスター",
+    "4": "レジェンド",
+    "99": "管理者"
+  },
+  "difficulty": {
+    "new": "新規",
+    "easy": "簡単",
+    "medium": "普通",
+    "hard": "難しい",
+    "extreme": "極限"
+  },
+  "themes": {
+    "default": "クラシック",
+    "snow": "雪",
+    "inferno": "インフェルノ",
+    "neon": "ネオン",
+    "retro": "レトロ",
+    "underwater": "水中"
+  },
+  "titles": {
+    "novato": { "name": "新人", "unlock": "デフォルト（無料）" },
+    "mestre_trolls": { "name": "トロールマスター", "unlock": "トロールタグ付きレベルを20個公開" },
+    "velocista": { "name": "スピードスター", "unlock": "実績：スピードスター" },
+    "sobrevivente": { "name": "サバイバー", "unlock": "実績：逆不死身" },
+    "arquiteto_supremo": { "name": "最高建築家", "unlock": "アーキテクトランク" },
+    "lenda_viva": { "name": "生ける伝説", "unlock": "レジェンドランク" },
+    "colecionador": { "name": "コレクター", "unlock": "15個以上のコスメをアンロック" },
+    "desafiante": { "name": "チャレンジャー", "unlock": "10回のウィークリーチャレンジをクリア" },
+    "explorador": { "name": "探検家", "unlock": "ショップで購入" },
+    "heroi": { "name": "ヒーロー", "unlock": "ショップで購入" },
+    "lendario": { "name": "レジェンダリー", "unlock": "ショップで購入" }
+  },
+  "prefabs": {
+    "prefab_platform": "プラットフォーム",
+    "prefab_spike_pit": "スパイクの穴",
+    "prefab_cannon_tower": "大砲タワー",
+    "prefab_lava_bridge": "溶岩橋"
+  },
+  "palette": {
+    "0": { "name": "消しゴム", "description": "タイルやエンティティを消去" },
+    "1": { "name": "地面", "description": "表面は草、内部は土" },
+    "3": { "name": "レンガ", "description": "クラシックな破壊可能ブロック" },
+    "4": { "name": "城壁", "description": "石壁 — 上部に自動で胸壁" },
+    "5": { "name": "使用済みブロック", "description": "既に有効化されたブロック — 装飾用" },
+    "6": { "name": "パイプ", "description": "緑のパイプ — 自動形状検出" },
+    "10": { "name": "氷", "description": "滑りやすい表面 — オートタイル！" },
+    "11": { "name": "雲", "description": "雲プラットフォーム — 装飾のみ" },
+    "41": { "name": "砂", "description": "砂地 — オートタイル" },
+    "42": { "name": "雪", "description": "凍った地形 — オートタイル" },
+    "43": { "name": "木材", "description": "木の板 — 装飾的な固体" },
+    "44": { "name": "苔むした石", "description": "苔に覆われた古代の石" },
+    "45": { "name": "金属", "description": "リベット付き工業用金属パネル" },
+    "12": { "name": "スパイク", "description": "触れると即死！" },
+    "13": { "name": "隠しスパイク", "description": "草に見えるけど殺す — トロール！" },
+    "14": { "name": "溶岩", "description": "炎の海 — 全てを溶かす！" },
+    "15": { "name": "偽の地面", "description": "踏むと崩れる — サプライズ！" },
+    "16": { "name": "？ブロック", "description": "叩くとコインやサプライズ" },
+    "17": { "name": "トロール！ブロック", "description": "？に見えるけどトロール！" },
+    "18": { "name": "透明", "description": "透明ブロック — 叩くと出現" },
+    "19": { "name": "バネ", "description": "プレイヤーを上に飛ばす！" },
+    "20": { "name": "トランポリン", "description": "超ジャンプ — 極限の高さへ！" },
+    "21": { "name": "プラットフォーム", "description": "半固体 — 下から飛び乗れる" },
+    "22": { "name": "ベルト ←", "description": "プレイヤーを左に移動" },
+    "23": { "name": "ベルト →", "description": "プレイヤーを右に移動" },
+    "24": { "name": "チェックポイント", "description": "復活地点 — 進行を保存" },
+    "33": { "name": "パワーアップブロック", "description": "キノコ、スター、フラワーを放出" },
+    "37": { "name": "スライドブロック", "description": "有効化時に新しい位置へスライド" },
+    "38": { "name": "時限ブロック", "description": "周期的に出現・消滅" },
+    "39": { "name": "重力ゾーン", "description": "プレイヤーの重力を反転！" },
+    "54": { "name": "重力正常化", "description": "通常の重力を復元！" },
+    "40": { "name": "移動プラットフォーム", "description": "自動で移動するプラットフォーム" },
+    "46": { "name": "格子", "description": "半固体の金属プラットフォーム" },
+    "47": { "name": "水", "description": "プレイヤーを減速 — オートタイル" },
+    "48": { "name": "柵", "description": "木の柵 — 装飾、当たり判定なし" },
+    "49": { "name": "松明", "description": "燃える松明 — アニメーション装飾" },
+    "50": { "name": "鎖", "description": "吊り下がった金属チェーン — 装飾" },
+    "51": { "name": "看板", "description": "木の看板 — 装飾" },
+    "52": { "name": "クリスタル", "description": "輝く宝石 — 光る固体" },
+    "53": { "name": "キノコ", "description": "斑点のある赤いキノコブロック" },
+    "25": { "name": "プレイヤー", "description": "ヒーローキャットの開始位置" },
+    "26": { "name": "コイン", "description": "光るコレクタブル — ボーナスポイント！" },
+    "27": { "name": "グンバ", "description": "巡回する敵 — 左右に歩く" },
+    "28": { "name": "高速グンバ", "description": "ターボグンバ — もっと速い！" },
+    "29": { "name": "スパイニー", "description": "トゲの敵 — 踏むな！" },
+    "30": { "name": "フライヤー", "description": "浮遊する敵 — 上下に移動" },
+    "31": { "name": "旗", "description": "必須 — レベルゴールを示す" },
+    "32": { "name": "偽の旗", "description": "勝利に見えるけど、純粋なトロール！" },
+    "34": { "name": "キノコ（アイテム）", "description": "パワーアップ：速度と1ヒット耐性" },
+    "35": { "name": "スター", "description": "パワーアップ：一時的な無敵！" },
+    "36": { "name": "ファイアフラワー", "description": "パワーアップ：ファイアボールを発射！" },
+    "55": { "name": "テレポーターA", "description": "入口ポータル — テレポーターBとペア" },
+    "56": { "name": "テレポーターB", "description": "出口ポータル — テレポーターAとペア" },
+    "57": { "name": "粘着ブロック", "description": "プレイヤーを貼り付ける — ジャンプで脱出！" },
+    "58": { "name": "赤い鍵", "description": "赤いロックを開ける" },
+    "59": { "name": "青い鍵", "description": "青いロックを開ける" },
+    "60": { "name": "緑の鍵", "description": "緑のロックを開ける" },
+    "61": { "name": "赤いロック", "description": "赤い鍵で開くブロック" },
+    "62": { "name": "青いロック", "description": "青い鍵で開くブロック" },
+    "63": { "name": "緑のロック", "description": "緑の鍵で開くブロック" },
+    "64": { "name": "割れる氷", "description": "ファイアボールか3回ジャンプで壊れる" },
+    "65": { "name": "鏡", "description": "ファイアボールを反射！" },
+    "66": { "name": "風 ↑", "description": "上向きの気流" },
+    "67": { "name": "風 ↓", "description": "下向きの気流" },
+    "68": { "name": "風 ←", "description": "左向きの気流" },
+    "69": { "name": "風 →", "description": "右向きの気流" },
+    "70": { "name": "大砲 ←", "description": "左に弾を発射！" },
+    "71": { "name": "大砲 →", "description": "右に弾を発射！" },
+    "72": { "name": "大砲 ↑", "description": "上に弾を発射！" },
+    "73": { "name": "大砲 ↓", "description": "下に弾を発射！" },
+    "74": { "name": "ゴースト", "description": "見てない時に動く！ブー！" },
+    "75": { "name": "シューター", "description": "弾を撃つ固定敵" },
+    "76": { "name": "巨大グンバ", "description": "ミニボス！3回ジャンプで倒す！" },
+    "77": { "name": "丸のこ", "description": "進路上の全てを切る！破壊不能！" },
+    "78": { "name": "スローモーション", "description": "パワーアップ：3秒間スローモーション！" },
+    "79": { "name": "カスタム看板", "description": "クリエイターのテキスト付き看板" }
+  },
+  "error": {
+    "title": "[!] 内部エラー",
+    "description": "サーバーで問題が発生しました。もう一度お試しください。",
+    "retry": "再試行",
+    "home": "ホーム"
+  },
+  "notFound": {
+    "title": "[?] ページが見つかりません",
+    "description": "お探しのレベルは削除されたか、存在しない可能性があります。",
+    "browseLevels": "レベルを探索",
+    "home": "ホーム"
+  },
+  "errorBoundary": {
+    "title": "問題が発生しました",
+    "description": "予期しないエラーが発生しました。",
+    "reload": "再読み込み",
+    "goHome": "ホームに戻る",
+    "details": "エラー詳細",
+    "gameCrash": "ゲームがクラッシュしました",
+    "clickToRestart": "クリックして再起動"
+  },
+  "rankUp": {
+    "title": "ランクアップ！",
+    "message": "おめでとう！{rank}に到達しました",
+    "cta": "素晴らしいレベルを作り続けて共有しましょう！",
+    "closeLabel": "通知を閉じる"
+  },
+  "weekly": {
+    "title": "ウィークリーチャレンジ",
+    "daysLeft": "残り{count}日",
+    "doubleCoins": "2×コイン",
+    "playChallenge": "チャレンジプレイ"
+  },
+  "creator": {
+    "notFound": "クリエイターが見つかりません — Trap Architect",
+    "notFoundShort": "クリエイターが見つかりません",
+    "loadError": "プロフィールの読み込みエラー",
+    "loadingProfile": "プロフィールを読み込み中...",
+    "backToBrowse": "探索に戻る",
+    "memberSince": "{date}から参加",
+    "levelsOf": "{nickname}のレベル",
+    "noLevelsYet": "このクリエイターはまだレベルを公開していません。",
+    "metaDesc": "{rank} · {levels}レベル · {plays}プレイ"
+  },
+  "communityPlay": {
+    "notFound": "レベルが見つかりません",
+    "loadError": "レベルの読み込みエラー",
+    "loadingLevel": "レベルを読み込み中...",
+    "backToBrowse": "← 探索に戻る",
+    "brandName": "Trap Architect",
+    "browse": "探索",
+    "controlMove": "移動",
+    "controlJump": "ジャンプ",
+    "controlMenu": "メニュー",
+    "play": "プレイ",
+    "report": "報告",
+    "rate": "評価",
+    "reportLevel": "レベルを報告",
+    "reportReasons": {
+      "offensive": "不適切なコンテンツ",
+      "impossible": "クリア不可能",
+      "spam": "スパム / 空のレベル",
+      "bug": "バグ / 壊れたレベル",
+      "other": "その他"
+    },
+    "reportDescPlaceholder": "追加情報（任意）",
+    "submitting": "送信中...",
+    "submit": "送信",
+    "reportSent": "報告を送信しました！",
+    "alreadyReported": "このレベルは既に報告済みです。",
+    "loginToReport": "報告するにはログインしてください。",
+    "reportError": "報告の送信エラー。",
+    "connectionError": "接続エラー。",
+    "leaderboard": "トッププレイ",
+    "player": "プレイヤー"
+  },
+  "tags": {
+    "puzzle": "パズル",
+    "speedrun": "スピードラン",
+    "troll": "トロール",
+    "precision": "精密",
+    "kaizo": "改造",
+    "easy": "簡単",
+    "art": "アート",
+    "story": "ストーリー",
+    "music": "ミュージック",
+    "impossible": "不可能"
+  }
+}

@@ -1,11 +1,21 @@
 import ptBR from "./messages/pt-BR.json";
 import enUS from "./messages/en-US.json";
+import esES from "./messages/es-ES.json";
+import frFR from "./messages/fr-FR.json";
+import itIT from "./messages/it-IT.json";
+import jaJP from "./messages/ja-JP.json";
+import zhCN from "./messages/zh-CN.json";
 
 type Messages = typeof ptBR;
 
 const messages: Record<string, Messages> = {
   "pt-BR": ptBR,
   "en-US": enUS,
+  "es-ES": esES,
+  "fr-FR": frFR,
+  "it-IT": itIT,
+  "ja-JP": jaJP,
+  "zh-CN": zhCN,
 };
 
 let currentLocale = "pt-BR";
